@@ -8,6 +8,8 @@ use tokio_util::{
     codec::{Decoder, Encoder},
 };
 
+use crate::error::ControllerError;
+
 pub const DATA_ID: u8 = 0x00;
 pub const HEALTH_REQUEST_ID: u8 = 0x01;
 pub const HEALTH_RESPONSE_ID: u8 = 0x02;
@@ -20,7 +22,7 @@ pub const TARE_SUCCESS_ID: u8 = 0x06;
 #[deku(id_type = "u8", endian = "big")]
 pub enum Packet {
     #[deku(id = "DATA_ID")]
-    Data { value: u16 },
+    Data { value: f32 },
     #[deku(id = "HEALTH_REQUEST_ID")]
     HealthRequest,
     #[deku(id = "HEALTH_RESPONSE_ID")]
@@ -56,7 +58,7 @@ impl Protocol {
 
 impl Decoder for Protocol {
     type Item = Packet;
-    type Error = io::Error;
+    type Error = ControllerError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         if let Some(decoded) = self
@@ -75,12 +77,12 @@ impl Decoder for Protocol {
             let calculated_crc = self.crc.checksum(data);
 
             if calculated_crc != received_crc {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "CRC mismatch"));
+                return Err(ControllerError::CRCMismatch);
             }
 
             match Packet::from_bytes((data, 0)) {
                 Ok((_, packet)) => Ok(Some(packet)),
-                Err(e) => Err(io::Error::new(io::ErrorKind::InvalidData, e.to_string())),
+                Err(_) => Err(ControllerError::PacketError),
             }
         } else {
             Ok(None)
@@ -89,13 +91,13 @@ impl Decoder for Protocol {
 }
 
 impl Encoder<Packet> for Protocol {
-    type Error = io::Error;
+    type Error = ControllerError;
 
     fn encode(&mut self, packet: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
         // Serialize the packet
         let packet_bytes = packet
             .to_bytes()
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            .map_err(|_| ControllerError::PacketError)?;
 
         // Calculate CRC
         let crc = self.crc.checksum(&packet_bytes);
@@ -113,7 +115,7 @@ impl Encoder<Packet> for Protocol {
         // COBS encode the frame (packet + CRC)
         self.codec
             .encode(&frame_buffer, dst)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|_| ControllerError::PacketError)?;
 
         Ok(())
     }

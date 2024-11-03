@@ -8,9 +8,13 @@
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"lint:ci": "biome ci .",
+		"tauri:lint": "cargo clippy --manifest-path ./src-tauri/Cargo.toml",
+		"tauri:lint:fix": "cargo clippy --manifest-path ./src-tauri/Cargo.toml --fix",
+		"next:lint": "biome check .",
+		"next:lint:fix": "biome check --write .",
+		"next:lint:ci": "biome ci .",
+		"lint": "npm run next:lint && npm run tauri:lint",
+		"lint:fix": "npm run next:lint:fix && npm run tauri:lint:fix",
 		"tauri": "tauri"
 	},
 	"dependencies": {
@@ -24,10 +28,10 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
-		"@tauri-apps/cli": "^2",
-		"@types/node": "22.8.6",
+		"@tauri-apps/cli": "^2.0.4",
+		"@types/node": "22.8.7",
 		"@types/react": "18.3.12",
 		"tailwindcss": "^3.4.14",
-		"typescript": "^5.2.2"
+		"typescript": "^5.6.3"
 	}
 }
