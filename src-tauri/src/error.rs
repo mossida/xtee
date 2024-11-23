@@ -1,7 +1,5 @@
 #[derive(Debug, thiserror::Error)]
 pub enum ControllerError {
-    #[error("Option mismatch")]
-    OptionMismatch,
     #[error("CRC mismatch")]
     CRCMismatch,
     #[error("Packet error")]

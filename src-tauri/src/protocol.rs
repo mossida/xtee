@@ -1,5 +1,5 @@
 use cobs_codec::Codec;
-use crc::{Crc, CRC_16_MODBUS};
+use crc::{Crc, CRC_16_USB};
 use deku::prelude::*;
 use serde::Serialize;
 use tokio::io;
@@ -7,16 +7,17 @@ use tokio_util::{
     bytes::BytesMut,
     codec::{Decoder, Encoder},
 };
+use tracing::error;
 
 use crate::error::ControllerError;
 
-pub const DATA_ID: u8 = 0x00;
-pub const HEALTH_REQUEST_ID: u8 = 0x01;
-pub const HEALTH_RESPONSE_ID: u8 = 0x02;
-pub const MOTOR_COMMAND_ID: u8 = 0x03;
-pub const MOTOR_STOP_ID: u8 = 0x04;
-pub const TARE_CELL_ID: u8 = 0x05;
-pub const TARE_SUCCESS_ID: u8 = 0x06;
+pub const DATA_ID: u8 = 0x01;
+pub const HEALTH_REQUEST_ID: u8 = 0x02;
+pub const HEALTH_RESPONSE_ID: u8 = 0x03;
+pub const MOTOR_COMMAND_ID: u8 = 0x04;
+pub const MOTOR_STOP_ID: u8 = 0x05;
+pub const TARE_CELL_ID: u8 = 0x06;
+pub const TARE_SUCCESS_ID: u8 = 0x07;
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "big")]
@@ -43,7 +44,7 @@ pub enum Packet {
 }
 
 pub struct Protocol {
-    codec: Codec,
+    codec: Codec<0x00, 0x00, 256, 256>,
     crc: Crc<u16>,
 }
 
@@ -51,7 +52,7 @@ impl Protocol {
     pub fn new() -> Self {
         Self {
             codec: Codec::new(),
-            crc: Crc::<u16>::new(&CRC_16_MODBUS),
+            crc: Crc::<u16>::new(&CRC_16_USB),
         }
     }
 }
@@ -77,12 +78,16 @@ impl Decoder for Protocol {
             let calculated_crc = self.crc.checksum(data);
 
             if calculated_crc != received_crc {
-                return Err(ControllerError::CRCMismatch);
+                error!("CRC mismatch");
+                return Ok(None);
             }
 
-            match Packet::from_bytes((data, 0)) {
+            match Packet::from_bytes((data, data_len)) {
                 Ok((_, packet)) => Ok(Some(packet)),
-                Err(_) => Err(ControllerError::PacketError),
+                Err(err) => {
+                    error!("Packet error: {:?}", err);
+                    Ok(None)
+                }
             }
         } else {
             Ok(None)

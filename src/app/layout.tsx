@@ -1,4 +1,8 @@
 import "@/styles/globals.css";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import { cn } from "@/utils/cn";
+import { Providers } from "./providers";
 
 export default function RootLayout({
   children,
@@ -6,8 +10,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html
+      lang="en"
+      className={cn(`${GeistSans.variable} ${GeistMono.variable}`)}
+      suppressHydrationWarning
+    >
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

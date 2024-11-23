@@ -85,14 +85,12 @@ impl Actor for Controller {
 
     async fn handle(
         &self,
-        _: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
-            ControllerMessage::Spawn(child) => match child {
-                ControllerChild::Actuator => {}
-            },
+            ControllerMessage::Spawn(child) => child.spawn(myself, state.store.clone()).await?,
         }
 
         Ok(())
