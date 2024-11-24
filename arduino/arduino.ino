@@ -68,6 +68,7 @@ private:
   void handleActuatorMoveCommand(const uint8_t *data, size_t size) {
     if (size < 1)
       return;
+
     uint8_t direction = data[0];
 
     if (direction != 0 && direction != 1)
@@ -104,10 +105,15 @@ private:
   }
 
   void sendPacket(uint8_t id, const uint8_t *data, size_t size) {
+    if (!transmissionReady && id != PACKET_READY)
+      return;
+
     uint8_t packet[size + 2];
 
     packet[0] = id;
-    memcpy(&packet[1], data, size);
+
+    if (data && size > 0)
+      memcpy(&packet[1], data, size);
 
     uint8_t packetCRC = crc.calculate(packet, size + 1);
     packet[size + 1] = packetCRC;
@@ -117,8 +123,10 @@ private:
 
 public:
   void begin(unsigned long speed) {
-    serial.setPacketHandler(packetHandler);
     serial.begin(speed);
+    serial.setPacketHandler(packetHandler);
+
+    sendPacket(PACKET_READY, nullptr, 0);
   }
 
   void update() {
@@ -126,10 +134,9 @@ public:
   }
 
   void handlePacket(const uint8_t *buffer, size_t size) {
-    serial.send(buffer, size);
-    return;
+    digitalWrite(LED_BUILTIN, LOW);
 
-    if (size < 3)
+    if (size < 2)
       return;
 
     // Extract CRC from packet
@@ -169,10 +176,6 @@ public:
         } else if (stopSlave == 2 && stepper2) {
           stepper2->stopMove();
         }
-        break;
-      case PACKET_TARE_CELL:
-        scale.tare();
-        sendPacket(PACKET_TARE_SUCCESS, NULL, 0);
         break;
     }
   }
