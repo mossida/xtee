@@ -44,4 +44,3 @@ tracing-subscriber = { version = "0", features = [
   'env-filter',
   'json',
 ] }
-#rppal = "0.19.0"

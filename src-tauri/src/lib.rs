@@ -2,8 +2,8 @@ use setup::{setup_app, setup_logging};
 
 mod actor;
 mod cmd;
-mod config;
 mod error;
+mod filter;
 mod protocol;
 mod setup;
 mod store;

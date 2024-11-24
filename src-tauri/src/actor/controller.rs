@@ -1,42 +1,61 @@
 use std::sync::Arc;
 
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, SupervisionEvent};
+use ractor::{
+    async_trait, concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, SupervisionEvent,
+};
 use tauri::{AppHandle, Emitter};
 
-use crate::{
-    config,
-    store::{store, Store},
-};
+use crate::store::{store, Store};
 
-use super::actuator::{Actuator, ActuatorConfig};
+use super::{
+    actuator::{Actuator, ActuatorConfig},
+    mux::{Mux, MuxArguments},
+};
 
 pub struct Controller;
 
 pub enum ControllerChild {
+    Mux,
     Actuator,
 }
 
 impl ControllerChild {
     fn name(&self) -> &str {
         match self {
+            ControllerChild::Mux => "mux",
             ControllerChild::Actuator => "actuator",
         }
     }
 
     async fn spawn(
-        &self,
+        self,
         myself: ActorRef<ControllerMessage>,
         store: Arc<Store>,
     ) -> Result<(), ActorProcessingErr> {
+        let name = self.name().to_string();
+
         match self {
             ControllerChild::Actuator => {
                 Actuator::spawn_linked(
-                    Some(self.name().to_string()),
+                    Some(name),
                     Actuator,
-                    ActuatorConfig::from(store),
+                    ActuatorConfig::try_from(store)?,
                     myself.get_cell(),
                 )
-                .await?
+                .await?;
+            }
+            ControllerChild::Mux => {
+                let mut config = MuxArguments::try_from(store)?;
+                let children = myself.get_children();
+
+                // TODO: Inject children
+                /*config.targets = myself
+                .get_children()
+                .iter()
+                .map(|child| child.into())
+                .collect();*/
+
+                Mux::spawn_linked(Some(name), Mux, config, myself.get_cell()).await?;
             }
         };
 
@@ -54,12 +73,10 @@ pub struct ControllerState {
 }
 
 impl Controller {
-    pub async fn spawn(handle: AppHandle) -> Result<(), ActorProcessingErr> {
-        Actor::spawn(None, Controller, handle)
-            .await?
-            .1
-            .await
-            .map_err(|e| e.into())
+    pub async fn init(handle: AppHandle) -> Result<JoinHandle<()>, ActorProcessingErr> {
+        let (_, handle) = Actor::spawn(Some("controller".to_owned()), Controller, handle).await?;
+
+        Ok(handle)
     }
 }
 
@@ -76,9 +93,8 @@ impl Actor for Controller {
     ) -> Result<Self::State, ActorProcessingErr> {
         let store = store(&args)?;
 
-        if store.has(config::FORWARD_PIN) && store.has(config::BACKWARD_PIN) {
-            myself.send_message(ControllerMessage::Spawn(ControllerChild::Actuator))?;
-        }
+        myself.send_message(ControllerMessage::Spawn(ControllerChild::Actuator))?;
+        myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
 
         Ok(ControllerState { store, app: args })
     }

@@ -1,12 +1,18 @@
+use std::sync::Arc;
+
 use futures::{future, stream::SplitSink, SinkExt, StreamExt};
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
-use tokio_serial::SerialStream;
+use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::{Decoder, Framed};
 use tracing::{error, info};
 
-use crate::protocol::{Packet, Protocol};
+use crate::{
+    error::ControllerError,
+    protocol::{Packet, Protocol},
+    store::{Store, CONTROLLER_BAUD, CONTROLLER_BUS},
+};
 
 type Targets<S> = Vec<Box<dyn Target<S>>>;
 
@@ -24,7 +30,30 @@ pub struct MuxState {
 
 pub struct MuxArguments {
     stream: SerialStream,
-    targets: Targets<Packet>,
+    pub targets: Targets<Packet>,
+}
+
+impl TryFrom<Arc<Store>> for MuxArguments {
+    type Error = ControllerError;
+
+    fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
+        let bus_value = value
+            .get(CONTROLLER_BUS)
+            .ok_or(ControllerError::ConfigError)?;
+        let baud_value = value
+            .get(CONTROLLER_BAUD)
+            .ok_or(ControllerError::ConfigError)?;
+
+        let bus = bus_value.as_str().ok_or(ControllerError::ConfigError)?;
+        let baud = baud_value.as_u64().ok_or(ControllerError::ConfigError)?;
+
+        let stream = tokio_serial::new(bus, baud as u32).open_native_async()?;
+
+        Ok(MuxArguments {
+            stream,
+            targets: vec![], // Will be injected by controller
+        })
+    }
 }
 
 pub struct MuxCallback;
@@ -57,8 +86,7 @@ impl Actor for Mux {
         mux_stream(
             StreamMuxConfiguration {
                 stream,
-                // TODO: Add targets
-                targets: vec![],
+                targets: args.targets,
                 callback: MuxCallback,
                 stop_processing_target_on_failure: true,
             },

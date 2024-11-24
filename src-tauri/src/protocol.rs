@@ -1,29 +1,38 @@
+use std::io::Read;
+
 use cobs_codec::Codec;
-use crc::{Crc, CRC_16_USB};
+use crc::{Algorithm, Crc, CRC_16_USB, CRC_8_DARC, CRC_8_SMBUS};
 use deku::prelude::*;
 use serde::Serialize;
-use tokio::io;
+use tokio::io::{self, AsyncRead, AsyncWrite};
 use tokio_util::{
     bytes::BytesMut,
-    codec::{Decoder, Encoder},
+    codec::{Decoder, Encoder, Framed},
 };
 use tracing::error;
 
 use crate::error::ControllerError;
 
-pub const DATA_ID: u8 = 0x01;
-pub const HEALTH_REQUEST_ID: u8 = 0x02;
-pub const HEALTH_RESPONSE_ID: u8 = 0x03;
-pub const MOTOR_COMMAND_ID: u8 = 0x04;
-pub const MOTOR_STOP_ID: u8 = 0x05;
-pub const TARE_CELL_ID: u8 = 0x06;
-pub const TARE_SUCCESS_ID: u8 = 0x07;
+// control flow
+
+pub const READY_ID: u8 = 0x01;
+pub const DATA_ID: u8 = 0x02;
+pub const HEALTH_REQUEST_ID: u8 = 0x03;
+pub const HEALTH_RESPONSE_ID: u8 = 0x04;
+pub const MOTOR_COMMAND_ID: u8 = 0x05;
+pub const MOTOR_STOP_ID: u8 = 0x06;
+pub const ACTUATOR_MOVE_ID: u8 = 0x07;
+pub const ACTUATOR_STOP_ID: u8 = 0x08;
+pub const TARE_CELL_ID: u8 = 0x09;
+pub const TARE_SUCCESS_ID: u8 = 0x0a;
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
-#[deku(id_type = "u8", endian = "big")]
+#[deku(id_type = "u8", endian = "little")]
 pub enum Packet {
+    #[deku(id = "READY_ID")]
+    Ready,
     #[deku(id = "DATA_ID")]
-    Data { value: f32 },
+    Data { value: i32 },
     #[deku(id = "HEALTH_REQUEST_ID")]
     HealthRequest,
     #[deku(id = "HEALTH_RESPONSE_ID")]
@@ -37,6 +46,10 @@ pub enum Packet {
     },
     #[deku(id = "MOTOR_STOP_ID")]
     MotorStop { slave: u8 },
+    #[deku(id = "ACTUATOR_MOVE_ID")]
+    ActuatorMove { direction: u8 },
+    #[deku(id = "ACTUATOR_STOP_ID")]
+    ActuatorStop,
     #[deku(id = "TARE_CELL_ID")]
     TareCell,
     #[deku(id = "TARE_SUCCESS_ID")]
@@ -45,14 +58,25 @@ pub enum Packet {
 
 pub struct Protocol {
     codec: Codec<0x00, 0x00, 256, 256>,
-    crc: Crc<u16>,
+    crc: Crc<u8>,
 }
 
 impl Protocol {
     pub fn new() -> Self {
+        let crc = Crc::<u8>::new(&Algorithm {
+            width: 8,      // 8-bit CRC
+            poly: 0x9B,    // Polynomial used for CRC calculation
+            init: 0x00,    // Initial value for the CRC register
+            refin: false,  // Input data is not reflected
+            refout: false, // Output CRC is not reflected
+            xorout: 0x00,  // No XOR applied to the final CRC
+            check: 0xEA,   // Precomputed "check" value for "123456789"
+            residue: 0x00, // Residue for correct packets
+        });
+
         Self {
             codec: Codec::new(),
-            crc: Crc::<u16>::new(&CRC_16_USB),
+            crc,
         }
     }
 }
@@ -67,22 +91,27 @@ impl Decoder for Protocol {
             .decode(src)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
         {
-            if decoded.len() < 3 {
+            if decoded.len() < 2 {
                 return Ok(None);
             }
 
-            let data_len = decoded.len() - 2;
-            let (data, crc_bytes) = decoded.split_at(data_len);
+            let size = decoded.len() - 1;
+            let data = &decoded[..size];
 
-            let received_crc = u16::from_be_bytes([crc_bytes[0], crc_bytes[1]]);
+            let received_crc = u8::from_le(decoded[size]);
             let calculated_crc = self.crc.checksum(data);
 
             if calculated_crc != received_crc {
-                error!("CRC mismatch");
+                error!(
+                    "CRC mismatch, expected: {}, received: {}. Packet: {:?}",
+                    calculated_crc,
+                    received_crc,
+                    decoded.to_vec()
+                );
                 return Ok(None);
             }
 
-            match Packet::from_bytes((data, data_len)) {
+            match Packet::from_bytes((data, 0)) {
                 Ok((_, packet)) => Ok(Some(packet)),
                 Err(err) => {
                     error!("Packet error: {:?}", err);
@@ -109,15 +138,10 @@ impl Encoder<Packet> for Protocol {
 
         // Create a buffer for the frame (packet + CRC)
         let mut frame_buffer = Vec::with_capacity(packet_bytes.len() + 2);
-        frame_buffer.extend_from_slice(&packet_bytes);
-        frame_buffer.extend_from_slice(&crc.to_be_bytes());
 
-        // Reserve space in the destination buffer
-        // COBS encoding may add up to 1 byte per 254 bytes, plus 1 overhead byte
-        let max_encoded_len = frame_buffer.len() + (frame_buffer.len() / 254) + 1;
-        dst.reserve(max_encoded_len);
+        frame_buffer.extend(packet_bytes);
+        frame_buffer.extend(crc.to_le_bytes());
 
-        // COBS encode the frame (packet + CRC)
         self.codec
             .encode(&frame_buffer, dst)
             .map_err(|_| ControllerError::PacketError)?;
