@@ -36,6 +36,7 @@ ractor_actors = "0.4.4"
 tokio-serial = "5.4.4"
 futures = "0.3.31"
 thiserror = "1.0.66"
+anyhow = "1.0.72"
 pid = "4.0.0"
 time = { version = "0", features = ['macros', 'serde'] }
 tracing = { version = "0", features = ["log", "release_max_level_info"] }

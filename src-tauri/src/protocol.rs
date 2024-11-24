@@ -1,13 +1,13 @@
-use std::io::Read;
+use std::sync::Arc;
 
 use cobs_codec::Codec;
-use crc::{Algorithm, Crc, CRC_16_USB, CRC_8_DARC, CRC_8_SMBUS};
+use crc::{Algorithm, Crc};
 use deku::prelude::*;
 use serde::Serialize;
-use tokio::io::{self, AsyncRead, AsyncWrite};
+use tokio::io::{self};
 use tokio_util::{
     bytes::BytesMut,
-    codec::{Decoder, Encoder, Framed},
+    codec::{Decoder, Encoder},
 };
 use tracing::error;
 

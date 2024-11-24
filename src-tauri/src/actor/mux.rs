@@ -1,7 +1,11 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
-use futures::{future, stream::SplitSink, SinkExt, StreamExt};
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use futures::{
+    future::{self},
+    stream::SplitSink,
+    SinkExt, Stream, StreamExt,
+};
+use ractor::{async_trait, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
@@ -14,9 +18,8 @@ use crate::{
     store::{Store, CONTROLLER_BAUD, CONTROLLER_BUS},
 };
 
-type Targets<S> = Vec<Box<dyn Target<S>>>;
-
 type Writer = SplitSink<Framed<SerialStream, Protocol>, Packet>;
+pub type MuxStream = Pin<Box<dyn Stream<Item = Packet> + Send + 'static>>;
 
 pub struct Mux;
 
@@ -30,7 +33,7 @@ pub struct MuxState {
 
 pub struct MuxArguments {
     stream: SerialStream,
-    pub targets: Targets<Packet>,
+    pub targets: Vec<Box<dyn Target<MuxStream>>>,
 }
 
 impl TryFrom<Arc<Store>> for MuxArguments {
@@ -53,6 +56,36 @@ impl TryFrom<Arc<Store>> for MuxArguments {
             stream,
             targets: vec![], // Will be injected by controller
         })
+    }
+}
+
+pub struct MuxTarget<S> {
+    cell: ActorCell,
+    _s: PhantomData<S>,
+}
+
+impl<S> From<ActorCell> for MuxTarget<S> {
+    fn from(cell: ActorCell) -> Self {
+        MuxTarget {
+            cell,
+            _s: PhantomData,
+        }
+    }
+}
+
+impl<S> Target<S> for MuxTarget<S>
+where
+    S: Stream + ractor::State,
+    S::Item: Clone + ractor::Message,
+{
+    fn get_id(&self) -> String {
+        self.cell.get_id().to_string()
+    }
+
+    fn message_received(&self, item: <S as Stream>::Item) -> Result<(), ActorProcessingErr> {
+        self.cell.send_message(item)?;
+
+        Ok(())
     }
 }
 
@@ -81,7 +114,7 @@ impl Actor for Mux {
     ) -> Result<Self::State, ActorProcessingErr> {
         let protocol = Protocol::new();
         let (sink, framed_stream) = protocol.framed(args.stream).split();
-        let stream = framed_stream.filter_map(|r| future::ready(r.ok()));
+        let stream = framed_stream.filter_map(|r| future::ready(r.ok())).boxed();
 
         mux_stream(
             StreamMuxConfiguration {

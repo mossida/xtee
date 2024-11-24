@@ -9,7 +9,7 @@ use crate::store::{store, Store};
 
 use super::{
     actuator::{Actuator, ActuatorConfig},
-    mux::{Mux, MuxArguments},
+    mux::{Mux, MuxArguments, MuxStream, MuxTarget},
 };
 
 pub struct Controller;
@@ -46,14 +46,17 @@ impl ControllerChild {
             }
             ControllerChild::Mux => {
                 let mut config = MuxArguments::try_from(store)?;
-                let children = myself.get_children();
 
-                // TODO: Inject children
-                /*config.targets = myself
-                .get_children()
-                .iter()
-                .map(|child| child.into())
-                .collect();*/
+                config.targets = myself
+                    .get_children()
+                    .iter()
+                    .map(|child| {
+                        let target = Box::new(MuxTarget::<MuxStream>::from(child))
+                            as Box<dyn ractor_actors::streams::Target<MuxStream>>;
+
+                        target
+                    })
+                    .collect();
 
                 Mux::spawn_linked(Some(name), Mux, config, myself.get_cell()).await?;
             }
