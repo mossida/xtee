@@ -10,6 +10,8 @@ pub enum ControllerError {
     IOError(#[from] std::io::Error),
     #[error("Serial error: {0}")]
     SerialError(#[from] tokio_serial::Error),
+    #[error("JSON error: {0}")]
+    JSONError(#[from] serde_json::Error),
     #[error("Generic error: {0}")]
     Any(#[from] anyhow::Error),
 }

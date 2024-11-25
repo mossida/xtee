@@ -9,7 +9,7 @@ use crate::{
     error::ControllerError,
     filter::KalmanFilter,
     protocol::Packet,
-    store::{Store, PID_DERIVATIVE, PID_INTEGRAL, PID_PROPORTIONAL},
+    store::{PIDSettings, Store, PID_SETTINGS},
 };
 
 use super::mux::MuxMessage;
@@ -17,33 +17,25 @@ use super::mux::MuxMessage;
 pub struct Actuator;
 
 pub struct ActuatorConfig {
-    pub pid: (f32, f32, f32),
     pub precision: f32,
     pub output_limit: f32,
+    pub pid_settings: PIDSettings,
 }
 
 impl TryFrom<Arc<Store>> for ActuatorConfig {
     type Error = ControllerError;
 
     fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
-        let pid_p_value = value
-            .get(PID_PROPORTIONAL)
-            .ok_or(ControllerError::ConfigError)?;
-        let pid_i_value = value
-            .get(PID_INTEGRAL)
-            .ok_or(ControllerError::ConfigError)?;
-        let pid_d_value = value
-            .get(PID_DERIVATIVE)
+        let pid_settings = value
+            .get(PID_SETTINGS)
             .ok_or(ControllerError::ConfigError)?;
 
-        let pid_p = pid_p_value.as_f64().unwrap() as f32;
-        let pid_i = pid_i_value.as_f64().unwrap() as f32;
-        let pid_d = pid_d_value.as_f64().unwrap() as f32;
+        let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
         Ok(ActuatorConfig {
-            pid: (pid_p, pid_i, pid_d),
             precision: 0.25,
             output_limit: 200.0,
+            pid_settings: settings,
         })
     }
 }
@@ -160,12 +152,19 @@ impl Actor for Actuator {
         let mut pid = Pid::new(0.0, config.output_limit);
         let filter = KalmanFilter::new(1.0, 1.0, 1.0, 1.0);
 
-        // TODO: Understand if limit is the same as the gain
-        pid.p(config.pid.0, 50.0);
-        pid.i(config.pid.1, 25.0);
-        pid.d(config.pid.2, 10.0);
+        let PIDSettings {
+            proportional,
+            integral,
+            derivative,
+            derivative_limit,
+            proportional_limit,
+            integral_limit,
+        } = config.pid_settings;
 
-        pid.setpoint(50.0);
+        // TODO: Understand if limit is the same as the gain
+        pid.p(proportional, proportional_limit);
+        pid.i(integral, integral_limit);
+        pid.d(derivative, derivative_limit);
 
         Ok(ActuatorState {
             pid,
