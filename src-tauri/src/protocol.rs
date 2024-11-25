@@ -1,17 +1,20 @@
-use std::sync::Arc;
-
-use cobs_codec::Codec;
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
+use futures::{future, StreamExt};
+use ractor::ActorRef;
 use serde::Serialize;
 use tokio::io::{self};
+use tokio_serial::SerialStream;
 use tokio_util::{
     bytes::BytesMut,
     codec::{Decoder, Encoder},
 };
-use tracing::error;
+use tracing::{error, trace};
 
-use crate::error::ControllerError;
+use crate::{
+    actor::mux::{MuxMessage, MuxSink, MuxStream},
+    error::ControllerError,
+};
 
 // control flow
 
@@ -57,11 +60,52 @@ pub enum Packet {
 }
 
 pub struct Protocol {
-    codec: Codec<0x00, 0x00, 256, 256>,
-    crc: Crc<u8>,
+    stream: SerialStream,
 }
 
 impl Protocol {
+    fn transform(self, mux: ActorRef<MuxMessage>) -> (MuxSink, MuxStream) {
+        let codec = Codec::new();
+        let (framed_sink, framed_stream) = codec.framed(self.stream).split();
+
+        let mux = mux.clone();
+        let stream = framed_stream
+            .filter_map(|r| future::ready(r.ok()))
+            .then(move |packet| {
+                trace!("Received packet: {:?}", packet);
+
+                let mux = mux.clone();
+
+                async move {
+                    match packet {
+                        Packet::Ready => {
+                            mux.send_message(MuxMessage::Write(Packet::Ready)).unwrap()
+                        }
+                        _ => {}
+                    }
+
+                    packet
+                }
+            });
+
+        (framed_sink, stream.boxed())
+    }
+
+    pub fn new(stream: SerialStream) -> Self {
+        Self { stream }
+    }
+
+    pub fn framed(self, mux: ActorRef<MuxMessage>) -> (MuxSink, MuxStream) {
+        Self::transform(self, mux)
+    }
+}
+
+pub struct Codec {
+    cobs_codec: cobs_codec::Codec<0x00, 0x00, 256, 256>,
+    crc: Crc<u8>,
+}
+
+impl Codec {
     pub fn new() -> Self {
         let crc = Crc::<u8>::new(&Algorithm {
             width: 8,      // 8-bit CRC
@@ -75,19 +119,19 @@ impl Protocol {
         });
 
         Self {
-            codec: Codec::new(),
             crc,
+            cobs_codec: cobs_codec::Codec::new(),
         }
     }
 }
 
-impl Decoder for Protocol {
+impl Decoder for Codec {
     type Item = Packet;
     type Error = ControllerError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         if let Some(decoded) = self
-            .codec
+            .cobs_codec
             .decode(src)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
         {
@@ -124,7 +168,7 @@ impl Decoder for Protocol {
     }
 }
 
-impl Encoder<Packet> for Protocol {
+impl Encoder<Packet> for Codec {
     type Error = ControllerError;
 
     fn encode(&mut self, packet: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
@@ -142,7 +186,7 @@ impl Encoder<Packet> for Protocol {
         frame_buffer.extend(packet_bytes);
         frame_buffer.extend(crc.to_le_bytes());
 
-        self.codec
+        self.cobs_codec
             .encode(&frame_buffer, dst)
             .map_err(|_| ControllerError::PacketError)?;
 

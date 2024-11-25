@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
 use ractor::{
-    async_trait, concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, SupervisionEvent,
+    async_trait, concurrency::JoinHandle, registry, Actor, ActorProcessingErr, ActorRef,
+    SupervisionEvent,
 };
 use tauri::{AppHandle, Emitter};
 
-use crate::store::{store, Store};
+use crate::{
+    protocol::Packet,
+    store::{store, Store},
+};
 
 use super::{
     actuator::{Actuator, ActuatorConfig},
@@ -49,9 +53,9 @@ impl ControllerChild {
 
                 config.targets = myself
                     .get_children()
-                    .iter()
+                    .into_iter()
                     .map(|child| {
-                        let target = Box::new(MuxTarget::<MuxStream>::from(child))
+                        let target = Box::new(MuxTarget::from(child))
                             as Box<dyn ractor_actors::streams::Target<MuxStream>>;
 
                         target

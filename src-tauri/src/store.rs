@@ -15,9 +15,9 @@ pub const SCALE_GAIN: &str = "scale_gain";
 pub type Store = tauri_plugin_store::Store<Wry>;
 
 fn defaults(store: Arc<Store>) {
-    store.set(PID_PROPORTIONAL, 1.0);
-    store.set(PID_INTEGRAL, 0.0);
-    store.set(PID_DERIVATIVE, 0.0);
+    store.set(PID_PROPORTIONAL, 1.2);
+    store.set(PID_INTEGRAL, 0.04);
+    store.set(PID_DERIVATIVE, 0.15);
 
     store.set(SCALE_GAIN, 0.0000672315);
 

@@ -1,24 +1,22 @@
 use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
-use futures::{
-    future::{self},
-    stream::SplitSink,
-    SinkExt, Stream, StreamExt,
-};
-use ractor::{async_trait, Actor, ActorCell, ActorProcessingErr, ActorRef};
+use futures::{stream::SplitSink, SinkExt, Stream};
+use ractor::{async_trait, cast, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
-use tokio_util::codec::{Decoder, Framed};
+use tokio_util::codec::Framed;
 use tracing::{error, info};
 
 use crate::{
     error::ControllerError,
-    protocol::{Packet, Protocol},
+    protocol::{Codec, Packet, Protocol},
     store::{Store, CONTROLLER_BAUD, CONTROLLER_BUS},
 };
 
-type Writer = SplitSink<Framed<SerialStream, Protocol>, Packet>;
+use super::actuator::{self, ActuatorMessage};
+
+pub type MuxSink = SplitSink<Framed<SerialStream, Codec>, Packet>;
 pub type MuxStream = Pin<Box<dyn Stream<Item = Packet> + Send + 'static>>;
 
 pub struct Mux;
@@ -28,7 +26,7 @@ pub enum MuxMessage {
 }
 
 pub struct MuxState {
-    writer: Writer,
+    writer: MuxSink,
 }
 
 pub struct MuxArguments {
@@ -59,31 +57,25 @@ impl TryFrom<Arc<Store>> for MuxArguments {
     }
 }
 
-pub struct MuxTarget<S> {
+pub struct MuxTarget {
     cell: ActorCell,
-    _s: PhantomData<S>,
 }
 
-impl<S> From<ActorCell> for MuxTarget<S> {
+impl From<ActorCell> for MuxTarget {
     fn from(cell: ActorCell) -> Self {
-        MuxTarget {
-            cell,
-            _s: PhantomData,
-        }
+        MuxTarget { cell }
     }
 }
 
-impl<S> Target<S> for MuxTarget<S>
-where
-    S: Stream + ractor::State,
-    S::Item: Clone + ractor::Message,
-{
+impl Target<MuxStream> for MuxTarget {
     fn get_id(&self) -> String {
         self.cell.get_id().to_string()
     }
 
-    fn message_received(&self, item: <S as Stream>::Item) -> Result<(), ActorProcessingErr> {
-        self.cell.send_message(item)?;
+    fn message_received(&self, item: Packet) -> Result<(), ActorProcessingErr> {
+        if self.cell.is_message_type_of::<ActuatorMessage>().unwrap() {
+            self.cell.send_message(ActuatorMessage::from(item))?;
+        }
 
         Ok(())
     }
@@ -112,9 +104,13 @@ impl Actor for Mux {
         myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let protocol = Protocol::new();
-        let (sink, framed_stream) = protocol.framed(args.stream).split();
-        let stream = framed_stream.filter_map(|r| future::ready(r.ok())).boxed();
+        let protocol = Protocol::new(args.stream);
+        let (sink, stream) = protocol.framed(myself.clone());
+
+        println!(
+            "targets: {:?}",
+            args.targets.iter().map(|t| t.get_id()).collect::<Vec<_>>()
+        );
 
         mux_stream(
             StreamMuxConfiguration {

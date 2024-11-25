@@ -11,8 +11,8 @@
 #define STEPPER2_STEP_PIN 6
 #define STEPPER2_DIR_PIN 7
 
-#define ACTUATOR_PWM 12
-#define ACTUATOR_DIR 9
+#define ACTUATOR_PWM 4
+#define ACTUATOR_DIR 5
 
 // Packet IDs
 #define PACKET_READY 0x01            // READY_ID
@@ -66,6 +66,8 @@ private:
   boolean transmissionReady = false;
 
   void handleActuatorMoveCommand(const uint8_t *data, size_t size) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    
     if (size < 1)
       return;
 
@@ -79,6 +81,8 @@ private:
   }
 
   void handleActuatorStopCommand(const uint8_t *data, size_t size) {
+    digitalWrite(LED_BUILTIN, LOW);
+    
     if (size != 0)
       return;
 
@@ -152,10 +156,10 @@ public:
         transmissionReady = true;
         break;
       case PACKET_ACTUATOR_MOVE:
-        handleActuatorMoveCommand(&buffer[1], size - 3);
+        handleActuatorMoveCommand(&buffer[1], size - 2);
         break;
       case PACKET_ACTUATOR_STOP:
-        handleActuatorStopCommand(&buffer[1], size - 3);
+        handleActuatorStopCommand(&buffer[1], size - 2);
         break;
       case PACKET_MOTOR_COMMAND:
         if (size < 7)
@@ -219,8 +223,6 @@ void setup() {
 
   digitalWrite(ACTUATOR_DIR, LOW);
   digitalWrite(ACTUATOR_PWM, LOW);
-
-  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 void loop() {

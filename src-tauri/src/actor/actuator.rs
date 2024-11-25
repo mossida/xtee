@@ -1,12 +1,18 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, registry, Actor, ActorProcessingErr, ActorRef};
+use tokio::task::JoinHandle;
+use tracing::{debug, trace};
 
 use crate::{
     error::ControllerError,
+    filter::KalmanFilter,
+    protocol::Packet,
     store::{Store, PID_DERIVATIVE, PID_INTEGRAL, PID_PROPORTIONAL},
 };
+
+use super::mux::MuxMessage;
 
 pub struct Actuator;
 
@@ -36,8 +42,8 @@ impl TryFrom<Arc<Store>> for ActuatorConfig {
 
         Ok(ActuatorConfig {
             pid: (pid_p, pid_i, pid_d),
-            precision: 0.0,
-            output_limit: 0.0,
+            precision: 0.25,
+            output_limit: 200.0,
         })
     }
 }
@@ -49,24 +55,94 @@ pub enum ActuatorStatus {
 }
 
 pub enum ActuatorMessage {
-    Data(f32),
     Load(f32),
     Keep(f32),
     GracefulStop,
     EmergencyStop,
+    Packet(Packet),
+}
+
+impl From<Packet> for ActuatorMessage {
+    fn from(value: Packet) -> Self {
+        ActuatorMessage::Packet(value)
+    }
 }
 
 pub struct ActuatorState {
     pid: Pid<f32>,
+    filter: KalmanFilter,
     status: ActuatorStatus,
     config: ActuatorConfig,
+    current_step: Option<JoinHandle<Result<(), ActorProcessingErr>>>,
+    current_offset: Option<f32>,
 }
 
 impl ActuatorState {
-    fn step(&mut self, value: f32) -> Result<(), ActorProcessingErr> {
-        let ControlOutput { output, .. } = self.pid.next_control_output(value);
+    fn handle_input(&mut self, value: f32) -> () {
+        debug!("Actuator value: {:.2},", value);
+
+        match self.status {
+            ActuatorStatus::Keeping => {
+                if (value - self.pid.setpoint).abs() < self.config.precision {
+                    // Do nothing
+                } else {
+                    self.current_step = Some(self.step(value));
+                }
+            }
+            ActuatorStatus::Loading => {
+                if (value - self.pid.setpoint).abs() < self.config.precision {
+                    self.status = ActuatorStatus::Idle;
+                } else {
+                    self.current_step = Some(self.step(value));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_packet(&mut self, packet: Packet) -> Result<(), ActorProcessingErr> {
+        match packet {
+            Packet::Data { value } => {
+                let raw = (value as f32) * 0.0000672315;
+                //let offset = self.current_offset.get_or_insert(raw);
+                let calculated = self.filter.update(raw);
+
+                match &self.current_step {
+                    Some(handle) => {
+                        if handle.is_finished() {
+                            self.handle_input(calculated);
+                        }
+                    }
+                    None => self.handle_input(calculated),
+                }
+            }
+            _ => {}
+        }
 
         Ok(())
+    }
+
+    fn step(&mut self, value: f32) -> JoinHandle<Result<(), ActorProcessingErr>> {
+        let ControlOutput { output, .. } = self.pid.next_control_output(value);
+        let pulse = (output.abs().clamp(5.0, 50.0)) as u64;
+
+        debug!("Actuator step: {:.2}", output);
+
+        tokio::spawn(async move {
+            let mux = registry::where_is("mux".to_string()).ok_or(ControllerError::MissingMux)?;
+
+            mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
+                direction: if output > 0.0 { 0 } else { 1 },
+            }))?;
+
+            tokio::time::sleep(Duration::from_millis(pulse)).await;
+
+            mux.send_message(MuxMessage::Write(Packet::ActuatorStop))?;
+
+            trace!("Actuator step finished");
+
+            Ok::<(), ActorProcessingErr>(())
+        })
     }
 }
 
@@ -82,16 +158,21 @@ impl Actor for Actuator {
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let mut pid = Pid::new(0.0, config.output_limit);
+        let filter = KalmanFilter::new(1.0, 1.0, 1.0, 1.0);
 
         // TODO: Understand if limit is the same as the gain
-        pid.p(config.pid.0, config.pid.0);
-        pid.i(config.pid.1, config.pid.1);
-        pid.d(config.pid.2, config.pid.2);
+        pid.p(config.pid.0, 50.0);
+        pid.i(config.pid.1, 25.0);
+        pid.d(config.pid.2, 10.0);
+
+        pid.setpoint(50.0);
 
         Ok(ActuatorState {
             pid,
-            status: ActuatorStatus::Idle,
-
+            filter,
+            status: ActuatorStatus::Keeping,
+            current_step: None,
+            current_offset: None,
             config,
         })
     }
@@ -117,17 +198,7 @@ impl Actor for Actuator {
                 state.status = ActuatorStatus::Keeping;
                 state.pid.setpoint(value);
             }
-            ActuatorMessage::Data(value) => match state.status {
-                ActuatorStatus::Keeping => state.step(value)?,
-                ActuatorStatus::Loading => {
-                    if (value - state.pid.setpoint).abs() < 0.01 {
-                        state.status = ActuatorStatus::Idle;
-                    } else {
-                        state.step(value)?;
-                    }
-                }
-                _ => {}
-            },
+            ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
         }
 
         Ok(())
