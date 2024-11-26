@@ -15,6 +15,7 @@
 		"lint": "npm run next:lint && npm run tauri:lint",
 		"lint:fix": "npm run next:lint:fix && npm run tauri:lint:fix",
 		"tauri": "tauri",
+		"generate:types": "typeshare ./src-tauri --lang=typescript --output-file=./src/types/tauri.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -47,6 +48,7 @@
 		"@tauri-apps/plugin-shell": "^2",
 		"@tauri-apps/plugin-store": "~2",
 		"autoprefixer": "^10.4.20",
+		"babel-plugin-react-compiler": "^19.0.0-beta-df7b47d-20241124",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.1",
 		"geist": "^1.3.1",
@@ -57,6 +59,7 @@
 		"react-dom": "^18.3.1",
 		"react-hook-form": "^7.53.2",
 		"react-icons": "^5.3.0",
+		"react-query": "^3.39.3",
 		"recharts": "^2.13.3",
 		"tailwind-merge": "^2.5.4",
 		"tailwindcss-animate": "^1.0.7",

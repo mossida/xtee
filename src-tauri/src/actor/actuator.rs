@@ -2,11 +2,13 @@ use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
 use ractor::{async_trait, registry, Actor, ActorProcessingErr, ActorRef};
+use tauri::{AppHandle, Emitter};
 use tokio::task::JoinHandle;
 use tracing::{debug, trace};
 
 use crate::{
     error::ControllerError,
+    event::EVENT_WEIGHT,
     filter::KalmanFilter,
     protocol::Packet,
     store::{PIDSettings, Store, PID_SETTINGS},
@@ -16,26 +18,28 @@ use super::mux::MuxMessage;
 
 pub struct Actuator;
 
-pub struct ActuatorConfig {
+pub struct ActuatorArguments {
     pub precision: f32,
     pub output_limit: f32,
     pub pid_settings: PIDSettings,
+    pub handle: AppHandle,
 }
 
-impl TryFrom<Arc<Store>> for ActuatorConfig {
+impl TryFrom<(Arc<Store>, AppHandle)> for ActuatorArguments {
     type Error = ControllerError;
 
-    fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
+    fn try_from((value, handle): (Arc<Store>, AppHandle)) -> Result<Self, Self::Error> {
         let pid_settings = value
             .get(PID_SETTINGS)
             .ok_or(ControllerError::ConfigError)?;
 
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
-        Ok(ActuatorConfig {
+        Ok(ActuatorArguments {
             precision: 0.25,
             output_limit: 200.0,
             pid_settings: settings,
+            handle,
         })
     }
 }
@@ -64,7 +68,7 @@ pub struct ActuatorState {
     pid: Pid<f32>,
     filter: KalmanFilter,
     status: ActuatorStatus,
-    config: ActuatorConfig,
+    config: ActuatorArguments,
     current_step: Option<JoinHandle<Result<(), ActorProcessingErr>>>,
     current_offset: Option<f32>,
 }
@@ -98,6 +102,8 @@ impl ActuatorState {
                 let raw = (value as f32) * 0.0000672315;
                 //let offset = self.current_offset.get_or_insert(raw);
                 let calculated = self.filter.update(raw);
+
+                self.config.handle.emit(EVENT_WEIGHT, calculated)?;
 
                 match &self.current_step {
                     Some(handle) => {
@@ -142,7 +148,7 @@ impl ActuatorState {
 impl Actor for Actuator {
     type Msg = ActuatorMessage;
     type State = ActuatorState;
-    type Arguments = ActuatorConfig;
+    type Arguments = ActuatorArguments;
 
     async fn pre_start(
         &self,
@@ -169,7 +175,7 @@ impl Actor for Actuator {
         Ok(ActuatorState {
             pid,
             filter,
-            status: ActuatorStatus::Keeping,
+            status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: None,
             config,

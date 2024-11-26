@@ -51,7 +51,7 @@ export function QuantityInput({
   return (
     <div
       className={cn(
-        "group flex items-stretch transition-[box-shadow] font-mono",
+        "group flex items-stretch justify-center transition-[box-shadow] font-mono",
         className,
       )}
     >
@@ -63,17 +63,12 @@ export function QuantityInput({
         type="button"
         tabIndex={-1}
       >
-        <Minus
-          className="size-2"
-          absoluteStrokeWidth
-          strokeWidth={3.5}
-          tabIndex={-1}
-        />
+        <Minus className="size-6" absoluteStrokeWidth tabIndex={-1} />
       </button>
-      <div className="relative grid items-center justify-items-center text-center">
+      <div className="relative flex flex-row items-center justify-center">
         <input
           ref={inputRef}
-          className="flex w-8 text-center transition-colors file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 p-0 border-0 h-6 text-xs !bg-transparent border-b border-transparent focus:border-border [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+          className="flex w-fit text-center transition-colors file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 p-0 border-0 h-6 text-xl !bg-transparent border-b border-transparent focus:border-border [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
           style={{ fontKerning: "none" }}
           type="number"
           min={min}
@@ -86,6 +81,7 @@ export function QuantityInput({
           onFocus={onFocus}
           inputMode="decimal"
         />
+        Kgs
       </div>
       <button
         aria-label="Increase"
@@ -95,12 +91,7 @@ export function QuantityInput({
         type="button"
         tabIndex={-1}
       >
-        <Plus
-          className="size-2"
-          absoluteStrokeWidth
-          strokeWidth={3.5}
-          tabIndex={-1}
-        />
+        <Plus className="size-6" absoluteStrokeWidth tabIndex={-1} />
       </button>
     </div>
   );

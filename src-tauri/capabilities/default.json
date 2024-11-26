@@ -5,8 +5,9 @@
 	"windows": ["main"],
 	"permissions": [
 		"core:default",
-		"shell:allow-open",
 		"log:default",
-		"store:default"
+		"store:default",
+		"shell:allow-open",
+		"core:webview:allow-set-webview-zoom"
 	]
 }

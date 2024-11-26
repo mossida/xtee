@@ -1,18 +1,17 @@
 use std::sync::Arc;
 
 use ractor::{
-    async_trait, concurrency::JoinHandle, registry, Actor, ActorProcessingErr, ActorRef,
-    SupervisionEvent,
+    async_trait, concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, SupervisionEvent,
 };
 use tauri::{AppHandle, Emitter};
 
 use crate::{
-    protocol::Packet,
+    event::EVENT_COMPONENT_FAILED,
     store::{store, Store},
 };
 
 use super::{
-    actuator::{Actuator, ActuatorConfig},
+    actuator::{Actuator, ActuatorArguments},
     mux::{Mux, MuxArguments, MuxStream, MuxTarget},
 };
 
@@ -34,6 +33,7 @@ impl ControllerChild {
     async fn spawn(
         self,
         myself: ActorRef<ControllerMessage>,
+        app: AppHandle,
         store: Arc<Store>,
     ) -> Result<(), ActorProcessingErr> {
         let name = self.name().to_string();
@@ -43,7 +43,7 @@ impl ControllerChild {
                 Actuator::spawn_linked(
                     Some(name),
                     Actuator,
-                    ActuatorConfig::try_from(store)?,
+                    ActuatorArguments::try_from((store, app))?,
                     myself.get_cell(),
                 )
                 .await?;
@@ -72,6 +72,7 @@ impl ControllerChild {
 
 pub enum ControllerMessage {
     Spawn(ControllerChild),
+    Restart,
 }
 
 pub struct ControllerState {
@@ -80,6 +81,17 @@ pub struct ControllerState {
 }
 
 impl Controller {
+    pub async fn spawn_children(
+        controller: &ActorRef<ControllerMessage>,
+    ) -> Result<(), ActorProcessingErr> {
+        controller.send_message(ControllerMessage::Spawn(ControllerChild::Actuator))?;
+
+        // Note: Mux must be spawned last because it needs the children to be spawned
+        controller.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
+
+        Ok(())
+    }
+
     pub async fn init(handle: AppHandle) -> Result<JoinHandle<()>, ActorProcessingErr> {
         let (_, handle) = Actor::spawn(Some("controller".to_owned()), Controller, handle).await?;
 
@@ -100,8 +112,7 @@ impl Actor for Controller {
     ) -> Result<Self::State, ActorProcessingErr> {
         let store = store(&args)?;
 
-        myself.send_message(ControllerMessage::Spawn(ControllerChild::Actuator))?;
-        myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
+        myself.send_message(ControllerMessage::Restart)?;
 
         Ok(ControllerState { store, app: args })
     }
@@ -113,7 +124,15 @@ impl Actor for Controller {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
-            ControllerMessage::Spawn(child) => child.spawn(myself, state.store.clone()).await?,
+            ControllerMessage::Spawn(child) => {
+                child
+                    .spawn(myself, state.app.clone(), state.store.clone())
+                    .await?
+            }
+            ControllerMessage::Restart => {
+                myself.stop_children(None);
+                Controller::spawn_children(&myself).await?;
+            }
         }
 
         Ok(())
@@ -130,7 +149,7 @@ impl Actor for Controller {
             | SupervisionEvent::ActorFailed(who, _) => {
                 state
                     .app
-                    .emit("controller-error", who.get_id().to_string())?;
+                    .emit(EVENT_COMPONENT_FAILED, who.get_id().to_string())?;
             }
             _ => {}
         }
