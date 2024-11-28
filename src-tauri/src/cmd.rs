@@ -2,9 +2,27 @@ use ractor::registry;
 use serialport::SerialPortInfo;
 
 use crate::{
-    actor::{actuator::ActuatorMessage, controller::ControllerMessage, mux::MuxMessage},
+    actor::{
+        actuator::ActuatorMessage,
+        controller::ControllerMessage,
+        motor::{MotorMessage, MotorMovement},
+        mux::MuxMessage,
+    },
     protocol::Packet,
 };
+
+#[tauri::command]
+pub fn motor_spin(slave: u8, direction: u8, rotations: u16, speed: u16) -> Result<(), String> {
+    let motor = registry::where_is(format!("motor-{}", slave)).ok_or("Motor not found")?;
+
+    motor
+        .send_message(MotorMessage::Spin(MotorMovement {
+            direction,
+            rotations,
+            speed,
+        }))
+        .map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 pub fn restart() -> Result<(), String> {

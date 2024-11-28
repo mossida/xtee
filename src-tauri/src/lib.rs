@@ -18,6 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .setup(setup_app)
         .invoke_handler(tauri::generate_handler![
+            cmd::motor_spin,
             cmd::actuator_load,
             cmd::actuator_keep,
             cmd::actuator_move,

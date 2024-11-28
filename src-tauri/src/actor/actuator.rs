@@ -75,8 +75,6 @@ pub struct ActuatorState {
 
 impl ActuatorState {
     fn handle_input(&mut self, value: f32) -> () {
-        debug!("Actuator value: {:.2},", value);
-
         match self.status {
             ActuatorStatus::Keeping => {
                 if (value - self.pid.setpoint).abs() < self.config.precision {

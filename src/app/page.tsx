@@ -31,6 +31,27 @@ export default function Home() {
     },
   });
 
+  const { mutate: spinMotor } = useMutation({
+    mutationFn: async ({
+      slave,
+      direction,
+      rotations,
+      speed,
+    }: {
+      slave: number;
+      direction: "forward" | "backward";
+      rotations: number;
+      speed: number;
+    }) => {
+      await invoke("motor_spin", {
+        slave,
+        direction: direction === "forward" ? 1 : 0,
+        rotations,
+        speed,
+      });
+    },
+  });
+
   const { mutate: keepActuator } = useMutation({
     mutationFn: async () => {
       await invoke("actuator_keep", { setpoint });
@@ -50,8 +71,6 @@ export default function Home() {
       await invoke("actuator_stop");
     },
   });
-
-  webview?.setZoom(1.7);
 
   return (
     <div className="w-full">
@@ -100,13 +119,25 @@ export default function Home() {
               >
                 Step backward
               </Button>
-              <Button size="lg">Unload</Button>
+              <Button
+                size="lg"
+                onClick={() =>
+                  spinMotor({
+                    slave: 1,
+                    direction: "forward",
+                    rotations: 10000,
+                    speed: 7000,
+                  })
+                }
+              >
+                Unload
+              </Button>
             </div>
 
             <div className="w-full flex-grow flex flex-col justify-between px-4 gap-2">
               <Button
                 variant="destructive"
-                className="flex-grow"
+                className="flex-grow hover:bg-destructive"
                 onClick={() => stopActuator()}
               >
                 STOP

@@ -1,17 +1,19 @@
 use std::sync::Arc;
 
 use ractor::{
-    async_trait, concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef, SupervisionEvent,
+    async_trait, concurrency::JoinHandle, pg, Actor, ActorProcessingErr, ActorRef, SupervisionEvent,
 };
 use tauri::{AppHandle, Emitter};
 
 use crate::{
+    actor::motor::{Motor, MotorArguments},
     event::EVENT_COMPONENT_FAILED,
     store::{store, Store},
 };
 
 use super::{
     actuator::{Actuator, ActuatorArguments},
+    motor::MotorMessage,
     mux::{Mux, MuxArguments, MuxStream, MuxTarget},
 };
 
@@ -20,13 +22,15 @@ pub struct Controller;
 pub enum ControllerChild {
     Mux,
     Actuator,
+    Motor(u8),
 }
 
 impl ControllerChild {
-    fn name(&self) -> &str {
+    fn name(&self) -> String {
         match self {
-            ControllerChild::Mux => "mux",
-            ControllerChild::Actuator => "actuator",
+            ControllerChild::Mux => "mux".to_string(),
+            ControllerChild::Actuator => "actuator".to_string(),
+            ControllerChild::Motor(slave) => format!("motor-{}", slave),
         }
     }
 
@@ -64,6 +68,21 @@ impl ControllerChild {
 
                 Mux::spawn_linked(Some(name), Mux, config, myself.get_cell()).await?;
             }
+            ControllerChild::Motor(slave) => {
+                let (motor, _) = Motor::spawn_linked(
+                    Some(format!("motor-{}", slave)),
+                    Motor { slave },
+                    MotorArguments {},
+                    myself.get_cell(),
+                )
+                .await?;
+
+                pg::join_scoped(
+                    String::from("components"),
+                    String::from("motors"),
+                    vec![motor.get_cell()],
+                );
+            }
         };
 
         Ok(())
@@ -73,6 +92,7 @@ impl ControllerChild {
 pub enum ControllerMessage {
     Spawn(ControllerChild),
     Restart,
+    PostSpawn,
 }
 
 pub struct ControllerState {
@@ -85,9 +105,12 @@ impl Controller {
         controller: &ActorRef<ControllerMessage>,
     ) -> Result<(), ActorProcessingErr> {
         controller.send_message(ControllerMessage::Spawn(ControllerChild::Actuator))?;
+        controller.send_message(ControllerMessage::Spawn(ControllerChild::Motor(1)))?;
+        controller.send_message(ControllerMessage::Spawn(ControllerChild::Motor(2)))?;
 
         // Note: Mux must be spawned last because it needs the children to be spawned
         controller.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
+        controller.send_message(ControllerMessage::PostSpawn)?;
 
         Ok(())
     }
@@ -132,6 +155,16 @@ impl Actor for Controller {
             ControllerMessage::Restart => {
                 myself.stop_children(None);
                 Controller::spawn_children(&myself).await?;
+            }
+            ControllerMessage::PostSpawn => {
+                let motors =
+                    pg::get_scoped_members(&String::from("components"), &String::from("motors"));
+
+                for motor in motors {
+                    let motor = ActorRef::<MotorMessage>::from(motor);
+
+                    motor.send_message(MotorMessage::StartUpdates)?;
+                }
             }
         }
 

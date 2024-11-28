@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 
 export function SecondaryMenu({
   items,
-}: { items: { label: string; path: string }[] }) {
+  className,
+}: {
+  items: { label: string; path: string }[];
+} & React.HTMLAttributes<HTMLDivElement>) {
   const pathname = usePathname();
 
   return (
-    <nav className="py-4">
+    <nav className={cn("py-4", className)}>
       <ul className="flex space-x-6 text-sm overflow-auto scrollbar-hide">
         {items.map((item) => (
           <Link

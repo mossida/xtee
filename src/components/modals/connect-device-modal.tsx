@@ -13,13 +13,19 @@ import type { SerialPort } from "@/types/serial";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { storeQueryOptions } from "../prefetch-provider";
+import type { DialogProps } from "@radix-ui/react-dialog";
+import { uniqueBy } from "remeda";
 
-export function ConnectDeviceModal() {
+export function ConnectDeviceModal(props: DialogProps) {
   const { data: store } = useQuery(storeQueryOptions);
 
   const { data: ports } = useQuery({
     queryKey: ["ports"],
-    queryFn: () => invoke<SerialPort[]>("get_controllers"),
+    queryFn: async () =>
+      uniqueBy(
+        await invoke<SerialPort[]>("get_controllers"),
+        (obj) => obj.port_type.UsbPort.serial_number,
+      ),
     refetchInterval: 1000,
   });
 
@@ -31,7 +37,7 @@ export function ConnectDeviceModal() {
   });
 
   return (
-    <Dialog open={true}>
+    <Dialog {...props}>
       <DialogContent>
         <div className="p-4">
           <DialogHeader>
@@ -39,8 +45,8 @@ export function ConnectDeviceModal() {
 
             <DialogDescription>
               Select a controller from the list below to connect. If none
-              appear, ensure your device is powered on and within range. The
-              list updates automatically when controllers are detected.
+              appear, ensure your device is powered on and connected. The list
+              updates automatically when controllers are detected.
             </DialogDescription>
 
             <div className="h-[430px] space-y-4 overflow-auto pt-8">

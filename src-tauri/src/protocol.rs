@@ -9,7 +9,7 @@ use tokio_util::{
     bytes::BytesMut,
     codec::{Decoder, Encoder},
 };
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 
 use crate::{
     actor::mux::{MuxMessage, MuxSink, MuxStream},
@@ -20,14 +20,17 @@ use crate::{
 
 pub const READY_ID: u8 = 0x01;
 pub const DATA_ID: u8 = 0x02;
-pub const HEALTH_REQUEST_ID: u8 = 0x03;
-pub const HEALTH_RESPONSE_ID: u8 = 0x04;
-pub const MOTOR_COMMAND_ID: u8 = 0x05;
-pub const MOTOR_STOP_ID: u8 = 0x06;
-pub const ACTUATOR_MOVE_ID: u8 = 0x07;
-pub const ACTUATOR_STOP_ID: u8 = 0x08;
-pub const TARE_CELL_ID: u8 = 0x09;
-pub const TARE_SUCCESS_ID: u8 = 0x0a;
+
+pub const MOTOR_MOVE_ID: u8 = 0x03;
+pub const MOTOR_SETTINGS_ID: u8 = 0x04;
+pub const MOTOR_ASK_STATUS_ID: u8 = 0x05;
+pub const MOTOR_STATUS_ID: u8 = 0x06;
+pub const MOTOR_STOP_ID: u8 = 0x07;
+
+pub const ACTUATOR_MOVE_ID: u8 = 0x08;
+pub const ACTUATOR_STOP_ID: u8 = 0x09;
+pub const TARE_CELL_ID: u8 = 0x0a;
+pub const TARE_SUCCESS_ID: u8 = 0x0b;
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "little")]
@@ -36,21 +39,41 @@ pub enum Packet {
     Ready,
     #[deku(id = "DATA_ID")]
     Data { value: i32 },
-    #[deku(id = "HEALTH_REQUEST_ID")]
-    HealthRequest,
-    #[deku(id = "HEALTH_RESPONSE_ID")]
-    HealthResponse { uptime: u32, status: u8 },
-    #[deku(id = "MOTOR_COMMAND_ID")]
-    MotorCommand {
+    #[deku(id = "MOTOR_MOVE_ID")]
+    MotorMove {
         slave: u8,
+        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
         direction: u8,
-        revolutions: u16,
+        rotations: u16,
+    },
+    #[deku(id = "MOTOR_SETTINGS_ID")]
+    MotorSettings {
+        slave: u8,
         speed: u16,
+        acceleration: u16,
+    },
+    #[deku(id = "MOTOR_ASK_STATUS_ID")]
+    MotorAskStatus { slave: u8 },
+    #[deku(id = "MOTOR_STATUS_ID")]
+    MotorStatus {
+        slave: u8,
+        running: u8,
+        stopping: u8,
+        position: u32,
+        remaining: u32,
+        max_speed: u32,
     },
     #[deku(id = "MOTOR_STOP_ID")]
-    MotorStop { slave: u8 },
+    MotorStop {
+        slave: u8,
+        #[deku(assert = "*mode == 0x01 || *mode == 0x00")]
+        mode: u8,
+    },
     #[deku(id = "ACTUATOR_MOVE_ID")]
-    ActuatorMove { direction: u8 },
+    ActuatorMove {
+        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
+        direction: u8,
+    },
     #[deku(id = "ACTUATOR_STOP_ID")]
     ActuatorStop,
     #[deku(id = "TARE_CELL_ID")]
@@ -189,6 +212,12 @@ impl Encoder<Packet> for Codec {
         self.cobs_codec
             .encode(&frame_buffer, dst)
             .map_err(|_| ControllerError::PacketError)?;
+
+        debug!(
+            "Encoded packet: {:?}, framed: {:?}",
+            dst.to_vec(),
+            frame_buffer
+        );
 
         Ok(())
     }

@@ -20,8 +20,8 @@ export function Header() {
           </Button>
         </Link>
       )}
-      {pathname !== "/settings" && (
-        <Link href="/settings">
+      {!pathname.includes("/settings") && (
+        <Link href="/settings/general">
           <Button variant="outline" size="icon">
             <Icons.Settings className="size-5" />
           </Button>

@@ -1,12 +1,13 @@
-use std::{marker::PhantomData, pin::Pin, sync::Arc};
+use std::sync::Arc;
+use std::{any::TypeId, pin::Pin};
 
 use futures::{stream::SplitSink, SinkExt, Stream};
-use ractor::{async_trait, cast, Actor, ActorCell, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::Framed;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{
     error::ControllerError,
@@ -14,7 +15,7 @@ use crate::{
     store::{Store, CONTROLLER_BAUD, CONTROLLER_BUS},
 };
 
-use super::actuator::{self, ActuatorMessage};
+use super::{actuator::ActuatorMessage, motor::MotorMessage};
 
 pub type MuxSink = SplitSink<Framed<SerialStream, Codec>, Packet>;
 pub type MuxStream = Pin<Box<dyn Stream<Item = Packet> + Send + 'static>>;
@@ -73,8 +74,15 @@ impl Target<MuxStream> for MuxTarget {
     }
 
     fn message_received(&self, item: Packet) -> Result<(), ActorProcessingErr> {
-        if self.cell.is_message_type_of::<ActuatorMessage>().unwrap() {
-            self.cell.send_message(ActuatorMessage::from(item))?;
+        match self.cell.get_type_id() {
+            t if t == TypeId::of::<ActuatorMessage>() => {
+                self.cell.send_message(ActuatorMessage::from(item))?;
+            }
+
+            t if t == TypeId::of::<MotorMessage>() => {
+                self.cell.send_message(MotorMessage::from(item))?;
+            }
+            _ => {}
         }
 
         Ok(())
@@ -107,8 +115,8 @@ impl Actor for Mux {
         let protocol = Protocol::new(args.stream);
         let (sink, stream) = protocol.framed(myself.clone());
 
-        println!(
-            "targets: {:?}",
+        debug!(
+            "Mux targets: {:?}",
             args.targets.iter().map(|t| t.get_id()).collect::<Vec<_>>()
         );
 
