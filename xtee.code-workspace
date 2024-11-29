@@ -1,10 +1,19 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"path": ".",
+			"name": "root"
 		},
 		{
 			"path": "arduino"
+		},
+		{
+			"path": "src",
+			"name": "frontend"
+		},
+		{
+			"path": "src-tauri",
+			"name": "backend"
 		}
 	],
 	"settings": {
