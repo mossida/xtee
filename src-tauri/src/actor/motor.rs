@@ -1,8 +1,4 @@
-use ractor::{
-    async_trait,
-    concurrency::JoinHandle,
-    registry, Actor, ActorProcessingErr, ActorRef,
-};
+use ractor::{async_trait, concurrency::JoinHandle, registry, Actor, ActorProcessingErr, ActorRef};
 use tracing::debug;
 
 use crate::{error::ControllerError, protocol::Packet};
@@ -67,6 +63,16 @@ impl Actor for Motor {
             max_speed: 0,
             updates_handle: None,
         })
+    }
+
+    async fn post_start(
+        &self,
+        myself: ActorRef<Self::Msg>,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        myself.send_message(MotorMessage::StartUpdates)?;
+
+        Ok(())
     }
 
     async fn handle(

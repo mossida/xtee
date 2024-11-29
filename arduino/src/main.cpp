@@ -13,13 +13,16 @@
 
 protocol::Protocol pt;
 
+#if ENABLE_SCALE
 components::scale::Scale sc(&pt);
-components::actuator::Actuator at(&pt);
+#endif
 
+#if ENABLE_ACTUATOR
+components::actuator::Actuator at(&pt);
+#endif
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
 
   // Initialize serial communication
   pt.begin(SERIAL_SPEED);

@@ -1,14 +1,10 @@
 use ractor::registry;
 use serialport::SerialPortInfo;
 
-use crate::{
-    actor::{
-        actuator::ActuatorMessage,
-        controller::ControllerMessage,
-        motor::{MotorMessage, MotorMovement},
-        mux::MuxMessage,
-    },
-    protocol::Packet,
+use crate::actor::{
+    actuator::ActuatorMessage,
+    controller::ControllerMessage,
+    motor::{MotorMessage, MotorMovement},
 };
 
 #[tauri::command]
@@ -29,7 +25,7 @@ pub fn restart() -> Result<(), String> {
     let controller = registry::where_is("controller".to_string())
         .ok_or("Controller not found, how is app living?")?;
 
-    controller.send_message(ControllerMessage::Restart).unwrap();
+    controller.send_message(ControllerMessage::Start).unwrap();
 
     Ok(())
 }
@@ -65,19 +61,16 @@ pub fn actuator_keep(setpoint: f32) -> Result<(), String> {
 
 #[tauri::command]
 pub fn actuator_move(direction: u8) -> Result<(), String> {
-    let mux = registry::where_is("mux".to_string()).ok_or("Mux not found")?;
+    let actuator = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
 
-    mux.send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))
+    actuator
+        .send_message(ActuatorMessage::Move(direction))
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn actuator_stop() -> Result<(), String> {
     let actuator = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
-    let mux = registry::where_is("mux".to_string()).ok_or("Mux not found")?;
-
-    mux.send_message(MuxMessage::Write(Packet::ActuatorStop))
-        .map_err(|e| e.to_string())?;
 
     actuator
         .send_message(ActuatorMessage::GracefulStop)

@@ -2,6 +2,7 @@
 #define ACTUATOR_H
 
 #include <Arduino.h>
+#include <digitalWriteFast.h>
 
 #include "protocol.hpp"
 #include "pins.hpp"

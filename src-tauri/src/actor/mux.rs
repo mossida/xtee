@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{any::TypeId, pin::Pin};
 
 use futures::{stream::SplitSink, SinkExt, Stream};
-use ractor::{async_trait, Actor, ActorCell, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, pg, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
@@ -15,6 +15,7 @@ use crate::{
     store::{Store, CONTROLLER_BAUD, CONTROLLER_BUS},
 };
 
+use super::controller::COMPONENTS_SCOPE;
 use super::{actuator::ActuatorMessage, motor::MotorMessage};
 
 pub type MuxSink = SplitSink<Framed<SerialStream, Codec>, Packet>;
@@ -32,17 +33,17 @@ pub struct MuxState {
 
 pub struct MuxArguments {
     stream: SerialStream,
-    pub targets: Vec<Box<dyn Target<MuxStream>>>,
+    pub group: String,
 }
 
-impl TryFrom<Arc<Store>> for MuxArguments {
+impl TryFrom<(Arc<Store>, String)> for MuxArguments {
     type Error = ControllerError;
 
-    fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
-        let bus_value = value
+    fn try_from((store, group): (Arc<Store>, String)) -> Result<Self, Self::Error> {
+        let bus_value = store
             .get(CONTROLLER_BUS)
             .ok_or(ControllerError::ConfigError)?;
-        let baud_value = value
+        let baud_value = store
             .get(CONTROLLER_BAUD)
             .ok_or(ControllerError::ConfigError)?;
 
@@ -51,10 +52,7 @@ impl TryFrom<Arc<Store>> for MuxArguments {
 
         let stream = tokio_serial::new(bus, baud as u32).open_native_async()?;
 
-        Ok(MuxArguments {
-            stream,
-            targets: vec![], // Will be injected by controller
-        })
+        Ok(MuxArguments { stream, group })
     }
 }
 
@@ -115,15 +113,24 @@ impl Actor for Mux {
         let protocol = Protocol::new(args.stream);
         let (sink, stream) = protocol.framed(myself.clone());
 
+        let targets: Vec<_> = pg::get_scoped_members(&COMPONENTS_SCOPE.to_owned(), &args.group)
+            .into_iter()
+            .map(|child| {
+                Box::new(MuxTarget::from(child))
+                    as Box<dyn ractor_actors::streams::Target<MuxStream>>
+            })
+            .collect();
+
         debug!(
-            "Mux targets: {:?}",
-            args.targets.iter().map(|t| t.get_id()).collect::<Vec<_>>()
+            "Multiplexing to {:?} targets in group {}",
+            targets.len(),
+            args.group
         );
 
         mux_stream(
             StreamMuxConfiguration {
                 stream,
-                targets: args.targets,
+                targets,
                 callback: MuxCallback,
                 stop_processing_target_on_failure: true,
             },

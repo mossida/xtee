@@ -4,6 +4,7 @@ use ractor::{
     async_trait, concurrency::JoinHandle, pg, Actor, ActorProcessingErr, ActorRef, SupervisionEvent,
 };
 use tauri::{AppHandle, Emitter};
+use tracing::{error, warn};
 
 use crate::{
     actor::motor::{Motor, MotorArguments},
@@ -13,14 +14,21 @@ use crate::{
 
 use super::{
     actuator::{Actuator, ActuatorArguments},
-    motor::MotorMessage,
-    mux::{Mux, MuxArguments, MuxStream, MuxTarget},
+    mux::{Mux, MuxArguments},
 };
+
+pub const COMPONENTS_SCOPE: &str = "components";
+
+pub const MOTORS_GROUP: &str = "motors";
+pub const DEFAULT_GROUP: &str = "default";
+
+// TODO: add motors group
+pub const ALL_GROUPS: &[&str] = &[DEFAULT_GROUP];
 
 pub struct Controller;
 
 pub enum ControllerChild {
-    Mux,
+    Mux { group: String },
     Actuator,
     Motor(u8),
 }
@@ -28,8 +36,8 @@ pub enum ControllerChild {
 impl ControllerChild {
     fn name(&self) -> String {
         match self {
-            ControllerChild::Mux => "mux".to_string(),
-            ControllerChild::Actuator => "actuator".to_string(),
+            ControllerChild::Mux { group } => format!("mux-{}", group),
+            ControllerChild::Actuator => "actuator".to_owned(),
             ControllerChild::Motor(slave) => format!("motor-{}", slave),
         }
     }
@@ -40,33 +48,27 @@ impl ControllerChild {
         app: AppHandle,
         store: Arc<Store>,
     ) -> Result<(), ActorProcessingErr> {
-        let name = self.name().to_string();
+        let name = self.name();
 
         match self {
             ControllerChild::Actuator => {
                 Actuator::spawn_linked(
                     Some(name),
-                    Actuator,
+                    Actuator {
+                        group: DEFAULT_GROUP.to_owned(),
+                    },
                     ActuatorArguments::try_from((store, app))?,
                     myself.get_cell(),
                 )
                 .await?;
             }
-            ControllerChild::Mux => {
-                let mut config = MuxArguments::try_from(store)?;
+            ControllerChild::Mux { group } => {
+                let config = MuxArguments::try_from((store, group.clone()))?;
 
-                config.targets = myself
-                    .get_children()
-                    .into_iter()
-                    .map(|child| {
-                        
+                let (mux, _) =
+                    Mux::spawn_linked(Some(name), Mux, config, myself.get_cell()).await?;
 
-                        Box::new(MuxTarget::from(child))
-                            as Box<dyn ractor_actors::streams::Target<MuxStream>>
-                    })
-                    .collect();
-
-                Mux::spawn_linked(Some(name), Mux, config, myself.get_cell()).await?;
+                pg::join_scoped(COMPONENTS_SCOPE.to_owned(), group, vec![mux.get_cell()]);
             }
             ControllerChild::Motor(slave) => {
                 let (motor, _) = Motor::spawn_linked(
@@ -77,9 +79,10 @@ impl ControllerChild {
                 )
                 .await?;
 
+                // TODO: move to self join
                 pg::join_scoped(
-                    String::from("components"),
-                    String::from("motors"),
+                    COMPONENTS_SCOPE.to_owned(),
+                    MOTORS_GROUP.to_owned(),
                     vec![motor.get_cell()],
                 );
             }
@@ -90,9 +93,8 @@ impl ControllerChild {
 }
 
 pub enum ControllerMessage {
+    Start,
     Spawn(ControllerChild),
-    Restart,
-    PostSpawn,
 }
 
 pub struct ControllerState {
@@ -108,9 +110,12 @@ impl Controller {
         controller.send_message(ControllerMessage::Spawn(ControllerChild::Motor(1)))?;
         controller.send_message(ControllerMessage::Spawn(ControllerChild::Motor(2)))?;
 
-        // Note: Mux must be spawned last because it needs the children to be spawned
-        controller.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
-        controller.send_message(ControllerMessage::PostSpawn)?;
+        // Spawn muxes for each group
+        for group in ALL_GROUPS {
+            controller.send_message(ControllerMessage::Spawn(ControllerChild::Mux {
+                group: group.to_string(),
+            }))?;
+        }
 
         Ok(())
     }
@@ -135,7 +140,7 @@ impl Actor for Controller {
     ) -> Result<Self::State, ActorProcessingErr> {
         let store = store(&args)?;
 
-        myself.send_message(ControllerMessage::Restart)?;
+        myself.send_message(ControllerMessage::Start)?;
 
         Ok(ControllerState { store, app: args })
     }
@@ -150,21 +155,12 @@ impl Actor for Controller {
             ControllerMessage::Spawn(child) => {
                 child
                     .spawn(myself, state.app.clone(), state.store.clone())
-                    .await?
+                    .await
+                    .inspect_err(|e| error!("Failed to spawn child: {}", e))?;
             }
-            ControllerMessage::Restart => {
+            ControllerMessage::Start => {
                 myself.stop_children(None);
                 Controller::spawn_children(&myself).await?;
-            }
-            ControllerMessage::PostSpawn => {
-                let motors =
-                    pg::get_scoped_members(&String::from("components"), &String::from("motors"));
-
-                for motor in motors {
-                    let motor = ActorRef::<MotorMessage>::from(motor);
-
-                    motor.send_message(MotorMessage::StartUpdates)?;
-                }
             }
         }
 
@@ -178,8 +174,12 @@ impl Actor for Controller {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
-            SupervisionEvent::ActorTerminated(who, _, _)
-            | SupervisionEvent::ActorFailed(who, _) => {
+            SupervisionEvent::ActorTerminated(who, _, _) => {
+                warn!("Actor {} terminated", who.get_id());
+            }
+            SupervisionEvent::ActorFailed(who, err) => {
+                error!("Actor {} failed because of {}", who.get_id(), err);
+
                 state
                     .app
                     .emit(EVENT_COMPONENT_FAILED, who.get_id().to_string())?;

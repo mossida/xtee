@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, registry, Actor, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, pg, registry, Actor, ActorProcessingErr, ActorRef};
 use tauri::{AppHandle, Emitter};
 use tokio::task::JoinHandle;
 use tracing::{debug, trace};
@@ -14,9 +14,11 @@ use crate::{
     store::{PIDSettings, Store, PID_SETTINGS},
 };
 
-use super::mux::MuxMessage;
+use super::{controller::COMPONENTS_SCOPE, mux::MuxMessage};
 
-pub struct Actuator;
+pub struct Actuator {
+    pub group: String,
+}
 
 pub struct ActuatorArguments {
     pub precision: f32,
@@ -53,6 +55,7 @@ pub enum ActuatorStatus {
 pub enum ActuatorMessage {
     Load(f32),
     Keep(f32),
+    Move(u8),
     GracefulStop,
     EmergencyStop,
     Packet(Packet),
@@ -66,6 +69,7 @@ impl From<Packet> for ActuatorMessage {
 
 pub struct ActuatorState {
     pid: Pid<f32>,
+    mux: Option<ActorRef<MuxMessage>>,
     filter: KalmanFilter,
     status: ActuatorStatus,
     config: ActuatorArguments,
@@ -118,11 +122,12 @@ impl ActuatorState {
     fn step(&mut self, value: f32) -> JoinHandle<Result<(), ActorProcessingErr>> {
         let ControlOutput { output, .. } = self.pid.next_control_output(value);
         let pulse = (output.abs().clamp(5.0, 50.0)) as u64;
+        let mux = self.mux.clone().ok_or(ControllerError::MissingMux);
 
         debug!("Actuator step: {:.2}", output);
 
         tokio::spawn(async move {
-            let mux = registry::where_is("mux".to_string()).ok_or(ControllerError::MissingMux)?;
+            let mux = mux?;
 
             mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
                 direction: if output > 0.0 { 0 } else { 1 },
@@ -147,7 +152,7 @@ impl Actor for Actuator {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let mut pid = Pid::new(0.0, config.output_limit);
@@ -167,9 +172,16 @@ impl Actor for Actuator {
         pid.i(integral, integral_limit);
         pid.d(derivative, derivative_limit);
 
+        pg::join_scoped(
+            COMPONENTS_SCOPE.to_owned(),
+            self.group.clone(),
+            vec![myself.get_cell()],
+        );
+
         Ok(ActuatorState {
             pid,
             filter,
+            mux: None,
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: None,
@@ -183,12 +195,24 @@ impl Actor for Actuator {
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
+        if state.mux.is_none() {
+            let mux = registry::where_is(format!("mux-{}", self.group))
+                .ok_or(ControllerError::MissingMux)?;
+            state.mux = Some(mux.into());
+        }
+
         match message {
             ActuatorMessage::EmergencyStop => {
                 state.status = ActuatorStatus::Idle;
             }
             ActuatorMessage::GracefulStop => {
                 state.status = ActuatorStatus::Idle;
+
+                state
+                    .mux
+                    .as_ref()
+                    .ok_or(ControllerError::MissingMux)?
+                    .send_message(MuxMessage::Write(Packet::ActuatorStop))?;
             }
             ActuatorMessage::Load(value) => {
                 state.status = ActuatorStatus::Loading;
@@ -197,6 +221,13 @@ impl Actor for Actuator {
             ActuatorMessage::Keep(value) => {
                 state.status = ActuatorStatus::Keeping;
                 state.pid.setpoint(value);
+            }
+            ActuatorMessage::Move(direction) => {
+                state
+                    .mux
+                    .as_ref()
+                    .ok_or(ControllerError::MissingMux)?
+                    .send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))?;
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
         }
