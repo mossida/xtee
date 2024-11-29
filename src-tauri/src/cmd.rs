@@ -39,10 +39,7 @@ pub fn get_controllers() -> Result<Vec<SerialPortInfo>, String> {
     let ports = tokio_serial::available_ports().map_err(|e| e.to_string())?;
     let ports = ports
         .into_iter()
-        .filter(|port| match port.port_type {
-            tokio_serial::SerialPortType::UsbPort(_) => true,
-            _ => false,
-        })
+        .filter(|port| matches!(port.port_type, tokio_serial::SerialPortType::UsbPort(_)))
         .collect();
 
     Ok(ports)
