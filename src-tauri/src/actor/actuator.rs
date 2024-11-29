@@ -74,7 +74,7 @@ pub struct ActuatorState {
 }
 
 impl ActuatorState {
-    fn handle_input(&mut self, value: f32) -> () {
+    fn handle_input(&mut self, value: f32) {
         match self.status {
             ActuatorStatus::Keeping => {
                 if (value - self.pid.setpoint).abs() < self.config.precision {
@@ -95,24 +95,21 @@ impl ActuatorState {
     }
 
     fn handle_packet(&mut self, packet: Packet) -> Result<(), ActorProcessingErr> {
-        match packet {
-            Packet::Data { value } => {
-                let raw = (value as f32) * 0.0000672315;
-                //let offset = self.current_offset.get_or_insert(raw);
-                let calculated = self.filter.update(raw);
+        if let Packet::Data { value } = packet {
+            let raw = (value as f32) * 0.0000672315;
+            //let offset = self.current_offset.get_or_insert(raw);
+            let calculated = self.filter.update(raw);
 
-                self.config.handle.emit(EVENT_WEIGHT, calculated)?;
+            self.config.handle.emit(EVENT_WEIGHT, calculated)?;
 
-                match &self.current_step {
-                    Some(handle) => {
-                        if handle.is_finished() {
-                            self.handle_input(calculated);
-                        }
+            match &self.current_step {
+                Some(handle) => {
+                    if handle.is_finished() {
+                        self.handle_input(calculated);
                     }
-                    None => self.handle_input(calculated),
                 }
+                None => self.handle_input(calculated),
             }
-            _ => {}
         }
 
         Ok(())

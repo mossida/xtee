@@ -100,11 +100,8 @@ impl Protocol {
                 let mux = mux.clone();
 
                 async move {
-                    match packet {
-                        Packet::Ready => {
-                            mux.send_message(MuxMessage::Write(Packet::Ready)).unwrap()
-                        }
-                        _ => {}
+                    if packet == Packet::Ready {
+                        mux.send_message(MuxMessage::Write(Packet::Ready)).unwrap()
                     }
 
                     packet

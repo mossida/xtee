@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "arduino"
+		}
+	],
+	"settings": {
+		"rust-analyzer.cargo.targetDir": true,
+		"editor.formatOnSave": true
+	}
+}

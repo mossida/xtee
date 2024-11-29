@@ -1,6 +1,6 @@
 use ractor::{
     async_trait,
-    concurrency::{Duration, JoinHandle},
+    concurrency::JoinHandle,
     registry, Actor, ActorProcessingErr, ActorRef,
 };
 use tracing::debug;
@@ -81,7 +81,7 @@ impl Actor for Motor {
 
         match msg {
             MotorMessage::StartUpdates => {
-                let slave = self.slave.clone();
+                let slave = self.slave;
                 /*state.updates_handle =
                 Some(mux.send_interval(Duration::from_millis(1000), move || {
                     MuxMessage::Write(Packet::MotorAskStatus { slave })

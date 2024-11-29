@@ -59,11 +59,13 @@ impl KalmanFilter {
     ///
     /// # Arguments
     /// * `initial_estimate` - New initial state estimate
+    #[allow(dead_code)]
     pub fn reset(&mut self, initial_estimate: f32) {
         self.estimate = initial_estimate;
     }
 
     /// Gets the current estimate
+    #[allow(dead_code)]
     pub fn get_estimate(&self) -> f32 {
         self.estimate
     }

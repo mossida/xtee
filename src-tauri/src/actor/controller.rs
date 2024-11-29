@@ -59,10 +59,10 @@ impl ControllerChild {
                     .get_children()
                     .into_iter()
                     .map(|child| {
-                        let target = Box::new(MuxTarget::from(child))
-                            as Box<dyn ractor_actors::streams::Target<MuxStream>>;
+                        
 
-                        target
+                        Box::new(MuxTarget::from(child))
+                            as Box<dyn ractor_actors::streams::Target<MuxStream>>
                     })
                     .collect();
 
