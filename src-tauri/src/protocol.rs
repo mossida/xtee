@@ -29,8 +29,6 @@ pub const MOTOR_STOP_ID: u8 = 0x07;
 
 pub const ACTUATOR_MOVE_ID: u8 = 0x08;
 pub const ACTUATOR_STOP_ID: u8 = 0x09;
-pub const TARE_CELL_ID: u8 = 0x0a;
-pub const TARE_SUCCESS_ID: u8 = 0x0b;
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "little")]
@@ -76,10 +74,6 @@ pub enum Packet {
     },
     #[deku(id = "ACTUATOR_STOP_ID")]
     ActuatorStop,
-    #[deku(id = "TARE_CELL_ID")]
-    TareCell,
-    #[deku(id = "TARE_SUCCESS_ID")]
-    TareSuccess,
 }
 
 pub struct Protocol {

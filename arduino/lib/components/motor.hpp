@@ -24,7 +24,7 @@ namespace components
         class Engine
         {
         public:
-            explicit Engine(protocol::Protocol *protocol);
+            explicit Engine(protocol::Protocol *protocol) : protocol(protocol) {}
 
             void begin();
 
@@ -36,7 +36,9 @@ namespace components
         private:
             protocol::Protocol *protocol;
             FastAccelStepperEngine engine;
-            FastAccelStepper *steppers[pins::MOTORS_COUNT];
+            FastAccelStepper *steppers[pins::MOTORS_COUNT] = {nullptr};
+
+            void sendStatus(uint8_t slave);
         };
     }
 }
