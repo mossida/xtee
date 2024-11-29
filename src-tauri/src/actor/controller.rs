@@ -175,14 +175,22 @@ impl Actor for Controller {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             SupervisionEvent::ActorTerminated(who, _, _) => {
-                warn!("Actor {} terminated", who.get_id());
+                warn!(
+                    "Actor {} terminated",
+                    who.get_name().unwrap_or(who.get_id().to_string())
+                );
             }
             SupervisionEvent::ActorFailed(who, err) => {
-                error!("Actor {} failed because of {}", who.get_id(), err);
+                error!(
+                    "Actor {} failed because of {}",
+                    who.get_name().unwrap_or(who.get_id().to_string()),
+                    err
+                );
 
-                state
-                    .app
-                    .emit(EVENT_COMPONENT_FAILED, who.get_id().to_string())?;
+                state.app.emit(
+                    EVENT_COMPONENT_FAILED,
+                    who.get_name().unwrap_or(who.get_id().to_string()),
+                )?;
             }
             _ => {}
         }

@@ -5,5 +5,5 @@
 
 #include "scale.hpp"
 #include "actuator.hpp"
-
+#include "motor.hpp"
 #endif

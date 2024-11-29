@@ -20,7 +20,7 @@ namespace components
         class Actuator
         {
         public:
-            Actuator(protocol::Protocol *protocol);
+            explicit Actuator(protocol::Protocol *protocol);
 
             void begin();
 

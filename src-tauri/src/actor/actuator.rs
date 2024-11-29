@@ -56,8 +56,7 @@ pub enum ActuatorMessage {
     Load(f32),
     Keep(f32),
     Move(u8),
-    GracefulStop,
-    EmergencyStop,
+    Stop,
     Packet(Packet),
 }
 
@@ -202,11 +201,12 @@ impl Actor for Actuator {
         }
 
         match message {
-            ActuatorMessage::EmergencyStop => {
+            ActuatorMessage::Stop => {
                 state.status = ActuatorStatus::Idle;
-            }
-            ActuatorMessage::GracefulStop => {
-                state.status = ActuatorStatus::Idle;
+
+                state.current_step.take().inspect(|handle| {
+                    handle.abort();
+                });
 
                 state
                     .mux

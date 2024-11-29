@@ -73,6 +73,6 @@ pub fn actuator_stop() -> Result<(), String> {
     let actuator = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
 
     actuator
-        .send_message(ActuatorMessage::GracefulStop)
+        .send_message(ActuatorMessage::Stop)
         .map_err(|e| e.to_string())
 }

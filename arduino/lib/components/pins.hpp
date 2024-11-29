@@ -5,11 +5,24 @@
 
 namespace pins
 {
-    const uint8_t SCALE_DOUT = 2;
-    const uint8_t SCALE_SCK = 3;
+    struct Motor
+    {
+        const uint8_t step;
+        const uint8_t dir;
+        const uint8_t enable;
+    };
 
-    const uint8_t ACTUATOR_DIR = 5;
-    const uint8_t ACTUATOR_PWM = 4;
+    static const uint8_t SCALE_DOUT = 2;
+    static const uint8_t SCALE_SCK = 3;
+
+    static const uint8_t ACTUATOR_DIR = 5;
+    static const uint8_t ACTUATOR_PWM = 4;
+
+    static const Motor MOTOR_1 = {2, 5, 4};
+    static const Motor MOTOR_2 = {3, 6, 7};
+
+    static const Motor *MOTORS[] = {&MOTOR_1, &MOTOR_2};
+    static const size_t MOTORS_COUNT = 2;
 }
 
 #endif

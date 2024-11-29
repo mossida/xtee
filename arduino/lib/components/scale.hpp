@@ -18,7 +18,7 @@ namespace components
         class Scale
         {
         public:
-            Scale(protocol::Protocol *protocol);
+            explicit Scale(protocol::Protocol *protocol);
 
             void begin();
             void update();

@@ -20,6 +20,11 @@ components::scale::Scale sc(&pt);
 #if ENABLE_ACTUATOR
 components::actuator::Actuator at(&pt);
 #endif
+
+#if ENABLE_MOTORS
+components::motor::Engine mt(&pt);
+#endif
+
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -33,6 +38,10 @@ void setup()
 
 #if ENABLE_ACTUATOR
   at.begin();
+#endif
+
+#if ENABLE_MOTORS
+  mt.begin();
 #endif
 }
 
