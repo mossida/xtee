@@ -11,19 +11,6 @@ use crate::{
 };
 
 #[tauri::command]
-pub fn motor_spin(slave: u8, direction: u8, rotations: u16, speed: u16) -> Result<(), String> {
-    let motor = registry::where_is(format!("motor-{}", slave)).ok_or("Motor not found")?;
-
-    motor
-        .send_message(MotorMessage::Spin(MotorMovement {
-            direction,
-            rotations,
-            speed,
-        }))
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn restart() -> Result<(), String> {
     let controller = registry::where_is("controller".to_string())
         .ok_or("Controller not found, how is app living?")?;
@@ -33,9 +20,9 @@ pub fn restart() -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command()]
-pub fn get_controllers() -> Result<Vec<SerialPortInfo>, String> {
-    let ports = tokio_serial::available_ports().map_err(|e| e.to_string())?;
+pub fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<SerialPortInfo>, rspc::Error> {
+    let ports = tokio_serial::available_ports()
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?;
     let ports = ports
         .into_iter()
         .filter(|port| matches!(port.port_type, tokio_serial::SerialPortType::UsbPort(_)))

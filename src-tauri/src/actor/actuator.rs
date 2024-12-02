@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, pg, registry, Actor, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, pg, registry, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use tauri::{AppHandle, Emitter};
 use tokio::task::JoinHandle;
 use tracing::{debug, trace};
@@ -14,10 +14,10 @@ use crate::{
     store::{PIDSettings, Store, PID_SETTINGS},
 };
 
-use super::{controller::COMPONENTS_SCOPE, mux::MuxMessage};
+use super::{controller::ControllerMessage, mux::MuxMessage};
 
 pub struct Actuator {
-    pub group: String,
+    pub controller: ActorCell,
 }
 
 pub struct ActuatorArguments {
@@ -151,7 +151,7 @@ impl Actor for Actuator {
 
     async fn pre_start(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let mut pid = Pid::new(0.0, config.output_limit);
@@ -171,12 +171,6 @@ impl Actor for Actuator {
         pid.i(integral, integral_limit);
         pid.d(derivative, derivative_limit);
 
-        pg::join_scoped(
-            COMPONENTS_SCOPE.to_owned(),
-            self.group.clone(),
-            vec![myself.get_cell()],
-        );
-
         Ok(ActuatorState {
             pid,
             filter,
@@ -195,8 +189,14 @@ impl Actor for Actuator {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
-            let mux = registry::where_is(format!("mux-{}", self.group))
-                .ok_or(ControllerError::MissingMux)?;
+            let mux = rpc::call(
+                &self.controller,
+                |port| ControllerMessage::FetchMux(port),
+                None,
+            )
+            .await?
+            .success_or(ControllerError::MissingMux)?;
+
             state.mux = Some(mux.into());
         }
 

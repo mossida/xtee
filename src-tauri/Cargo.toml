@@ -26,6 +26,7 @@ serde_json = "1"
 
 rspc = { version = "0", features = ["tracing"] }
 rspc-tauri = "0"
+specta = { version = "1", features = ["serde"] }
 
 openssl-sys = { version = "0.9", features = ["vendored"] }
 tauri-plugin-log = "2"
@@ -50,3 +51,4 @@ tracing-subscriber = { version = "0", features = [
   'env-filter',
   'json',
 ] }
+nanoid = "0.4.0"

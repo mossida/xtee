@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::{any::TypeId, pin::Pin};
 
 use futures::{stream::SplitSink, SinkExt, Stream};
@@ -7,15 +6,15 @@ use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotifi
 
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::Framed;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
+use crate::actor::master::SCOPE;
 use crate::{
     error::ControllerError,
     protocol::{Codec, Packet, Protocol},
-    store::{Store, CONTROLLER_BAUD, CONTROLLER_BUS},
 };
 
-use super::controller::COMPONENTS_SCOPE;
+use super::controller::Controller;
 use super::{actuator::ActuatorMessage, motor::MotorMessage};
 
 pub type MuxSink = SplitSink<Framed<SerialStream, Codec>, Packet>;
@@ -33,26 +32,17 @@ pub struct MuxState {
 
 pub struct MuxArguments {
     stream: SerialStream,
-    pub group: String,
+    controller: Controller,
 }
 
-impl TryFrom<(Arc<Store>, String)> for MuxArguments {
+impl TryFrom<Controller> for MuxArguments {
     type Error = ControllerError;
 
-    fn try_from((store, group): (Arc<Store>, String)) -> Result<Self, Self::Error> {
-        let bus_value = store
-            .get(CONTROLLER_BUS)
-            .ok_or(ControllerError::ConfigError)?;
-        let baud_value = store
-            .get(CONTROLLER_BAUD)
-            .ok_or(ControllerError::ConfigError)?;
+    fn try_from(controller: Controller) -> Result<Self, Self::Error> {
+        let stream = tokio_serial::new(controller.serial_port.clone(), controller.baud_rate as u32)
+            .open_native_async()?;
 
-        let bus = bus_value.as_str().ok_or(ControllerError::ConfigError)?;
-        let baud = baud_value.as_u64().ok_or(ControllerError::ConfigError)?;
-
-        let stream = tokio_serial::new(bus, baud as u32).open_native_async()?;
-
-        Ok(MuxArguments { stream, group })
+        Ok(MuxArguments { stream, controller })
     }
 }
 
@@ -113,19 +103,14 @@ impl Actor for Mux {
         let protocol = Protocol::new(args.stream);
         let (sink, stream) = protocol.framed(myself.clone());
 
-        let targets: Vec<_> = pg::get_scoped_members(&COMPONENTS_SCOPE.to_owned(), &args.group)
-            .into_iter()
-            .map(|child| {
-                Box::new(MuxTarget::from(child))
-                    as Box<dyn ractor_actors::streams::Target<MuxStream>>
-            })
-            .collect();
-
-        debug!(
-            "Multiplexing to {:?} targets in group {}",
-            targets.len(),
-            args.group
-        );
+        let targets: Vec<_> =
+            pg::get_scoped_members(&SCOPE.to_owned(), &args.controller.group.into())
+                .into_iter()
+                .map(|child| {
+                    Box::new(MuxTarget::from(child))
+                        as Box<dyn ractor_actors::streams::Target<MuxStream>>
+                })
+                .collect();
 
         mux_stream(
             StreamMuxConfiguration {

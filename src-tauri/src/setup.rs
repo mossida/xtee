@@ -1,8 +1,9 @@
+use ractor::Actor;
 use time::macros::{format_description, offset};
 use tracing::Level;
 use tracing_subscriber::fmt::time::OffsetTime;
 
-use crate::actor::controller::Controller;
+use crate::actor::master::Master;
 
 pub fn setup_logging() {
     let fmt = if cfg!(debug_assertions) {
@@ -31,11 +32,11 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
     let handle = app.handle().to_owned();
 
     tauri::async_runtime::spawn(async move {
-        let controller = Controller::init(handle)
+        let (_, handle) = Actor::spawn(None, Master, handle)
             .await
-            .expect("Failed to spawn controller");
+            .expect("Failed to spawn master");
 
-        controller.await.expect("Controller failed");
+        handle.await.expect("Master failed");
     });
 
     Ok(())

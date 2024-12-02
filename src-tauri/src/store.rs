@@ -4,11 +4,10 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Error, StoreExt};
 
-pub const CONTROLLER_BUS: &str = "controller_bus";
-pub const CONTROLLER_BAUD: &str = "controller_baud";
+use crate::actor::controller::Controller;
 
+pub const CONTROLLERS: &str = "controllers";
 pub const PID_SETTINGS: &str = "pid_settings";
-
 pub const SCALE_GAIN: &str = "scale_gain";
 
 pub type Store = tauri_plugin_store::Store<Wry>;
@@ -38,9 +37,10 @@ fn defaults(store: Arc<Store>) {
     );
 
     store.set(SCALE_GAIN, 0.0000672315);
-
-    store.set(CONTROLLER_BUS, "/dev/cu.usbmodem113101");
-    store.set(CONTROLLER_BAUD, 115200);
+    store.set(
+        CONTROLLERS,
+        serde_json::to_value(vec![] as Vec<Controller>).unwrap(),
+    );
 }
 
 pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
