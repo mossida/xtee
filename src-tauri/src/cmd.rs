@@ -1,10 +1,11 @@
-use ractor::registry;
+use ractor::{registry, rpc};
 use serialport::SerialPortInfo;
 
 use crate::{
     actor::{
         actuator::ActuatorMessage,
-        controller::ControllerMessage,
+        controller::{Controller, ControllerMessage},
+        master::MasterMessage,
     },
     router::RouterContext,
 };
@@ -19,7 +20,7 @@ pub fn restart() -> Result<(), String> {
     Ok(())
 }
 
-pub fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<SerialPortInfo>, rspc::Error> {
+pub fn get_ports(_ctx: RouterContext, _: ()) -> Result<Vec<SerialPortInfo>, rspc::Error> {
     let ports = tokio_serial::available_ports()
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?;
     let ports = ports
@@ -28,6 +29,27 @@ pub fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<SerialPortInfo>
         .collect();
 
     Ok(ports)
+}
+
+pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controller>, rspc::Error> {
+    let controller = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Master not found".to_owned(),
+    ))?;
+
+    let result = rpc::call(
+        &controller,
+        |port| MasterMessage::FetchControllers(port),
+        None,
+    )
+    .await
+    .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
+    .success_or(rspc::Error::new(
+        rspc::ErrorCode::InternalServerError,
+        "No response from master".to_owned(),
+    ))?;
+
+    Ok(result)
 }
 
 pub fn actuator_load(_ctx: RouterContext, setpoint: f32) -> Result<(), rspc::Error> {

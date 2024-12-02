@@ -40,12 +40,20 @@ fn defaults(store: Arc<Store>) {
     store.set(SCALE_GAIN, 0.0000672315);
     store.set(
         CONTROLLERS,
-        serde_json::to_value(vec![Controller {
-            id: nanoid!(4),
-            group: ControllerGroup::Default,
-            serial_port: "/dev/tty.usbmodem113201".to_owned(),
-            baud_rate: 115200,
-        }] as Vec<Controller>)
+        serde_json::to_value(vec![
+            Controller {
+                id: nanoid!(4),
+                group: ControllerGroup::Default,
+                serial_port: "/dev/cu.usbmodem113201".to_owned(),
+                baud_rate: 115200,
+            },
+            Controller {
+                id: nanoid!(4),
+                group: ControllerGroup::Motors,
+                serial_port: "/dev/cu.usbmodem113301".to_owned(),
+                baud_rate: 115200,
+            },
+        ] as Vec<Controller>)
         .unwrap(),
     );
 }

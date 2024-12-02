@@ -8,7 +8,6 @@ use tracing::{debug, trace};
 
 use crate::{
     error::ControllerError,
-    event::EVENT_WEIGHT,
     filter::KalmanFilter,
     protocol::Packet,
     store::{PIDSettings, Store, PID_SETTINGS},
@@ -103,7 +102,7 @@ impl ActuatorState {
             //let offset = self.current_offset.get_or_insert(raw);
             let calculated = self.filter.update(raw);
 
-            self.config.handle.emit(EVENT_WEIGHT, calculated)?;
+            self.config.handle.emit("event:weight", calculated)?;
 
             match &self.current_step {
                 Some(handle) => {
@@ -189,13 +188,9 @@ impl Actor for Actuator {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
-            let mux = rpc::call(
-                &self.controller,
-                ControllerMessage::FetchMux,
-                None,
-            )
-            .await?
-            .success_or(ControllerError::MissingMux)?;
+            let mux = rpc::call(&self.controller, ControllerMessage::FetchMux, None)
+                .await?
+                .success_or(ControllerError::MissingMux)?;
 
             debug!("Actuator got mux: {:?}", mux.get_name());
 

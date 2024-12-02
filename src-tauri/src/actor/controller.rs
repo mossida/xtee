@@ -5,6 +5,7 @@ use ractor::{
     async_trait, pg, Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent,
 };
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use tauri::AppHandle;
 use tracing::{error, warn};
 
@@ -20,7 +21,7 @@ use super::{
     mux::{Mux, MuxArguments, MuxMessage},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct Controller {
     pub id: String,
     pub group: ControllerGroup,
@@ -28,7 +29,7 @@ pub struct Controller {
     pub baud_rate: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Type)]
 pub enum ControllerGroup {
     Default,
     Motors,
@@ -109,7 +110,10 @@ impl ControllerChild {
             ControllerChild::Motor(slave) => {
                 let (motor, _) = Motor::spawn_linked(
                     Some(name),
-                    Motor { slave: *slave },
+                    Motor {
+                        slave: *slave,
+                        controller: myself.get_cell(),
+                    },
                     MotorArguments {},
                     myself.get_cell(),
                 )
@@ -184,7 +188,7 @@ impl Actor for Controller {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             ControllerMessage::FetchMux(reply) => {
-                let _ = reply.send(state.mux.clone().ok_or(ControllerError::MissingMux)?);
+                reply.send(state.mux.clone().ok_or(ControllerError::MissingMux)?)?;
             }
             ControllerMessage::Spawn(child) => {
                 let cell = child
@@ -196,7 +200,9 @@ impl Actor for Controller {
                     .await
                     .inspect_err(|e| error!("Failed to spawn child: {}", e))?;
 
-                if let ControllerChild::Mux = child { state.mux = Some(cell.into()) }
+                if let ControllerChild::Mux = child {
+                    state.mux = Some(cell.into())
+                }
             }
             ControllerMessage::Start => {
                 myself.stop_children(None);

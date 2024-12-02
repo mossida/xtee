@@ -1,12 +1,17 @@
-use ractor::{async_trait, concurrency::JoinHandle, registry, Actor, ActorProcessingErr, ActorRef};
+use ractor::{
+    async_trait,
+    concurrency::{Duration, JoinHandle},
+    rpc, Actor, ActorCell, ActorProcessingErr, ActorRef,
+};
 use tracing::debug;
 
-use crate::{error::ControllerError, protocol::Packet};
+use crate::{actor::controller::ControllerMessage, error::ControllerError, protocol::Packet};
 
 use super::mux::MuxMessage;
 
 pub struct Motor {
     pub slave: u8,
+    pub controller: ActorCell,
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +47,7 @@ pub struct MotorState {
     status: MotorStatus,
     max_speed: u32,
     updates_handle: Option<JoinHandle<()>>,
+    mux: Option<ActorRef<MuxMessage>>,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +68,7 @@ impl Actor for Motor {
             status: MotorStatus::Idle,
             max_speed: 0,
             updates_handle: None,
+            mux: None,
         })
     }
 
@@ -81,29 +88,48 @@ impl Actor for Motor {
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let mux = ActorRef::<MuxMessage>::from(
-            registry::where_is("mux".to_string()).ok_or(ControllerError::MissingMux)?,
-        );
+        if state.mux.is_none() {
+            let mux = rpc::call(&self.controller, ControllerMessage::FetchMux, None)
+                .await?
+                .success_or(ControllerError::MissingMux)?;
+
+            debug!("Motor got mux: {:?}", mux.get_name());
+
+            state.mux = Some(mux);
+        }
 
         match msg {
             MotorMessage::StartUpdates => {
                 let slave = self.slave;
-                /*state.updates_handle =
-                Some(mux.send_interval(Duration::from_millis(1000), move || {
-                    MuxMessage::Write(Packet::MotorAskStatus { slave })
-                }));*/
+                state.updates_handle = Some(
+                    state
+                        .mux
+                        .as_ref()
+                        .ok_or(ControllerError::MissingMux)?
+                        .send_interval(Duration::from_millis(1000), move || {
+                            MuxMessage::Write(Packet::MotorAskStatus { slave })
+                        }),
+                );
             }
             MotorMessage::GracefulStop => {
-                mux.send_message(MuxMessage::Write(Packet::MotorStop {
-                    slave: self.slave,
-                    mode: 0x01,
-                }))?;
+                state
+                    .mux
+                    .as_ref()
+                    .ok_or(ControllerError::MissingMux)?
+                    .send_message(MuxMessage::Write(Packet::MotorStop {
+                        slave: self.slave,
+                        mode: 0x01,
+                    }))?;
             }
             MotorMessage::EmergencyStop => {
-                mux.send_message(MuxMessage::Write(Packet::MotorStop {
-                    slave: self.slave,
-                    mode: 0x00,
-                }))?;
+                state
+                    .mux
+                    .as_ref()
+                    .ok_or(ControllerError::MissingMux)?
+                    .send_message(MuxMessage::Write(Packet::MotorStop {
+                        slave: self.slave,
+                        mode: 0x00,
+                    }))?;
             }
             MotorMessage::Spin(movement) => {
                 debug!("Spinning motor {} with {:?}", self.slave, movement);
@@ -114,11 +140,15 @@ impl Actor for Motor {
                     acceleration: 1000,
                 }))?;*/
 
-                mux.send_message(MuxMessage::Write(Packet::MotorMove {
-                    slave: self.slave,
-                    direction: movement.direction,
-                    rotations: movement.rotations,
-                }))?;
+                state
+                    .mux
+                    .as_ref()
+                    .ok_or(ControllerError::MissingMux)?
+                    .send_message(MuxMessage::Write(Packet::MotorMove {
+                        slave: self.slave,
+                        direction: movement.direction,
+                        rotations: movement.rotations,
+                    }))?;
             }
             MotorMessage::Packet(packet) => match packet {
                 Packet::MotorStatus {

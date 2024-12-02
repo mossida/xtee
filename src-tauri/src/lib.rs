@@ -4,7 +4,6 @@ use setup::{setup_app, setup_logging};
 mod actor;
 mod cmd;
 mod error;
-mod event;
 mod filter;
 mod protocol;
 mod router;

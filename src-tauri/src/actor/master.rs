@@ -1,9 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use tauri::AppHandle;
 
-use crate::store::{store, Store, CONTROLLERS};
+use crate::{
+    error::ControllerError,
+    store::{store, Store, CONTROLLERS},
+};
 
 use super::controller::{Controller, ControllerGroup, ControllerMessage};
 
@@ -23,6 +26,7 @@ pub struct MasterState {
 pub enum MasterMessage {
     Restart,
     Spawn(Controller),
+    FetchControllers(RpcReplyPort<Vec<Controller>>),
 }
 
 #[async_trait]
@@ -63,28 +67,34 @@ impl Actor for Master {
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        if let MasterMessage::Spawn(controller) = message {
-            if state.groups.contains_key(&controller.group)
-                || state.ports.contains_key(&controller.serial_port)
-            {
-                panic!("Controller is invalid");
+        match message {
+            MasterMessage::Spawn(controller) => {
+                if state.groups.contains_key(&controller.group)
+                    || state.ports.contains_key(&controller.serial_port)
+                {
+                    return Err(ControllerError::ConfigError.into());
+                }
+
+                state.groups.insert(controller.group.clone(), true);
+                state.ports.insert(controller.serial_port.clone(), true);
+
+                let id = controller.id.clone();
+                let (actor_ref, _) = Actor::spawn_linked(
+                    Some(id.clone()),
+                    controller.clone(),
+                    (state.store.clone(), state.app.clone()),
+                    myself.get_cell(),
+                )
+                .await?;
+
+                state.refs.insert(id.clone(), actor_ref);
+                state.controllers.insert(id, controller);
             }
-
-            state.groups.insert(controller.group.clone(), true);
-            state.ports.insert(controller.serial_port.clone(), true);
-
-            let id = controller.id.clone();
-            let (actor_ref, _) = Actor::spawn_linked(
-                Some(id.clone()),
-                controller.clone(),
-                (state.store.clone(), state.app.clone()),
-                myself.get_cell(),
-            )
-            .await?;
-
-            state.refs.insert(id.clone(), actor_ref);
-            state.controllers.insert(id, controller);
-        }
+            MasterMessage::FetchControllers(reply) => {
+                reply.send(state.controllers.values().cloned().collect())?;
+            }
+            _ => {}
+        };
 
         Ok(())
     }

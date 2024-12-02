@@ -197,6 +197,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "better_any"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1795ebc740ea791ffbe6685e0688ab1effec16c2864e0476db40bfdf0c02cb3d"
+
+[[package]]
 name = "bindgen"
 version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2737,6 +2743,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
+name = "ordered-float"
+version = "2.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "os_pipe"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3423,24 +3438,28 @@ dependencies = [
 [[package]]
 name = "rspc"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd05809b3e7eb762c6c89073e52a10a10a2663581206a014607c44957ad3792f"
+source = "git+https://github.com/espeon/rspc#edd828c48dab13d397a57c4bd4897045ebfb6bc8"
 dependencies = [
+ "better_any",
+ "erased-serde",
  "futures",
  "serde",
+ "serde-value",
  "serde_json",
  "specta 2.0.0-rc.20",
  "specta-typescript",
+ "specta-util",
  "thiserror 2.0.3",
  "tokio",
  "tracing",
+ "transient",
+ "typeid",
 ]
 
 [[package]]
 name = "rspc-tauri"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd003e0c53961fc562affd0ff838ce26bb4b1664781d5e9e99774b3bf12d98b"
+source = "git+https://github.com/espeon/rspc#edd828c48dab13d397a57c4bd4897045ebfb6bc8"
 dependencies = [
  "futures",
  "rspc",
@@ -3642,6 +3661,16 @@ dependencies = [
  "erased-serde",
  "serde",
  "typeid",
+]
+
+[[package]]
+name = "serde-value"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
+dependencies = [
+ "ordered-float",
+ "serde",
 ]
 
 [[package]]
@@ -3952,7 +3981,6 @@ checksum = "4ccbb212565d2dc177bc15ecb7b039d66c4490da892436a4eee5b394d620c9bc"
 dependencies = [
  "serde",
  "serde_json",
- "specta 1.0.5",
  "specta-macros 2.0.0-rc.17",
  "thiserror 1.0.66",
 ]
@@ -4002,6 +4030,16 @@ dependencies = [
  "specta 2.0.0-rc.20",
  "specta-serde",
  "thiserror 1.0.66",
+]
+
+[[package]]
+name = "specta-util"
+version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8113d65b58a6de3184b01d6df9e50b6d4bbe7f724251f576d84f23228824456"
+dependencies = [
+ "serde",
+ "specta 2.0.0-rc.20",
 ]
 
 [[package]]
@@ -4838,6 +4876,28 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
+]
+
+[[package]]
+name = "transient"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdb61be2bc3753cfec3ea4a16753bb98322be47dac7b910ee3170a5307ba9341"
+dependencies = [
+ "rustversion",
+ "transient-derive",
+]
+
+[[package]]
+name = "transient-derive"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "045931745df1346c58e3d822f81f07cabbb515e737613d5c93d3a77c13b66cd8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+ "thiserror 1.0.66",
 ]
 
 [[package]]
@@ -5765,7 +5825,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serialport",
- "specta 1.0.5",
+ "specta 2.0.0-rc.20",
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
