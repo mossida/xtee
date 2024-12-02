@@ -1,9 +1,8 @@
 "use client";
 
-import { PrefetchProvider } from "@/components/prefetch-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -15,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         forcedTheme="dark"
         disableTransitionOnChange
       >
-        <PrefetchProvider>{children}</PrefetchProvider>
+        {children}
       </ThemeProvider>
     </QueryClientProvider>
   );

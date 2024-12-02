@@ -2,29 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { invoke } from "@tauri-apps/api/core";
 import { QuantityInput } from "@/components/ui/quantity-input";
 import { useState } from "react";
-import { useMutation } from "react-query";
 import { CurrentLoad } from "@/components/current-load";
-import { StepActuator, stopActuatorOptions } from "@/components/step-actuator";
 import { ManualActuator } from "@/components/manual-actuator";
+import { api } from "@/lib/client";
 
 export default function Home() {
   const [setpoint, setSetpoint] = useState(0);
 
-  const { mutate: stopActuator } = useMutation(stopActuatorOptions);
-  const { mutate: loadActuator } = useMutation({
-    mutationFn: async () => {
-      await invoke("actuator_load", { setpoint });
-    },
-  });
-
-  const { mutate: keepActuator } = useMutation({
-    mutationFn: async () => {
-      await invoke("actuator_keep", { setpoint });
-    },
-  });
+  const { mutate: stopActuator } = api.useMutation("actuator/stop");
+  const { mutate: loadActuator } = api.useMutation("actuator/load");
+  const { mutate: keepActuator } = api.useMutation("actuator/keep");
 
   return (
     <div className="w-full">
@@ -41,10 +30,10 @@ export default function Home() {
                 onChange={setSetpoint}
               />
               <div className="flex flex-col gap-2">
-                <Button size="lg" onClick={() => loadActuator()}>
+                <Button size="lg" onClick={() => loadActuator(setpoint)}>
                   Reach load
                 </Button>
-                <Button size="lg" onClick={() => keepActuator()}>
+                <Button size="lg" onClick={() => keepActuator(setpoint)}>
                   Keep loaded
                 </Button>
               </div>
