@@ -34,18 +34,18 @@ pub enum ControllerGroup {
     Motors,
 }
 
-impl Into<String> for ControllerGroup {
-    fn into(self) -> String {
-        match self {
+impl From<ControllerGroup> for String {
+    fn from(val: ControllerGroup) -> Self {
+        match val {
             ControllerGroup::Default => "default".to_owned(),
             ControllerGroup::Motors => "motors".to_owned(),
         }
     }
 }
 
-impl Into<Vec<ControllerChild>> for ControllerGroup {
-    fn into(self) -> Vec<ControllerChild> {
-        match self {
+impl From<ControllerGroup> for Vec<ControllerChild> {
+    fn from(val: ControllerGroup) -> Self {
+        match val {
             ControllerGroup::Default => vec![ControllerChild::Actuator],
             ControllerGroup::Motors => vec![ControllerChild::Motor(1), ControllerChild::Motor(2)],
         }
@@ -184,7 +184,7 @@ impl Actor for Controller {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             ControllerMessage::FetchMux(reply) => {
-                reply.send(state.mux.clone().ok_or(ControllerError::MissingMux)?);
+                let _ = reply.send(state.mux.clone().ok_or(ControllerError::MissingMux)?);
             }
             ControllerMessage::Spawn(child) => {
                 let cell = child
@@ -196,10 +196,7 @@ impl Actor for Controller {
                     .await
                     .inspect_err(|e| error!("Failed to spawn child: {}", e))?;
 
-                match child {
-                    ControllerChild::Mux => state.mux = Some(cell.into()),
-                    _ => {}
-                }
+                if let ControllerChild::Mux = child { state.mux = Some(cell.into()) }
             }
             ControllerMessage::Start => {
                 myself.stop_children(None);

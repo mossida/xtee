@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ractor::{async_trait, concurrency::JoinHandle, Actor, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
 use tauri::AppHandle;
 
 use crate::store::{store, Store, CONTROLLERS};
@@ -63,30 +63,27 @@ impl Actor for Master {
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        match message {
-            MasterMessage::Spawn(controller) => {
-                if state.groups.contains_key(&controller.group)
-                    || state.ports.contains_key(&controller.serial_port)
-                {
-                    panic!("Controller is invalid");
-                }
-
-                state.groups.insert(controller.group.clone(), true);
-                state.ports.insert(controller.serial_port.clone(), true);
-
-                let id = controller.id.clone();
-                let (actor_ref, _) = Actor::spawn_linked(
-                    Some(id.clone()),
-                    controller.clone(),
-                    (state.store.clone(), state.app.clone()),
-                    myself.get_cell(),
-                )
-                .await?;
-
-                state.refs.insert(id.clone(), actor_ref);
-                state.controllers.insert(id, controller);
+        if let MasterMessage::Spawn(controller) = message {
+            if state.groups.contains_key(&controller.group)
+                || state.ports.contains_key(&controller.serial_port)
+            {
+                panic!("Controller is invalid");
             }
-            _ => {}
+
+            state.groups.insert(controller.group.clone(), true);
+            state.ports.insert(controller.serial_port.clone(), true);
+
+            let id = controller.id.clone();
+            let (actor_ref, _) = Actor::spawn_linked(
+                Some(id.clone()),
+                controller.clone(),
+                (state.store.clone(), state.app.clone()),
+                myself.get_cell(),
+            )
+            .await?;
+
+            state.refs.insert(id.clone(), actor_ref);
+            state.controllers.insert(id, controller);
         }
 
         Ok(())

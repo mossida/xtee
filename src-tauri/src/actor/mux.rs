@@ -39,7 +39,7 @@ impl TryFrom<Controller> for MuxArguments {
     type Error = ControllerError;
 
     fn try_from(controller: Controller) -> Result<Self, Self::Error> {
-        let stream = tokio_serial::new(controller.serial_port.clone(), controller.baud_rate as u32)
+        let stream = tokio_serial::new(controller.serial_port.clone(), controller.baud_rate)
             .open_native_async()?;
 
         Ok(MuxArguments { stream, controller })

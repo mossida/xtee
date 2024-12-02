@@ -5,7 +5,6 @@ use crate::{
     actor::{
         actuator::ActuatorMessage,
         controller::ControllerMessage,
-        motor::{MotorMessage, MotorMovement},
     },
     router::RouterContext,
 };

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, pg, registry, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use tauri::{AppHandle, Emitter};
 use tokio::task::JoinHandle;
 use tracing::{debug, trace};
@@ -191,13 +191,15 @@ impl Actor for Actuator {
         if state.mux.is_none() {
             let mux = rpc::call(
                 &self.controller,
-                |port| ControllerMessage::FetchMux(port),
+                ControllerMessage::FetchMux,
                 None,
             )
             .await?
             .success_or(ControllerError::MissingMux)?;
 
-            state.mux = Some(mux.into());
+            debug!("Actuator got mux: {:?}", mux.get_name());
+
+            state.mux = Some(mux);
         }
 
         match message {

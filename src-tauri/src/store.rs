@@ -1,10 +1,11 @@
 use std::{sync::Arc, time::Duration};
 
+use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Error, StoreExt};
 
-use crate::actor::controller::Controller;
+use crate::actor::controller::{Controller, ControllerGroup};
 
 pub const CONTROLLERS: &str = "controllers";
 pub const PID_SETTINGS: &str = "pid_settings";
@@ -39,7 +40,13 @@ fn defaults(store: Arc<Store>) {
     store.set(SCALE_GAIN, 0.0000672315);
     store.set(
         CONTROLLERS,
-        serde_json::to_value(vec![] as Vec<Controller>).unwrap(),
+        serde_json::to_value(vec![Controller {
+            id: nanoid!(4),
+            group: ControllerGroup::Default,
+            serial_port: "/dev/tty.usbmodem113201".to_owned(),
+            baud_rate: 115200,
+        }] as Vec<Controller>)
+        .unwrap(),
     );
 }
 
