@@ -24,18 +24,21 @@ serde = { version = "1", features = ["derive"] }
 typeshare = "1"
 serde_json = "1"
 
-openssl-sys = {version = "0.9", features = ["vendored"] }
+rspc = { version = "0", features = ["tracing"] }
+rspc-tauri = "0"
+
+openssl-sys = { version = "0.9", features = ["vendored"] }
 tauri-plugin-log = "2"
 tauri-plugin-store = "2"
 ractor = "0.13.0"
-deku = {version = "0.18.1"}
+deku = { version = "0.18.1" }
 crc = "3.2.1"
 cobs-codec = "0.1.0"
 tokio = { version = "1.41.0", features = ["full"] }
 tokio-util = "0.7.12"
 ractor_actors = "0.4.4"
 tokio-serial = "5.4.4"
-serialport = {version = "4", features = ["serde"] }
+serialport = { version = "4", features = ["serde"] }
 futures = "0.3.31"
 thiserror = "1.0.66"
 anyhow = "1.0.72"

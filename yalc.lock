@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "packages": {
+    "@rspc/client": {
+      "signature": "5979471192613a7a28625ee5265d8796"
+    },
+    "@rspc/query-core": {
+      "signature": "f574bc61d3addb277eef549163d1389b"
+    },
+    "@rspc/react-query": {
+      "signature": "c84ce23ad6af6077194b6612eadb24f2"
+    },
+    "@rspc/tauri": {
+      "signature": "5d35d42d320db0ed4eac8aae1caf7e1e"
+    }
+  }
+}

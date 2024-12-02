@@ -65,3 +65,5 @@ tailwind.css
 # tauri
 target/
 schemas/
+
+.yalc

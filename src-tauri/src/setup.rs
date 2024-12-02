@@ -14,8 +14,8 @@ pub fn setup_logging() {
     let timer = OffsetTime::new(offset!(+8), fmt);
 
     let builder = tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .with_file(false)
+        .with_max_level(Level::TRACE)
+        .with_file(true)
         .with_line_number(false)
         .with_target(false)
         .with_timer(timer);
@@ -31,11 +31,11 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
     let handle = app.handle().to_owned();
 
     tauri::async_runtime::spawn(async move {
-        let handle = Controller::init(handle)
+        let controller = Controller::init(handle)
             .await
             .expect("Failed to spawn controller");
 
-        handle.await.expect("Controller failed");
+        controller.await.expect("Controller failed");
     });
 
     Ok(())

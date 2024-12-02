@@ -1,10 +1,13 @@
 use ractor::registry;
 use serialport::SerialPortInfo;
 
-use crate::actor::{
-    actuator::ActuatorMessage,
-    controller::ControllerMessage,
-    motor::{MotorMessage, MotorMovement},
+use crate::{
+    actor::{
+        actuator::ActuatorMessage,
+        controller::ControllerMessage,
+        motor::{MotorMessage, MotorMovement},
+    },
+    router::RouterContext,
 };
 
 #[tauri::command]
@@ -41,38 +44,46 @@ pub fn get_controllers() -> Result<Vec<SerialPortInfo>, String> {
     Ok(ports)
 }
 
-#[tauri::command]
-pub fn actuator_load(setpoint: f32) -> Result<(), String> {
-    let actor = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
+pub fn actuator_load(_ctx: RouterContext, setpoint: f32) -> Result<(), rspc::Error> {
+    let actor = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
 
     actor
         .send_message(ActuatorMessage::Load(setpoint))
-        .map_err(|e| e.to_string())
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
-#[tauri::command]
-pub fn actuator_keep(setpoint: f32) -> Result<(), String> {
-    let actor = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
+pub fn actuator_keep(_ctx: RouterContext, setpoint: f32) -> Result<(), rspc::Error> {
+    let actor = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
 
     actor
         .send_message(ActuatorMessage::Keep(setpoint))
-        .map_err(|e| e.to_string())
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
-#[tauri::command]
-pub fn actuator_move(direction: u8) -> Result<(), String> {
-    let actuator = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
+pub fn actuator_move(_ctx: RouterContext, direction: u8) -> Result<(), rspc::Error> {
+    let actuator = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
 
     actuator
         .send_message(ActuatorMessage::Move(direction))
-        .map_err(|e| e.to_string())
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
-#[tauri::command]
-pub fn actuator_stop() -> Result<(), String> {
-    let actuator = registry::where_is("actuator".to_string()).ok_or("Actuator not found")?;
+pub fn actuator_stop(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
+    let actuator = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
 
     actuator
         .send_message(ActuatorMessage::Stop)
-        .map_err(|e| e.to_string())
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
