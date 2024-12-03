@@ -1,7 +1,6 @@
 "use client";
 
 import { ConnectDeviceModal } from "@/components/modals/connect-device-modal";
-import { storeQueryOptions } from "@/components/prefetch-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,16 +20,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 export default function GeneralSettings() {
   const [isOpen, setIsOpen] = useState(false);
-
-  const { data: store } = useQuery(storeQueryOptions);
-  const { data: controller } = useQuery({
-    queryKey: ["controller"],
-    queryFn: () => store?.get<string>("controller_bus"),
-  });
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -54,7 +46,7 @@ export default function GeneralSettings() {
                 <TableCell>
                   <Badge>default</Badge>
                 </TableCell>
-                <TableCell>{controller}</TableCell>
+                <TableCell>Slave</TableCell>
                 <TableCell>115200</TableCell>
               </TableRow>
             </TableBody>

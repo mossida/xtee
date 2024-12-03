@@ -1,6 +1,5 @@
 "use client";
 
-import { storeQueryOptions } from "@/components/prefetch-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,31 +13,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 export default function ActuatorSettings() {
-  const { data: store } = useQuery(storeQueryOptions);
-
-  const { data: pid } = useQuery({
-    queryKey: ["pid_settings"],
-    queryFn: () =>
-      store?.get<{
-        proportional: number;
-        integral: number;
-        derivative: number;
-      }>("pid_settings"),
-  });
-
-  const { mutate: updatePid } = useMutation({
-    mutationFn: async (data: any) =>
-      store?.set("pid_settings", { ...pid, ...data }),
-  });
-
-  const { register, handleSubmit } = useForm({
-    values: Object.fromEntries(
-      Object.entries(pid ?? {}).map(([key, value]) => [
-        key,
-        value?.toFixed(2) ?? 0,
-      ]),
-    ),
-  });
+  const { register, handleSubmit } = useForm({});
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -65,9 +40,7 @@ export default function ActuatorSettings() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-4">
-          <Button onClick={handleSubmit((data) => updatePid(data))}>
-            Save
-          </Button>
+          <Button>Save</Button>
         </CardFooter>
       </Card>
     </div>

@@ -12,13 +12,11 @@ import { invoke } from "@tauri-apps/api/core";
 import type { SerialPort } from "@/types/serial";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { storeQueryOptions } from "../prefetch-provider";
+
 import type { DialogProps } from "@radix-ui/react-dialog";
 import { uniqueBy } from "remeda";
 
 export function ConnectDeviceModal(props: DialogProps) {
-  const { data: store } = useQuery(storeQueryOptions);
-
   const { data: ports } = useQuery({
     queryKey: ["ports"],
     queryFn: async () =>
@@ -29,12 +27,12 @@ export function ConnectDeviceModal(props: DialogProps) {
     refetchInterval: 1000,
   });
 
-  const { mutate: connect } = useMutation({
+  /*const { mutate: connect } = useMutation({
     mutationFn: async (port: string) => {
       await store?.set("controller_bus", port);
       await invoke("restart");
     },
-  });
+  });*/
 
   return (
     <Dialog {...props}>
@@ -68,7 +66,7 @@ export function ConnectDeviceModal(props: DialogProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => connect(port.port_name)}
+                      // onClick={() => connect(port.port_name)}
                     >
                       Connect
                     </Button>
