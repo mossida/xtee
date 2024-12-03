@@ -57,7 +57,7 @@ pub enum Packet {
         slave: u8,
         running: u8,
         stopping: u8,
-        position: u32,
+        position: i32,
         remaining: u32,
         max_speed: u32,
     },

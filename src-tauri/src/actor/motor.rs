@@ -39,7 +39,7 @@ impl From<Packet> for MotorMessage {
 #[derive(Debug, Clone)]
 pub enum MotorStatus {
     Idle,
-    Spinning { position: u32, remaining: u32 },
+    Spinning { position: i32, remaining: u32 },
 }
 
 #[derive(Debug)]

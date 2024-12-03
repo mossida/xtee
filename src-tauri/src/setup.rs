@@ -16,7 +16,7 @@ pub fn setup_logging() {
 
     let builder = tracing_subscriber::fmt()
         .with_max_level(Level::DEBUG)
-        .with_file(true)
+        .with_file(false)
         .with_line_number(false)
         .with_target(false)
         .with_timer(timer);

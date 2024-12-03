@@ -42,13 +42,13 @@ fn defaults(store: Arc<Store>) {
         CONTROLLERS,
         serde_json::to_value(vec![
             Controller {
-                id: nanoid!(4),
+                id: "controller-default".to_owned(),
                 group: ControllerGroup::Default,
                 serial_port: "/dev/cu.usbmodem113201".to_owned(),
                 baud_rate: 115200,
             },
             Controller {
-                id: nanoid!(4),
+                id: "controller-motors".to_owned(),
                 group: ControllerGroup::Motors,
                 serial_port: "/dev/cu.usbmodem113301".to_owned(),
                 baud_rate: 115200,

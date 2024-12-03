@@ -62,7 +62,7 @@ pub enum ControllerChild {
 impl ControllerChild {
     fn name(&self) -> String {
         match self {
-            ControllerChild::Mux => nanoid!(4),
+            ControllerChild::Mux => format!("mux-{}", nanoid!(4)),
             ControllerChild::Actuator => "actuator".to_owned(),
             ControllerChild::Motor(slave) => format!("motor-{}", slave),
         }

@@ -102,6 +102,8 @@ impl ActuatorState {
             //let offset = self.current_offset.get_or_insert(raw);
             let calculated = self.filter.update(raw);
 
+            debug!("Actuator handle packet: {:.2}", calculated);
+
             self.config.handle.emit("event:weight", calculated)?;
 
             match &self.current_step {

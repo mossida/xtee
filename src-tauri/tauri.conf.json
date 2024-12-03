@@ -17,6 +17,9 @@
 				"resizable": false,
 				"fullscreen": true,
 				"minimizable": false,
+				"decorations": false,
+				"width": 1024,
+				"height": 600,
 				"browserExtensionsEnabled": false
 			}
 		],

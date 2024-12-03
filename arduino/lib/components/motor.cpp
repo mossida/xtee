@@ -86,14 +86,32 @@ void Engine::sendStatus(uint8_t slave)
     auto index = slave - 1;
     auto *stepper = steppers[index];
 
-    uint8_t buffer[6];
+    uint8_t buffer[15];
+    int32_t position = stepper->getCurrentPosition();
+    uint32_t remaining = stepper->stepsToStop();
+    uint32_t max_speed = stepper->getMaxSpeedInHz();
 
     buffer[0] = slave;
     buffer[1] = stepper->isRunning() ? 1 : 0;
     buffer[2] = stepper->isStopping() ? 1 : 0;
-    buffer[3] = stepper->getCurrentPosition();
-    buffer[4] = stepper->stepsToStop();
-    buffer[5] = stepper->getMaxSpeedInHz();
 
-    protocol->sendPacket(packet::STATUS, buffer, 6);
+    // Write position bytes (32-bit integer) in little-endian
+    buffer[3] = position & 0xFF; // Least significant byte first
+    buffer[4] = (position >> 8) & 0xFF;
+    buffer[5] = (position >> 16) & 0xFF;
+    buffer[6] = (position >> 24) & 0xFF; // Most significant byte last
+
+    // Write remaining steps (32-bit integer) in little-endian
+    buffer[7] = remaining & 0xFF;
+    buffer[8] = (remaining >> 8) & 0xFF;
+    buffer[9] = (remaining >> 16) & 0xFF;
+    buffer[10] = (remaining >> 24) & 0xFF;
+
+    // Write max speed (32-bit integer) in little-endian
+    buffer[11] = max_speed & 0xFF;
+    buffer[12] = (max_speed >> 8) & 0xFF;
+    buffer[13] = (max_speed >> 16) & 0xFF;
+    buffer[14] = (max_speed >> 24) & 0xFF;
+
+    protocol->sendPacket(packet::STATUS, buffer, 15);
 }
