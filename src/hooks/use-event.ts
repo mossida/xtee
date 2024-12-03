@@ -1,14 +1,13 @@
-import type { Event, Payload } from "@/types/event";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-export function useEvent<T extends Event, P = Payload<T>>(event: T) {
+export function useEvent<T extends string, P>(event: T) {
   const client = useQueryClient();
 
-  const query = useQuery<P | undefined>({
+  const query = useQuery<P | null>({
     queryKey: ["event", event],
-    queryFn: async () => undefined,
+    queryFn: async () => null,
   });
 
   useEffect(() => {

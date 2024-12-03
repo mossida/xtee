@@ -11,7 +11,7 @@ function formatBalancedNumber(num: number): string {
 }
 
 export function CurrentLoad() {
-  const { data: weight } = useEvent("data:weight");
+  const { data: weight } = useEvent<"event:weight", number>("event:weight");
 
   return (
     <div className="flex flex-col items-start w-full">

@@ -25,6 +25,7 @@ export const api = {
     return useQueryTanstack({
       ...options,
       queryKey: [key],
+      // @ts-expect-error
       queryFn: () => client.query([key]),
     });
   },
