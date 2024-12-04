@@ -10,7 +10,7 @@ use tauri::AppHandle;
 use tracing::{error, warn};
 
 use crate::{
-    actor::motor::{Motor, MotorArguments},
+    components::motor::{Motor, MotorArguments},
     error::ControllerError,
     store::Store,
 };

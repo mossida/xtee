@@ -1,8 +1,8 @@
 use router::{router, RouterContext};
 use setup::{setup_app, setup_logging};
 
-mod actor;
 mod cmd;
+mod components;
 mod error;
 mod filter;
 mod protocol;

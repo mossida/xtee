@@ -2,7 +2,7 @@ use ractor::{registry, rpc};
 use serialport::SerialPortInfo;
 
 use crate::{
-    actor::{
+    components::{
         actuator::ActuatorMessage,
         controller::{Controller, ControllerMessage},
         master::MasterMessage,

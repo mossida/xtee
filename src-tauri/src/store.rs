@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Error, StoreExt};
 
-use crate::actor::controller::{Controller, ControllerGroup};
+use crate::components::controller::{Controller, ControllerGroup};
 
 pub const CONTROLLERS: &str = "controllers";
 pub const PID_SETTINGS: &str = "pid_settings";

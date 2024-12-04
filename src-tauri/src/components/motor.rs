@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tracing::debug;
 
-use crate::{actor::controller::ControllerMessage, error::ControllerError, protocol::Packet};
+use crate::{components::controller::ControllerMessage, error::ControllerError, protocol::Packet};
 
 use super::mux::MuxMessage;
 

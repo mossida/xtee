@@ -3,7 +3,7 @@ use time::macros::{format_description, offset};
 use tracing::Level;
 use tracing_subscriber::fmt::time::OffsetTime;
 
-use crate::actor::master::Master;
+use crate::components::master::Master;
 
 pub fn setup_logging() {
     let fmt = if cfg!(debug_assertions) {

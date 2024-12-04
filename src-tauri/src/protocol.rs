@@ -12,7 +12,7 @@ use tokio_util::{
 use tracing::{debug, error, trace};
 
 use crate::{
-    actor::mux::{MuxMessage, MuxSink, MuxStream},
+    components::mux::{MuxMessage, MuxSink, MuxStream},
     error::ControllerError,
 };
 

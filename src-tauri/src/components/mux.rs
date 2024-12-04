@@ -8,7 +8,7 @@ use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::Framed;
 use tracing::{error, info};
 
-use crate::actor::master::SCOPE;
+use crate::components::master::SCOPE;
 use crate::{
     error::ControllerError,
     protocol::{Codec, Packet, Protocol},
