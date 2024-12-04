@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { MotorsStatus } from "../motors-status";
 import { Button } from "../ui/button";
 import {
   Form,
@@ -139,6 +140,9 @@ export function TwistingMode() {
         >
           STOP
         </Button>
+      </div>
+      <div className="col-span-1">
+        <MotorsStatus />
       </div>
     </div>
   );

@@ -45,7 +45,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="w-full flex-grow flex flex-col items-stretch justify-between px-4">
+          <div className="w-full flex-grow">
             <ManualActuator />
           </div>
 
