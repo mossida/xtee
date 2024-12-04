@@ -6,7 +6,9 @@ export function ManualActuator() {
     <>
       <StepActuator direction="forward" />
       <StepActuator direction="backward" />
-      <Button size="lg">Unload</Button>
+      <Button size="lg" variant="secondary">
+        Unload
+      </Button>
     </>
   );
 }

@@ -6,6 +6,7 @@ use crate::{
         actuator::ActuatorMessage,
         controller::{Controller, ControllerMessage},
         master::MasterMessage,
+        motor::{MotorMessage, MotorMovement},
     },
     router::RouterContext,
 };
@@ -29,6 +30,38 @@ pub fn get_ports(_ctx: RouterContext, _: ()) -> Result<Vec<SerialPortInfo>, rspc
         .collect();
 
     Ok(ports)
+}
+
+pub fn motor_spin(_ctx: RouterContext, input: (u8, MotorMovement)) -> Result<(), rspc::Error> {
+    let (slave, movement) = input;
+    let motor = registry::where_is(format!("motor-{}", slave)).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        format!("Motor {} not found", slave),
+    ))?;
+
+    motor
+        .send_message(MotorMessage::Spin(movement))
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
+}
+
+pub fn motor_stop(_ctx: RouterContext, input: (u8, u8)) -> Result<(), rspc::Error> {
+    let (slave, mode) = input;
+    let motor = registry::where_is(format!("motor-{}", slave)).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        format!("Motor {} not found", slave),
+    ))?;
+
+    motor
+        .send_message(if mode == 0x01 {
+            MotorMessage::GracefulStop
+        } else {
+            MotorMessage::EmergencyStop
+        })
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
 }
 
 pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controller>, rspc::Error> {

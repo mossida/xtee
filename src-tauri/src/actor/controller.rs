@@ -215,9 +215,9 @@ impl Actor for Controller {
 
     async fn handle_supervisor_evt(
         &self,
-        _: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         message: SupervisionEvent,
-        _state: &mut Self::State,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
             SupervisionEvent::ActorTerminated(who, _, _) => {
@@ -225,6 +225,12 @@ impl Actor for Controller {
                     "Actor {} terminated",
                     who.get_name().unwrap_or(who.get_id().to_string())
                 );
+
+                if let Some(mux) = state.mux.as_ref() {
+                    if mux.get_id() == who.get_id() {
+                        myself.kill();
+                    }
+                }
             }
             SupervisionEvent::ActorFailed(who, err) => {
                 error!(
@@ -232,6 +238,12 @@ impl Actor for Controller {
                     who.get_name().unwrap_or(who.get_id().to_string()),
                     err
                 );
+
+                if let Some(mux) = state.mux.as_ref() {
+                    if mux.get_id() == who.get_id() {
+                        myself.kill();
+                    }
+                }
             }
             _ => {}
         }

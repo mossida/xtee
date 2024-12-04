@@ -1,4 +1,4 @@
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/cn";
 
 export function LoadVisualizer({
   max,
@@ -23,8 +23,13 @@ export function LoadVisualizer({
   return (
     <div className="flex items-end gap-[8px]">
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="relative">
-          <div className={cn("w-[8px] h-[50px]", getColor(i))} />
+        <div key={`load-bar-${i}`} className="relative">
+          <div
+            className={cn(
+              "w-[8px] h-[50px] transition-colors duration-200",
+              getColor(i),
+            )}
+          />
         </div>
       ))}
     </div>

@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/cn";
 
 function Skeleton({
   className,

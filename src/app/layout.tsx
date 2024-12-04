@@ -1,7 +1,7 @@
 import "@/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/cn";
 import { Providers } from "./providers";
 import { Header } from "@/components/header";
 
@@ -19,7 +19,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <Header />
-          <div className="p-6">{children}</div>
+          <div className="p-6 h-full">{children}</div>
         </Providers>
       </body>
     </html>

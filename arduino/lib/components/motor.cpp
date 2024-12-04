@@ -31,9 +31,14 @@ void Engine::handleMove(const uint8_t *data, size_t size)
     auto *stepper = steppers[index];
     auto direction = data[1];
 
-    auto rotations = (uint16_t)data[2] << 8 | data[3];
+    auto rotations = (uint16_t)data[3] << 8 | data[2];
 
-    stepper->move(direction == 0x01 ? rotations : -rotations);
+    stepper->setSpeedInHz(3000);
+    stepper->setAcceleration(1000);
+
+    stepper->runForward();
+
+    // stepper->move(direction == 0x01 ? 60000 : -60000);
 
     sendStatus(data[0]);
 }
@@ -69,11 +74,11 @@ void Engine::handleSettings(const uint8_t *data, size_t size)
     auto index = data[0] - 1;
     auto *stepper = steppers[index];
 
-    auto speed = (uint16_t)data[1] << 8 | data[2];
-    auto acceleration = (uint16_t)data[3] << 8 | data[4];
+    auto speed = (uint16_t)data[2] << 8 | data[1];
+    auto acceleration = (uint16_t)data[4] << 8 | data[3];
 
-    stepper->setSpeedInHz(speed);
-    stepper->setAcceleration(acceleration);
+    stepper->setSpeedInHz(3000);
+    stepper->setAcceleration(1000);
 
     stepper->applySpeedAcceleration();
 }

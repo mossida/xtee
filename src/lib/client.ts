@@ -6,15 +6,16 @@ import type {
   UseMutationOptions,
   UseQueryOptions,
 } from "@/types/helpers";
-import { createClient, type RSPCError } from "@rspc/client";
+import { createClient, NoOpTransport, type RSPCError } from "@rspc/client";
 import { TauriTransport } from "@rspc/tauri";
 import {
   useQuery as useQueryTanstack,
   useMutation as useQueryMutation,
 } from "@tanstack/react-query";
+import { isTauri } from "./constants";
 
 export const client = createClient<Procedures>({
-  transport: new TauriTransport(),
+  transport: isTauri ? new TauriTransport() : new NoOpTransport(),
 });
 
 export const api = {
