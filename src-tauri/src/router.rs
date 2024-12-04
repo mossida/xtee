@@ -7,6 +7,7 @@ use crate::cmd::{
 };
 
 pub struct RouterContext {
+    #[allow(unused)]
     pub handle: AppHandle,
 }
 

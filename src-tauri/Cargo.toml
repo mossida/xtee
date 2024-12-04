@@ -24,8 +24,8 @@ serde = { version = "1", features = ["derive"] }
 typeshare = "1"
 serde_json = "1"
 
-rspc = { git = "https://github.com/espeon/rspc", features = ["tracing"] }
-rspc-tauri = { git = "https://github.com/espeon/rspc" }
+rspc = { version = "0.3.1", features = ["tracing"] }
+rspc-tauri = { version = "0.1.1" }
 specta = { version = "2.0.0-rc.20", features = ["derive"] }
 
 openssl-sys = { version = "0.9", features = ["vendored"] }

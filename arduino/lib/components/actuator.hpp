@@ -13,8 +13,8 @@ namespace components
     {
         namespace packet
         {
-            const uint8_t MOVE = 0x08;
-            const uint8_t STOP = 0x09;
+            const uint8_t MOVE = 0x09;
+            const uint8_t STOP = 0x0A;
         }
 
         class Actuator

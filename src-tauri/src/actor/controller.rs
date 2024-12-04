@@ -250,14 +250,4 @@ impl Actor for Controller {
 
         Ok(())
     }
-
-    async fn post_stop(
-        &self,
-        _: ActorRef<Self::Msg>,
-        state: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        state.store.close_resource();
-
-        Ok(())
-    }
 }

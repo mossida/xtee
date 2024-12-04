@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, MessagingErr};
 use tauri::{AppHandle, Emitter};
 use tokio::task::JoinHandle;
 use tracing::{debug, trace};
@@ -21,6 +21,8 @@ pub struct Actuator {
 
 pub struct ActuatorArguments {
     pub precision: f32,
+    pub scale_gain: f32,
+    pub scale_offset: f32,
     pub output_limit: f32,
     pub pid_settings: PIDSettings,
     pub handle: AppHandle,
@@ -38,6 +40,8 @@ impl TryFrom<(Arc<Store>, AppHandle)> for ActuatorArguments {
 
         Ok(ActuatorArguments {
             precision: 0.25,
+            scale_gain: 1.0,
+            scale_offset: 0.0,
             output_limit: 200.0,
             pid_settings: settings,
             handle,
@@ -67,29 +71,27 @@ impl From<Packet> for ActuatorMessage {
 
 pub struct ActuatorState {
     pid: Pid<f32>,
-    mux: Option<ActorRef<MuxMessage>>,
+    mux: Option<Arc<ActorRef<MuxMessage>>>,
     filter: KalmanFilter,
     status: ActuatorStatus,
     config: ActuatorArguments,
-    current_step: Option<JoinHandle<Result<(), ActorProcessingErr>>>,
+    current_step: Option<JoinHandle<Result<(), MessagingErr<MuxMessage>>>>,
     current_offset: Option<f32>,
 }
 
 impl ActuatorState {
     fn handle_input(&mut self, value: f32) {
+        let is_setpoint = (value - self.pid.setpoint).abs() < self.config.precision;
+
         match self.status {
-            ActuatorStatus::Keeping => {
-                if (value - self.pid.setpoint).abs() < self.config.precision {
-                    // Do nothing
-                } else {
-                    self.current_step = Some(self.step(value));
-                }
+            ActuatorStatus::Keeping if !is_setpoint => {
+                self.current_step = self.step(value).ok();
             }
             ActuatorStatus::Loading => {
-                if (value - self.pid.setpoint).abs() < self.config.precision {
+                if is_setpoint {
                     self.status = ActuatorStatus::Idle;
                 } else {
-                    self.current_step = Some(self.step(value));
+                    self.current_step = self.step(value).ok();
                 }
             }
             _ => {}
@@ -98,9 +100,9 @@ impl ActuatorState {
 
     fn handle_packet(&mut self, packet: Packet) -> Result<(), ActorProcessingErr> {
         if let Packet::Data { value } = packet {
-            let raw = (value as f32) * 0.0000672315;
-            //let offset = self.current_offset.get_or_insert(raw);
-            let calculated = self.filter.update(raw);
+            let raw = (value as f32) * self.config.scale_gain;
+            let offset = self.current_offset.get_or_insert(raw);
+            let calculated = self.filter.update(raw - *offset);
 
             debug!("Actuator handle packet: {:.2}", calculated);
 
@@ -119,28 +121,23 @@ impl ActuatorState {
         Ok(())
     }
 
-    fn step(&mut self, value: f32) -> JoinHandle<Result<(), ActorProcessingErr>> {
+    fn step(
+        &mut self,
+        value: f32,
+    ) -> Result<JoinHandle<Result<(), MessagingErr<MuxMessage>>>, ActorProcessingErr> {
         let ControlOutput { output, .. } = self.pid.next_control_output(value);
-        let pulse = (output.abs().clamp(5.0, 50.0)) as u64;
-        let mux = self.mux.clone().ok_or(ControllerError::MissingMux);
+        let pulse = (output.abs()) as u64;
+        let mux = self.mux.clone().ok_or(ControllerError::MissingMux)?;
 
         debug!("Actuator step: {:.2}", output);
 
-        tokio::spawn(async move {
-            let mux = mux?;
+        mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
+            direction: if output > 0.0 { 0 } else { 1 },
+        }))?;
 
-            mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
-                direction: if output > 0.0 { 0 } else { 1 },
-            }))?;
-
-            tokio::time::sleep(Duration::from_millis(pulse)).await;
-
-            mux.send_message(MuxMessage::Write(Packet::ActuatorStop))?;
-
-            trace!("Actuator step finished");
-
-            Ok::<(), ActorProcessingErr>(())
-        })
+        Ok(mux.send_after(Duration::from_millis(pulse), || {
+            MuxMessage::Write(Packet::ActuatorStop)
+        }))
     }
 }
 
@@ -178,7 +175,7 @@ impl Actor for Actuator {
             mux: None,
             status: ActuatorStatus::Idle,
             current_step: None,
-            current_offset: None,
+            current_offset: Some(config.scale_offset),
             config,
         })
     }
@@ -196,8 +193,10 @@ impl Actor for Actuator {
 
             debug!("Actuator got mux: {:?}", mux.get_name());
 
-            state.mux = Some(mux);
+            state.mux = Some(Arc::new(mux));
         }
+
+        let mux = state.mux.as_ref().ok_or(ControllerError::MissingMux)?;
 
         match message {
             ActuatorMessage::Stop => {
@@ -207,11 +206,7 @@ impl Actor for Actuator {
                     handle.abort();
                 });
 
-                state
-                    .mux
-                    .as_ref()
-                    .ok_or(ControllerError::MissingMux)?
-                    .send_message(MuxMessage::Write(Packet::ActuatorStop))?;
+                mux.send_message(MuxMessage::Write(Packet::ActuatorStop))?;
             }
             ActuatorMessage::Load(value) => {
                 state.status = ActuatorStatus::Loading;
@@ -222,11 +217,7 @@ impl Actor for Actuator {
                 state.pid.setpoint(value);
             }
             ActuatorMessage::Move(direction) => {
-                state
-                    .mux
-                    .as_ref()
-                    .ok_or(ControllerError::MissingMux)?
-                    .send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))?;
+                mux.send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))?;
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
         }

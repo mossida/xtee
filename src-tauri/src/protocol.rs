@@ -22,13 +22,14 @@ pub const READY_ID: u8 = 0x01;
 pub const DATA_ID: u8 = 0x02;
 
 pub const MOTOR_MOVE_ID: u8 = 0x03;
-pub const MOTOR_SETTINGS_ID: u8 = 0x04;
-pub const MOTOR_ASK_STATUS_ID: u8 = 0x05;
-pub const MOTOR_STATUS_ID: u8 = 0x06;
-pub const MOTOR_STOP_ID: u8 = 0x07;
+pub const MOTOR_KEEP_ID: u8 = 0x04;
+pub const MOTOR_SETTINGS_ID: u8 = 0x05;
+pub const MOTOR_ASK_STATUS_ID: u8 = 0x06;
+pub const MOTOR_STATUS_ID: u8 = 0x07;
+pub const MOTOR_STOP_ID: u8 = 0x08;
 
-pub const ACTUATOR_MOVE_ID: u8 = 0x08;
-pub const ACTUATOR_STOP_ID: u8 = 0x09;
+pub const ACTUATOR_MOVE_ID: u8 = 0x09;
+pub const ACTUATOR_STOP_ID: u8 = 0x0A;
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "little")]
@@ -61,6 +62,8 @@ pub enum Packet {
         remaining: u32,
         max_speed: u32,
     },
+    #[deku(id = "MOTOR_KEEP_ID")]
+    MotorKeep { slave: u8, direction: u8 },
     #[deku(id = "MOTOR_STOP_ID")]
     MotorStop {
         slave: u8,

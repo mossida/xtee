@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Duration};
 
-use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Error, StoreExt};

@@ -3437,8 +3437,9 @@ dependencies = [
 
 [[package]]
 name = "rspc"
-version = "0.3.0"
-source = "git+https://github.com/espeon/rspc#edd828c48dab13d397a57c4bd4897045ebfb6bc8"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c891dd1a73396c64492b10db14da67f745d65f0d46f3169f91941331005eb70"
 dependencies = [
  "better_any",
  "erased-serde",
@@ -3458,8 +3459,9 @@ dependencies = [
 
 [[package]]
 name = "rspc-tauri"
-version = "0.1.0"
-source = "git+https://github.com/espeon/rspc#edd828c48dab13d397a57c4bd4897045ebfb6bc8"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b570b20359d2cc83c824070d32d1f2e85e6f61d4987a150218fd090481b0eb72"
 dependencies = [
  "futures",
  "rspc",

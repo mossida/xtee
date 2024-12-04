@@ -15,10 +15,11 @@ namespace components
         namespace packet
         {
             const uint8_t MOVE = 0x03;
-            const uint8_t SETTINGS = 0x04;
-            const uint8_t REPORT_STATUS = 0x05;
-            const uint8_t STATUS = 0x06;
-            const uint8_t STOP = 0x07;
+            const uint8_t KEEP = 0x04;
+            const uint8_t SETTINGS = 0x05;
+            const uint8_t REPORT_STATUS = 0x06;
+            const uint8_t STATUS = 0x07;
+            const uint8_t STOP = 0x08;
         }
 
         class Engine
@@ -29,6 +30,7 @@ namespace components
             void begin();
 
             void handleMove(const uint8_t *data, size_t size);
+            void handleKeep(const uint8_t *data, size_t size);
             void handleSettings(const uint8_t *data, size_t size);
             void handleReportStatus(const uint8_t *data, size_t size);
             void handleStop(const uint8_t *data, size_t size);

@@ -12,6 +12,7 @@ void Engine::begin()
 
         stepper->setDirectionPin(pins::MOTORS[i]->dir);
         stepper->setEnablePin(pins::MOTORS[i]->enable, false);
+        stepper->setAutoEnable(false);
 
         steppers[i] = stepper;
     }
@@ -22,23 +23,38 @@ void Engine::begin()
     protocol->registerHandler(packet::STOP, this, &Engine::handleStop);
 }
 
+void Engine::handleKeep(const uint8_t *data, size_t size)
+{
+    if (size < 1 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+        return;
+
+    auto index = data[0] - 1;
+    auto direction = data[1];
+    auto *stepper = steppers[index];
+
+    if (stepper->isRunning())
+        stepper->forceStop();
+
+    if (direction == 0x01)
+        stepper->runForward();
+    else
+        stepper->runBackward();
+
+    sendStatus(data[0]);
+}
+
 void Engine::handleMove(const uint8_t *data, size_t size)
 {
     if (size < 1 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
         return;
 
     auto index = data[0] - 1;
-    auto *stepper = steppers[index];
     auto direction = data[1];
+    auto *stepper = steppers[index];
 
     auto rotations = (uint16_t)data[3] << 8 | data[2];
 
-    stepper->setSpeedInHz(3000);
-    stepper->setAcceleration(1000);
-
-    stepper->runForward();
-
-    // stepper->move(direction == 0x01 ? 60000 : -60000);
+    stepper->move(direction == 0x01 ? 60000 : -60000);
 
     sendStatus(data[0]);
 }
