@@ -9,7 +9,8 @@ export type Procedures = {
         { key: "actuator/move", input: number, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
-        { key: "motor/stop", input: [number, number], result: null },
+        { key: "motor/stop", input: [number, MotorStopMode], result: null } | 
+        { key: "restart", input: never, result: null },
     subscriptions: never
 };
 
@@ -18,3 +19,5 @@ export type Controller = { id: string; group: ControllerGroup; serial_port: stri
 export type ControllerGroup = "Default" | "Motors"
 
 export type MotorMovement = { direction: number; rotations: number; speed: number }
+
+export type MotorStopMode = "graceful" | "emergency"

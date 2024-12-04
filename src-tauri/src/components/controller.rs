@@ -30,6 +30,7 @@ pub struct Controller {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Type)]
+#[serde(rename_all = "kebab-case")]
 pub enum ControllerGroup {
     Default,
     Motors,
