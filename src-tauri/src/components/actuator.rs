@@ -4,7 +4,7 @@ use pid::{ControlOutput, Pid};
 use ractor::{async_trait, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, MessagingErr};
 use tauri::{AppHandle, Emitter};
 use tokio::task::JoinHandle;
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::{
     error::ControllerError,

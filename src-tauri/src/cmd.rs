@@ -72,7 +72,7 @@ pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controlle
 
     let result = rpc::call(
         &controller,
-        |port| MasterMessage::FetchControllers(port),
+        MasterMessage::FetchControllers,
         None,
     )
     .await
