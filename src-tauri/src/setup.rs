@@ -15,7 +15,7 @@ pub fn setup_logging() {
     let timer = OffsetTime::new(offset!(+8), fmt);
 
     let builder = tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
+        .with_max_level(Level::TRACE)
         .with_file(false)
         .with_line_number(false)
         .with_target(false)
@@ -32,7 +32,7 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
     let handle = app.handle().to_owned();
 
     tauri::async_runtime::spawn(async move {
-        let (_, handle) = Actor::spawn(None, Master, handle)
+        let (_, handle) = Actor::spawn(Some("master".to_owned()), Master, handle)
             .await
             .expect("Failed to spawn master");
 

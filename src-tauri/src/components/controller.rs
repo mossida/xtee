@@ -84,7 +84,7 @@ impl ControllerChild {
                     Actuator {
                         controller: myself.get_cell(),
                     },
-                    ActuatorArguments::try_from(args)?,
+                    ActuatorArguments::try_from(args.0)?,
                     myself.get_cell(),
                 )
                 .await?;

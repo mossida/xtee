@@ -3,8 +3,8 @@
 
 #include <HX711.h>
 
+#include "common.hpp"
 #include "protocol.hpp"
-#include "pins.hpp"
 
 namespace components
 {

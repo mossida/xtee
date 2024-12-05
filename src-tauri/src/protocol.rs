@@ -23,13 +23,17 @@ pub const DATA_ID: u8 = 0x02;
 
 pub const MOTOR_MOVE_ID: u8 = 0x03;
 pub const MOTOR_KEEP_ID: u8 = 0x04;
-pub const MOTOR_SETTINGS_ID: u8 = 0x05;
-pub const MOTOR_ASK_STATUS_ID: u8 = 0x06;
-pub const MOTOR_STATUS_ID: u8 = 0x07;
-pub const MOTOR_STOP_ID: u8 = 0x08;
 
-pub const ACTUATOR_MOVE_ID: u8 = 0x09;
-pub const ACTUATOR_STOP_ID: u8 = 0x0A;
+pub const MOTOR_SET_SPEED_ID: u8 = 0x05;
+pub const MOTOR_SET_ACCELERATION_ID: u8 = 0x06;
+pub const MOTOR_SET_OUTPUTS_ID: u8 = 0x07;
+
+pub const MOTOR_ASK_STATUS_ID: u8 = 0x08;
+pub const MOTOR_STATUS_ID: u8 = 0x09;
+pub const MOTOR_STOP_ID: u8 = 0x0A;
+
+pub const ACTUATOR_MOVE_ID: u8 = 0x0B;
+pub const ACTUATOR_STOP_ID: u8 = 0x0C;
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "little")]
@@ -45,12 +49,16 @@ pub enum Packet {
         direction: u8,
         rotations: u16,
     },
-    #[deku(id = "MOTOR_SETTINGS_ID")]
-    MotorSettings {
+    #[deku(id = "MOTOR_SET_SPEED_ID")]
+    MotorSetSpeed { slave: u8, speed: u32, apply: u8 },
+    #[deku(id = "MOTOR_SET_ACCELERATION_ID")]
+    MotorSetAcceleration {
         slave: u8,
-        speed: u16,
-        acceleration: u16,
+        acceleration: u32,
+        apply: u8,
     },
+    #[deku(id = "MOTOR_SET_OUTPUTS_ID")]
+    MotorSetOutputs { slave: u8, outputs: u8 },
     #[deku(id = "MOTOR_ASK_STATUS_ID")]
     MotorAskStatus { slave: u8 },
     #[deku(id = "MOTOR_STATUS_ID")]

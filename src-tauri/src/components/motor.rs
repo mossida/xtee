@@ -18,15 +18,17 @@ pub struct Motor {
 
 #[derive(Debug, Clone, Type, Serialize, Deserialize)]
 pub struct MotorMovement {
+    pub speed: u32,
     pub direction: u8,
     pub rotations: u16,
-    pub speed: u16,
 }
 
 #[derive(Debug, Clone)]
 pub enum MotorMessage {
     StartUpdates,
+    Keep(MotorMovement),
     Spin(MotorMovement),
+    SetOutputs(bool),
     GracefulStop,
     EmergencyStop,
     Packet(Packet),
@@ -50,6 +52,52 @@ pub struct MotorState {
     max_speed: u32,
     updates_handle: Option<JoinHandle<()>>,
     mux: Option<ActorRef<MuxMessage>>,
+}
+
+impl MotorState {
+    pub fn keep(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
+        let mux = self.mux.as_ref().ok_or(ControllerError::MissingMux)?;
+
+        mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
+            slave,
+            speed: movement.speed,
+            apply: 0x01,
+        }))?;
+
+        mux.send_message(MuxMessage::Write(Packet::MotorKeep {
+            slave,
+            direction: movement.direction,
+        }))?;
+
+        Ok(())
+    }
+
+    pub fn spin(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
+        let mux = self.mux.as_ref().ok_or(ControllerError::MissingMux)?;
+
+        // To be sure we make X rotations, we need to stop the motor first and reset the position
+        mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x00 }))?;
+
+        // Enable the motor outputs
+        mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
+            slave,
+            outputs: 0x01,
+        }))?;
+
+        mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
+            slave,
+            speed: movement.speed,
+            apply: 0x00,
+        }))?;
+
+        mux.send_message(MuxMessage::Write(Packet::MotorMove {
+            slave,
+            direction: movement.direction,
+            rotations: movement.rotations,
+        }))?;
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -119,19 +167,20 @@ impl Actor for Motor {
                     mode: 0x00,
                 }))?;
             }
+            MotorMessage::Keep(movement) => {
+                debug!("Keeping motor {} with {:?}", self.slave, movement);
+
+                state.keep(self.slave, movement)?;
+            }
             MotorMessage::Spin(movement) => {
                 debug!("Spinning motor {} with {:?}", self.slave, movement);
 
-                mux.send_message(MuxMessage::Write(Packet::MotorSettings {
+                state.spin(self.slave, movement)?;
+            }
+            MotorMessage::SetOutputs(outputs) => {
+                mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
                     slave: self.slave,
-                    speed: movement.speed,
-                    acceleration: 1000,
-                }))?;
-
-                mux.send_message(MuxMessage::Write(Packet::MotorMove {
-                    slave: self.slave,
-                    direction: movement.direction,
-                    rotations: movement.rotations,
+                    outputs: if outputs { 0x01 } else { 0x00 },
                 }))?;
             }
             MotorMessage::Packet(packet) => match packet {
@@ -159,6 +208,7 @@ impl Actor for Motor {
                 }
                 _ => {}
             },
+            _ => {}
         }
 
         Ok(())

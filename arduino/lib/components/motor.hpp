@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <FastAccelStepper.h>
 
+#include "common.hpp"
 #include "protocol.hpp"
-#include "pins.hpp"
 
 namespace components
 {
@@ -16,10 +16,14 @@ namespace components
         {
             const uint8_t MOVE = 0x03;
             const uint8_t KEEP = 0x04;
-            const uint8_t SETTINGS = 0x05;
-            const uint8_t REPORT_STATUS = 0x06;
-            const uint8_t STATUS = 0x07;
-            const uint8_t STOP = 0x08;
+
+            const uint8_t SET_SPEED = 0x05;
+            const uint8_t SET_ACCELERATION = 0x06;
+            const uint8_t SET_OUTPUTS = 0x07;
+
+            const uint8_t REPORT_STATUS = 0x08;
+            const uint8_t STATUS = 0x09;
+            const uint8_t STOP = 0x0A;
         }
 
         class Engine
@@ -31,7 +35,9 @@ namespace components
 
             void handleMove(const uint8_t *data, size_t size);
             void handleKeep(const uint8_t *data, size_t size);
-            void handleSettings(const uint8_t *data, size_t size);
+            void handleSetSpeed(const uint8_t *data, size_t size);
+            void handleSetAcceleration(const uint8_t *data, size_t size);
+            void handleSetOutputs(const uint8_t *data, size_t size);
             void handleReportStatus(const uint8_t *data, size_t size);
             void handleStop(const uint8_t *data, size_t size);
 

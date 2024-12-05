@@ -1,7 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
+use serde::Serialize;
+use specta::Type;
 use tauri::AppHandle;
+use tokio::sync::broadcast;
+use tokio_stream::wrappers::BroadcastStream;
 
 use crate::{
     error::ControllerError,
@@ -14,6 +18,13 @@ pub const SCOPE: &str = "components";
 
 pub struct Master;
 
+#[derive(Clone, Type, Serialize)]
+#[serde(tag = "type", content = "data")]
+#[specta(rename_all = "kebab-case")]
+pub enum Event {
+    Weight(f32),
+}
+
 pub struct MasterState {
     pub app: AppHandle,
     pub store: Arc<Store>,
@@ -21,12 +32,15 @@ pub struct MasterState {
     pub ports: HashMap<String, bool>,
     pub groups: HashMap<ControllerGroup, bool>,
     pub controllers: HashMap<String, Controller>,
+    pub channel: broadcast::Sender<Event>,
 }
 
 pub enum MasterMessage {
     Restart,
     Spawn(Controller),
+    Event(Event),
     FetchControllers(RpcReplyPort<Vec<Controller>>),
+    FetchStream(RpcReplyPort<BroadcastStream<Event>>),
 }
 
 #[async_trait]
@@ -58,6 +72,7 @@ impl Actor for Master {
             ports: HashMap::new(),
             groups: HashMap::new(),
             controllers: HashMap::new(),
+            channel: broadcast::channel(16).0,
         })
     }
 
@@ -92,6 +107,15 @@ impl Actor for Master {
             }
             MasterMessage::FetchControllers(reply) => {
                 reply.send(state.controllers.values().cloned().collect())?;
+            }
+            MasterMessage::FetchStream(reply) => {
+                reply.send(BroadcastStream::new(state.channel.subscribe()))?;
+            }
+            MasterMessage::Event(event) => {
+                state
+                    .channel
+                    .send(event)
+                    .map_err(|_| ControllerError::PacketError)?;
             }
             _ => {}
         };

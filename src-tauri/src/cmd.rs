@@ -1,4 +1,5 @@
-use ractor::{registry, rpc};
+use futures::{future, Stream, StreamExt};
+use ractor::{registry, rpc, ActorRef};
 use serde::Deserialize;
 
 use specta::Type;
@@ -7,11 +8,34 @@ use crate::{
     components::{
         actuator::ActuatorMessage,
         controller::Controller,
-        master::MasterMessage,
+        master::{Event, MasterMessage},
         motor::{MotorMessage, MotorMovement},
     },
     router::RouterContext,
 };
+
+// TODO: fix error handling
+pub fn events_bus(_ctx: RouterContext, _: ()) -> impl Stream<Item = Event> {
+    async_stream::stream! {
+        /*let master: ActorRef<MasterMessage> = registry::where_is("master".to_string()).expect("master to exist").into();
+
+        let stream = master
+            .call(MasterMessage::FetchStream, None)
+            .await
+            .expect("failed to ask master for stream")
+            .success_or(rspc::Error::new(
+                rspc::ErrorCode::InternalServerError,
+                "No response from master".to_owned(),
+            ))
+            .expect("failed to fetch stream from master")
+        .filter_map(|e| future::ready(e.ok()));
+
+        for await event in stream {
+            yield event;
+        }*/
+        yield Event::Weight(100.0);
+    }
+}
 
 pub fn restart(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
     let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
@@ -51,6 +75,20 @@ pub fn get_ports(_ctx: RouterContext, _: ()) -> Result<Vec<Port>, rspc::Error> {
         .collect();
 
     Ok(ports)
+}
+
+pub fn motor_keep(_ctx: RouterContext, input: (u8, MotorMovement)) -> Result<(), rspc::Error> {
+    let (slave, movement) = input;
+    let motor = registry::where_is(format!("motor-{}", slave)).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        format!("Motor {} not found", slave),
+    ))?;
+
+    motor
+        .send_message(MotorMessage::Keep(movement))
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
 }
 
 pub fn motor_spin(_ctx: RouterContext, input: (u8, MotorMovement)) -> Result<(), rspc::Error> {

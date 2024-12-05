@@ -8,15 +8,19 @@ export type Procedures = {
         { key: "actuator/load", input: number, result: null } | 
         { key: "actuator/move", input: number, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
+        { key: "motor/keep", input: [number, MotorMovement], result: null } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
         { key: "motor/stop", input: [number, MotorStopMode], result: null } | 
         { key: "restart", input: never, result: null },
-    subscriptions: never
+    subscriptions: 
+        { key: "events", input: never, result: Event }
 };
 
 export type Controller = { id: string; group: ControllerGroup; serial_port: string; baud_rate: number }
 
-export type ControllerGroup = "Default" | "Motors"
+export type ControllerGroup = "default" | "motors"
+
+export type Event = { type: "weight"; data: number }
 
 export type MotorMovement = { direction: number; rotations: number; speed: number }
 

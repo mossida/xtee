@@ -4,8 +4,9 @@
 #include <Arduino.h>
 #include <digitalWriteFast.h>
 
+#include "common.hpp"
 #include "protocol.hpp"
-#include "pins.hpp"
+
 
 namespace components
 {
@@ -13,8 +14,8 @@ namespace components
     {
         namespace packet
         {
-            const uint8_t MOVE = 0x09;
-            const uint8_t STOP = 0x0A;
+            const uint8_t MOVE = 0x0B;
+            const uint8_t STOP = 0x0C;
         }
 
         class Actuator

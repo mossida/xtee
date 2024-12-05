@@ -1,19 +1,21 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, MessagingErr};
-use tauri::{AppHandle, Emitter};
+use ractor::{
+    async_trait, registry, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, MessagingErr,
+};
 use tokio::task::JoinHandle;
 use tracing::debug;
 
 use crate::{
+    components::master::Event,
     error::ControllerError,
     filter::KalmanFilter,
     protocol::Packet,
-    store::{PIDSettings, Store, PID_SETTINGS},
+    store::{PIDSettings, Store, PID_SETTINGS, SCALE_GAIN},
 };
 
-use super::{controller::ControllerMessage, mux::MuxMessage};
+use super::{controller::ControllerMessage, master::MasterMessage, mux::MuxMessage};
 
 pub struct Actuator {
     pub controller: ActorCell,
@@ -25,13 +27,12 @@ pub struct ActuatorArguments {
     pub scale_offset: f32,
     pub output_limit: f32,
     pub pid_settings: PIDSettings,
-    pub handle: AppHandle,
 }
 
-impl TryFrom<(Arc<Store>, AppHandle)> for ActuatorArguments {
+impl TryFrom<Arc<Store>> for ActuatorArguments {
     type Error = ControllerError;
 
-    fn try_from((value, handle): (Arc<Store>, AppHandle)) -> Result<Self, Self::Error> {
+    fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
         let pid_settings = value
             .get(PID_SETTINGS)
             .ok_or(ControllerError::ConfigError)?;
@@ -40,11 +41,14 @@ impl TryFrom<(Arc<Store>, AppHandle)> for ActuatorArguments {
 
         Ok(ActuatorArguments {
             precision: 0.25,
-            scale_gain: 1.0,
+            scale_gain: value
+                .get(SCALE_GAIN)
+                .ok_or(ControllerError::ConfigError)?
+                .as_f64()
+                .unwrap_or(0.0000672315) as f32,
             scale_offset: 0.0,
             output_limit: 200.0,
             pid_settings: settings,
-            handle,
         })
     }
 }
@@ -72,6 +76,7 @@ impl From<Packet> for ActuatorMessage {
 pub struct ActuatorState {
     pid: Pid<f32>,
     mux: Option<Arc<ActorRef<MuxMessage>>>,
+    //master: Arc<ActorRef<MasterMessage>>,
     filter: KalmanFilter,
     status: ActuatorStatus,
     config: ActuatorArguments,
@@ -106,7 +111,8 @@ impl ActuatorState {
 
             debug!("Actuator handle packet: {:.2}", calculated);
 
-            self.config.handle.emit("event:weight", calculated)?;
+            //self.master
+            //    .send_message(MasterMessage::Event(Event::Weight(calculated)))?;
 
             match &self.current_step {
                 Some(handle) => {
@@ -155,6 +161,9 @@ impl Actor for Actuator {
         let mut pid = Pid::new(0.0, config.output_limit);
         let filter = KalmanFilter::new(1.0, 1.0, 1.0, 1.0);
 
+        //let master =
+        //    registry::where_is("master".to_string()).ok_or(ControllerError::PacketError)?;
+
         let PIDSettings {
             proportional,
             integral,
@@ -173,6 +182,7 @@ impl Actor for Actuator {
             pid,
             filter,
             mux: None,
+            //master: Arc::new(master.into()),
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),
