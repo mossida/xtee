@@ -81,9 +81,7 @@ impl ControllerChild {
             ControllerChild::Actuator => {
                 let (actuator, _) = Actuator::spawn_linked(
                     Some(name),
-                    Actuator {
-                        controller: myself.get_cell(),
-                    },
+                    Actuator,
                     ActuatorArguments::try_from(args.0)?,
                     myself.get_cell(),
                 )

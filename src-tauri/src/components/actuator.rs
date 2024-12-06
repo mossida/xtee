@@ -1,9 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{
-    async_trait, registry, rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, MessagingErr,
-};
+use ractor::{async_trait, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
 use tokio::task::JoinHandle;
 use tracing::debug;
 
@@ -17,9 +15,7 @@ use crate::{
 
 use super::{controller::ControllerMessage, master::MasterMessage, mux::MuxMessage};
 
-pub struct Actuator {
-    pub controller: ActorCell,
-}
+pub struct Actuator;
 
 pub struct ActuatorArguments {
     pub precision: f32,
@@ -192,12 +188,16 @@ impl Actor for Actuator {
 
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
-            let mux = rpc::call(&self.controller, ControllerMessage::FetchMux, None)
+            let controller = myself
+                .try_get_superivisor()
+                .ok_or(ControllerError::ConfigError)?;
+
+            let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
                 .await?
                 .success_or(ControllerError::MissingMux)?;
 
