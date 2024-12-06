@@ -105,6 +105,20 @@ pub fn motor_spin(_ctx: RouterContext, input: (u8, MotorMovement)) -> Result<(),
     Ok(())
 }
 
+pub fn motor_set_outputs(_ctx: RouterContext, input: (u8, bool)) -> Result<(), rspc::Error> {
+    let (slave, enabled) = input;
+    let motor = registry::where_is(format!("motor-{}", slave)).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        format!("Motor {} not found", slave),
+    ))?;
+
+    motor
+        .send_message(MotorMessage::SetOutputs(enabled))
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
+}
+
 #[derive(Type, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum MotorStopMode {
