@@ -109,10 +109,7 @@ impl ControllerChild {
             ControllerChild::Motor(slave) => {
                 let (motor, _) = Motor::spawn_linked(
                     Some(name),
-                    Motor {
-                        slave: *slave,
-                        controller: myself.get_cell(),
-                    },
+                    Motor { slave: *slave },
                     MotorArguments {},
                     myself.get_cell(),
                 )

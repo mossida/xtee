@@ -3,7 +3,7 @@ use tauri::AppHandle;
 
 use crate::cmd::{
     actuator_keep, actuator_load, actuator_move, actuator_stop, events_bus, get_controllers,
-    motor_keep, motor_set_outputs, motor_spin, motor_stop, restart,
+    motor_get_max_speed, motor_keep, motor_set_outputs, motor_spin, motor_stop, restart,
 };
 
 pub struct RouterContext {
@@ -15,6 +15,7 @@ pub fn router() -> Router<RouterContext> {
     Router::new()
         .config(Config::new().export_ts_bindings("../src/types/bindings.ts"))
         .query("controllers", |t| t(get_controllers))
+        .query("motor/get/max-speed", |t| t(motor_get_max_speed))
         //.query("ports", |t| t(get_ports))
         .mutation("restart", |t| t(restart))
         .mutation("motor/keep", |t| t(motor_keep))

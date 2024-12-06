@@ -1,7 +1,7 @@
 use ractor::{
     async_trait,
     concurrency::{Duration, JoinHandle},
-    rpc, Actor, ActorCell, ActorProcessingErr, ActorRef,
+    rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -13,7 +13,6 @@ use super::mux::MuxMessage;
 
 pub struct Motor {
     pub slave: u8,
-    pub controller: ActorCell,
 }
 
 #[derive(Debug, Clone, Type, Serialize, Deserialize)]
@@ -23,15 +22,18 @@ pub struct MotorMovement {
     pub rotations: u16,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum MotorMessage {
     StartUpdates,
     Keep(MotorMovement),
     Spin(MotorMovement),
-    SetOutputs(bool),
+
     GracefulStop,
     EmergencyStop,
     Packet(Packet),
+
+    SetOutputs(bool),
+    GetMaxSpeed(RpcReplyPort<u32>),
 }
 
 impl From<Packet> for MotorMessage {
@@ -150,27 +152,20 @@ impl Actor for Motor {
 
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
-            let mux = rpc::call(&self.controller, ControllerMessage::FetchMux, None)
+            let controller = myself
+                .try_get_superivisor()
+                .ok_or(ControllerError::ConfigError)?;
+
+            let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
                 .await?
                 .success_or(ControllerError::MissingMux)?;
 
             debug!("Motor got mux: {:?}", mux.get_name());
-
-            mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
-                slave: self.slave,
-                speed: 3000,
-                apply: 0x01,
-            }))?;
-
-            mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
-                slave: self.slave,
-                acceleration: 1000,
-            }))?;
 
             state.mux = Some(mux);
         }
@@ -209,6 +204,9 @@ impl Actor for Motor {
                     slave: self.slave,
                     outputs: if outputs { 0x01 } else { 0x00 },
                 }))?;
+            }
+            MotorMessage::GetMaxSpeed(reply) => {
+                reply.send(state.max_speed)?;
             }
             MotorMessage::Packet(packet) => match packet {
                 Packet::MotorStatus {

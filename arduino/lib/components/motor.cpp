@@ -168,7 +168,6 @@ void Engine::sendStatus(uint8_t slave)
     uint8_t buffer[11];
     int32_t position = stepper->getCurrentPosition();
     uint32_t remaining = stepper->stepsToStop();
-    uint32_t max_speed = stepper->getMaxSpeedInHz();
 
     buffer[0] = slave;
     buffer[1] = stepper->isRunning() ? 1 : 0;
