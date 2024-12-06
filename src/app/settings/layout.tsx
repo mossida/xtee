@@ -16,6 +16,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             label: "Actuator",
             path: "/settings/actuator",
           },
+          {
+            label: "Motors",
+            path: "/settings/motors",
+          },
         ]}
       />
       {children}
