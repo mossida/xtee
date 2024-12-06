@@ -34,6 +34,7 @@ export function TwistingMode() {
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
+  const { mutate: setOutputs } = api.useMutation("motor/set/outputs");
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -47,7 +48,7 @@ export function TwistingMode() {
   const start = () => {
     const values = form.getValues();
     const payload = {
-      direction: values.direction === "clockwise" ? 0x01 : 0x02,
+      direction: values.direction === "clockwise" ? 0x01 : 0x00,
       speed: values.speed === "slow" ? 1000 : 2000,
       rotations: values.rotations,
     };
@@ -61,7 +62,7 @@ export function TwistingMode() {
     onStart: () => {
       const values = form.getValues();
       const payload = {
-        direction: values.direction === "clockwise" ? 0x01 : 0x02,
+        direction: values.direction === "clockwise" ? 0x01 : 0x00,
         speed: values.speed === "slow" ? 1000 : 2000,
         rotations: values.rotations,
       };
@@ -181,7 +182,11 @@ export function TwistingMode() {
         </Button>
       </div>
       <div className="col-span-1">
-        <MotorsStatus />
+        {/*<MotorsStatus />*/}
+        <Button onClick={() => setOutputs([1, true])}>Enable motor 1</Button>
+        <Button onClick={() => setOutputs([2, true])}>Enable motor 2</Button>
+        <Button onClick={() => setOutputs([1, false])}>Disable motor 1</Button>
+        <Button onClick={() => setOutputs([2, false])}>Disable motor 2</Button>
       </div>
     </div>
   );

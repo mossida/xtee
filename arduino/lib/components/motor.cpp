@@ -18,9 +18,10 @@ void Engine::begin()
     }
 
     protocol->registerHandler(packet::MOVE, this, &Engine::handleMove);
-    // protocol->registerHandler(packet::SET_SPEED, this, &Engine::handleSetSpeed);
-    // protocol->registerHandler(packet::SET_ACCELERATION, this, &Engine::handleSetAcceleration);
-    // protocol->registerHandler(packet::SET_OUTPUTS, this, &Engine::handleSetOutputs);
+    protocol->registerHandler(packet::KEEP, this, &Engine::handleKeep);
+    protocol->registerHandler(packet::SET_SPEED, this, &Engine::handleSetSpeed);
+    protocol->registerHandler(packet::SET_ACCELERATION, this, &Engine::handleSetAcceleration);
+    protocol->registerHandler(packet::SET_OUTPUTS, this, &Engine::handleSetOutputs);
     protocol->registerHandler(packet::REPORT_STATUS, this, &Engine::handleReportStatus);
     protocol->registerHandler(packet::STOP, this, &Engine::handleStop);
 
@@ -32,12 +33,12 @@ void Engine::handleKeep(const uint8_t *data, size_t size)
     if (size < 2 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
         return;
 
+    if (data[1] != 0x01 && data[1] != 0x00)
+        return;
+
     auto index = data[0] - 1;
     auto direction = data[1];
     auto *stepper = steppers[index];
-
-    if (stepper->isRunning())
-        stepper->forceStop();
 
     if (direction == 0x01)
         stepper->runForward();
@@ -50,29 +51,21 @@ void Engine::handleMove(const uint8_t *data, size_t size)
     if (size < 4 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
         return;
 
-    if (data[1] != 0x02 && data[1] != 0x01)
+    if (data[1] != 0x00 && data[1] != 0x01)
         return;
 
     auto index = data[0] - 1;
-    auto direction = data[1];
+    auto direction = (2 * data[1]) - 1;
     auto *stepper = steppers[index];
-
     auto rotations = (uint16_t)data[3] << 8 | data[2];
-    auto steps = rotations * settings::MOTOR_STEPS;
 
-    if (direction == 0x01)
-    {
-        digitalWriteFast(LED_BUILTIN, HIGH);
-    }
-    else if (direction == 0x02)
-    {
-        digitalWriteFast(LED_BUILTIN, LOW);
-    }
+    if (rotations == 0)
+        return;
 
-    stepper->setSpeedInHz(3000);
-    stepper->setAcceleration(1000);
-    stepper->enableOutputs();
-    stepper->move(direction == 0x01 ? steps : -steps);
+    // NOTE: multiplication overflow if rotations is uint16_t
+    auto steps = settings::MOTOR_STEPS * rotations * direction;
+
+    stepper->move(static_cast<int32_t>(steps));
 }
 
 void Engine::handleReportStatus(const uint8_t *data, size_t size)
@@ -88,9 +81,12 @@ void Engine::handleStop(const uint8_t *data, size_t size)
     if (size < 1 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
         return;
 
+    if (data[1] != 0x00 && data[1] != 0x01)
+        return;
+
     auto index = data[0] - 1;
-    auto *stepper = steppers[index];
     auto mode = data[1];
+    auto *stepper = steppers[index];
 
     if (mode == 0x01)
         return stepper->stopMove();
@@ -101,6 +97,9 @@ void Engine::handleStop(const uint8_t *data, size_t size)
 void Engine::handleSetSpeed(const uint8_t *data, size_t size)
 {
     if (size < 6 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+        return;
+
+    if (data[5] != 0x00 && data[5] != 0x01)
         return;
 
     auto index = data[0] - 1;
@@ -126,12 +125,17 @@ void Engine::handleSetAcceleration(const uint8_t *data, size_t size)
     auto acceleration = (uint32_t)data[4] << 24 | (uint32_t)data[3] << 16 | (uint32_t)data[2] << 8 | data[1];
 
     stepper->setAcceleration(acceleration);
+
+    // TODO: understand if this can be set with a flag
     stepper->applySpeedAcceleration();
 }
 
 void Engine::handleSetOutputs(const uint8_t *data, size_t size)
 {
     if (size < 2 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+        return;
+
+    if (data[1] != 0x00 && data[1] != 0x01)
         return;
 
     auto index = data[0] - 1;

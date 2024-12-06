@@ -5,7 +5,7 @@
 
 namespace settings
 {
-    static const uint16_t MOTOR_STEPS = 800;
+    static const int64_t MOTOR_STEPS = 800;
 }
 
 #endif

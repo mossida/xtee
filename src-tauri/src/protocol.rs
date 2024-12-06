@@ -45,7 +45,7 @@ pub enum Packet {
     #[deku(id = "MOTOR_MOVE_ID")]
     MotorMove {
         slave: u8,
-        #[deku(assert = "*direction == 0x01 || *direction == 0x02")]
+        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
         direction: u8,
         rotations: u16,
     },
@@ -200,7 +200,8 @@ impl Encoder<Packet> for Codec {
         // Serialize the packet
         let packet_bytes = packet
             .to_bytes()
-            .map_err(|_| ControllerError::PacketError)?;
+            .map_err(|_| ControllerError::PacketError)
+            .inspect_err(|e| error!("Deku serialization error: {:?}", e))?;
 
         // Calculate CRC
         let crc = self.crc.checksum(&packet_bytes);
@@ -213,7 +214,8 @@ impl Encoder<Packet> for Codec {
 
         self.cobs_codec
             .encode(&frame_buffer, dst)
-            .map_err(|_| ControllerError::PacketError)?;
+            .map_err(|_| ControllerError::PacketError)
+            .inspect_err(|e| error!("COBS encoding error: {:?}", e))?;
 
         debug!(
             "Encoded packet: {:?}, framed: {:?}",
