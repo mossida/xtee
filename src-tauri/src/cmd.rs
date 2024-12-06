@@ -127,14 +127,14 @@ pub async fn motor_get_status(_ctx: RouterContext, slave: u8) -> Result<MotorSta
         ))?
         .into();
 
-    Ok(motor
+    motor
         .call(MotorMessage::GetStatus, None)
         .await
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
         .success_or(rspc::Error::new(
             rspc::ErrorCode::InternalServerError,
             "No response from motor".to_owned(),
-        ))?)
+        ))
 }
 
 pub async fn motor_get_max_speed(_ctx: RouterContext, slave: u8) -> Result<u32, rspc::Error> {
@@ -145,14 +145,14 @@ pub async fn motor_get_max_speed(_ctx: RouterContext, slave: u8) -> Result<u32, 
         ))?
         .into();
 
-    Ok(motor
+    motor
         .call(MotorMessage::GetMaxSpeed, None)
         .await
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
         .success_or(rspc::Error::new(
             rspc::ErrorCode::InternalServerError,
             "No response from motor".to_owned(),
-        ))?)
+        ))
 }
 
 #[derive(Type, Deserialize, PartialEq, Eq)]
