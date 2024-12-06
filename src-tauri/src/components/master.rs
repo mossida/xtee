@@ -38,8 +38,10 @@ pub struct MasterState {
 pub enum MasterMessage {
     Restart,
     Spawn(Controller),
+    #[allow(dead_code)]
     Event(Event),
     FetchControllers(RpcReplyPort<Vec<Controller>>),
+    #[allow(dead_code)]
     FetchStream(RpcReplyPort<BroadcastStream<Event>>),
 }
 
