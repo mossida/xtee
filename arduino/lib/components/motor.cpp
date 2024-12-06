@@ -73,6 +73,15 @@ void Engine::handleReportStatus(const uint8_t *data, size_t size)
     if (size < 1 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
         return;
 
+    if (!is_initialized)
+    {
+        // Send recognition for all motors in first call
+        for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
+            sendRecognition(i + 1);
+
+        is_initialized = true;
+    }
+
     sendStatus(data[0]);
 }
 
@@ -150,13 +159,13 @@ void Engine::handleSetOutputs(const uint8_t *data, size_t size)
 
 void Engine::sendStatus(uint8_t slave)
 {
-    if (slave > pins::MOTORS_COUNT)
+    if (slave < 1 || slave > pins::MOTORS_COUNT)
         return;
 
     auto index = slave - 1;
     auto *stepper = steppers[index];
 
-    uint8_t buffer[15];
+    uint8_t buffer[11];
     int32_t position = stepper->getCurrentPosition();
     uint32_t remaining = stepper->stepsToStop();
     uint32_t max_speed = stepper->getMaxSpeedInHz();
@@ -177,11 +186,25 @@ void Engine::sendStatus(uint8_t slave)
     buffer[9] = (remaining >> 16) & 0xFF;
     buffer[10] = (remaining >> 24) & 0xFF;
 
-    // Write max speed (32-bit integer) in little-endian
-    buffer[11] = max_speed & 0xFF;
-    buffer[12] = (max_speed >> 8) & 0xFF;
-    buffer[13] = (max_speed >> 16) & 0xFF;
-    buffer[14] = (max_speed >> 24) & 0xFF;
+    protocol->sendPacket(packet::STATUS, buffer, 11);
+}
 
-    protocol->sendPacket(packet::STATUS, buffer, 15);
+void Engine::sendRecognition(uint8_t slave)
+{
+    if (slave < 1 || slave > pins::MOTORS_COUNT)
+        return;
+
+    auto index = slave - 1;
+    auto *stepper = steppers[index];
+    auto max_speed = stepper->getMaxSpeedInHz();
+
+    uint8_t buffer[5];
+
+    buffer[0] = slave;
+    buffer[1] = max_speed & 0xFF;
+    buffer[2] = (max_speed >> 8) & 0xFF;
+    buffer[3] = (max_speed >> 16) & 0xFF;
+    buffer[4] = (max_speed >> 24) & 0xFF;
+
+    protocol->sendPacket(packet::RECOGNITION, buffer, 5);
 }

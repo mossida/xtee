@@ -22,9 +22,10 @@ namespace components
             const uint8_t SET_ACCELERATION = 0x06;
             const uint8_t SET_OUTPUTS = 0x07;
 
-            const uint8_t REPORT_STATUS = 0x08;
-            const uint8_t STATUS = 0x09;
-            const uint8_t STOP = 0x0A;
+            const uint8_t RECOGNITION = 0x08;
+            const uint8_t REPORT_STATUS = 0x09;
+            const uint8_t STATUS = 0x0A;
+            const uint8_t STOP = 0x0B;
         }
 
         class Engine
@@ -43,11 +44,13 @@ namespace components
             void handleStop(const uint8_t *data, size_t size);
 
         private:
+            bool is_initialized = false;
             protocol::Protocol *protocol;
             FastAccelStepperEngine engine;
             FastAccelStepper *steppers[pins::MOTORS_COUNT] = {nullptr};
 
             void sendStatus(uint8_t slave);
+            void sendRecognition(uint8_t slave);
         };
     }
 }

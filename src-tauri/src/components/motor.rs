@@ -214,13 +214,10 @@ impl Actor for Motor {
                 Packet::MotorStatus {
                     slave,
                     running,
-                    max_speed,
                     position,
                     remaining,
                     ..
                 } if slave == self.slave => {
-                    state.max_speed = max_speed;
-
                     state.status = if running == 1 {
                         MotorStatus::Spinning {
                             position,
@@ -231,7 +228,11 @@ impl Actor for Motor {
                     };
 
                     debug!("Motor {} status: {:?}", self.slave, state.status);
-                    //debug!("Motor {} max speed: {}", self.slave, max_speed);
+                }
+                Packet::MotorRecognition { slave, max_speed } if slave == self.slave => {
+                    debug!("Motor {} max speed: {}", self.slave, max_speed);
+
+                    state.max_speed = max_speed;
                 }
                 _ => {}
             },

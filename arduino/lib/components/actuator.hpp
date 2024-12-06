@@ -7,15 +7,14 @@
 #include "common.hpp"
 #include "protocol.hpp"
 
-
 namespace components
 {
     namespace actuator
     {
         namespace packet
         {
-            const uint8_t MOVE = 0x0B;
-            const uint8_t STOP = 0x0C;
+            const uint8_t MOVE = 0x0C;
+            const uint8_t STOP = 0x0D;
         }
 
         class Actuator
