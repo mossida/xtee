@@ -22,6 +22,6 @@ export type ControllerGroup = "default" | "motors"
 
 export type Event = { type: "weight"; data: number }
 
-export type MotorMovement = { direction: number; rotations: number; speed: number }
+export type MotorMovement = { speed: number; direction: number; rotations: number }
 
 export type MotorStopMode = "graceful" | "emergency"

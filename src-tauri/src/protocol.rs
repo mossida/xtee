@@ -45,18 +45,14 @@ pub enum Packet {
     #[deku(id = "MOTOR_MOVE_ID")]
     MotorMove {
         slave: u8,
-        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
+        #[deku(assert = "*direction == 0x01 || *direction == 0x02")]
         direction: u8,
         rotations: u16,
     },
     #[deku(id = "MOTOR_SET_SPEED_ID")]
     MotorSetSpeed { slave: u8, speed: u32, apply: u8 },
     #[deku(id = "MOTOR_SET_ACCELERATION_ID")]
-    MotorSetAcceleration {
-        slave: u8,
-        acceleration: u32,
-        apply: u8,
-    },
+    MotorSetAcceleration { slave: u8, acceleration: u32 },
     #[deku(id = "MOTOR_SET_OUTPUTS_ID")]
     MotorSetOutputs { slave: u8, outputs: u8 },
     #[deku(id = "MOTOR_ASK_STATUS_ID")]
@@ -71,7 +67,11 @@ pub enum Packet {
         max_speed: u32,
     },
     #[deku(id = "MOTOR_KEEP_ID")]
-    MotorKeep { slave: u8, direction: u8 },
+    MotorKeep {
+        slave: u8,
+        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
+        direction: u8,
+    },
     #[deku(id = "MOTOR_STOP_ID")]
     MotorStop {
         slave: u8,

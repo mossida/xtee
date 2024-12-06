@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <FastAccelStepper.h>
+#include <digitalWriteFast.h>
 
 #include "common.hpp"
 #include "protocol.hpp"

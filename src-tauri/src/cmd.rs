@@ -1,5 +1,5 @@
-use futures::{future, Stream, StreamExt};
-use ractor::{registry, rpc, ActorRef};
+use futures::Stream;
+use ractor::{registry, rpc};
 use serde::Deserialize;
 
 use specta::Type;

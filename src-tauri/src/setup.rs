@@ -15,7 +15,7 @@ pub fn setup_logging() {
     let timer = OffsetTime::new(offset!(+8), fmt);
 
     let builder = tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::DEBUG)
         .with_file(false)
         .with_line_number(false)
         .with_target(false)

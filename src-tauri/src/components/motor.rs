@@ -58,10 +58,20 @@ impl MotorState {
     pub fn keep(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
         let mux = self.mux.as_ref().ok_or(ControllerError::MissingMux)?;
 
+        mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
+            slave,
+            outputs: 0x01,
+        }))?;
+
         mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
             slave,
             speed: movement.speed,
             apply: 0x01,
+        }))?;
+
+        mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
+            slave,
+            acceleration: 1000,
         }))?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorKeep {
@@ -76,10 +86,10 @@ impl MotorState {
         let mux = self.mux.as_ref().ok_or(ControllerError::MissingMux)?;
 
         // To be sure we make X rotations, we need to stop the motor first and reset the position
-        mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x00 }))?;
+        //mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x00 }))?;
 
         // Enable the motor outputs
-        mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
+        /*mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
             slave,
             outputs: 0x01,
         }))?;
@@ -89,6 +99,12 @@ impl MotorState {
             speed: movement.speed,
             apply: 0x00,
         }))?;
+
+        // TODO: Understand why we need to set the acceleration here
+        mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
+            slave,
+            acceleration: 1000,
+        }))?;*/
 
         mux.send_message(MuxMessage::Write(Packet::MotorMove {
             slave,
@@ -144,6 +160,11 @@ impl Actor for Motor {
                 .success_or(ControllerError::MissingMux)?;
 
             debug!("Motor got mux: {:?}", mux.get_name());
+
+            mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
+                slave: self.slave,
+                acceleration: 1000,
+            }))?;
 
             state.mux = Some(mux);
         }
@@ -204,7 +225,7 @@ impl Actor for Motor {
                     };
 
                     debug!("Motor {} status: {:?}", self.slave, state.status);
-                    debug!("Motor {} max speed: {}", self.slave, max_speed);
+                    //debug!("Motor {} max speed: {}", self.slave, max_speed);
                 }
                 _ => {}
             },

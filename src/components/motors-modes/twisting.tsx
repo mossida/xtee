@@ -47,8 +47,8 @@ export function TwistingMode() {
   const start = () => {
     const values = form.getValues();
     const payload = {
-      direction: values.direction === "clockwise" ? 1 : 0,
-      speed: values.speed === "slow" ? 100 : 200,
+      direction: values.direction === "clockwise" ? 0x01 : 0x02,
+      speed: values.speed === "slow" ? 1000 : 2000,
       rotations: values.rotations,
     };
 
@@ -61,8 +61,8 @@ export function TwistingMode() {
     onStart: () => {
       const values = form.getValues();
       const payload = {
-        direction: values.direction === "clockwise" ? 1 : 0,
-        speed: values.speed === "slow" ? 100 : 200,
+        direction: values.direction === "clockwise" ? 0x01 : 0x02,
+        speed: values.speed === "slow" ? 1000 : 2000,
         rotations: values.rotations,
       };
 
