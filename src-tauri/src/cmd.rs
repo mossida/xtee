@@ -9,7 +9,7 @@ use crate::{
         actuator::ActuatorMessage,
         controller::Controller,
         master::{Event, MasterMessage},
-        motor::{MotorMessage, MotorMovement},
+        motor::{MotorMessage, MotorMovement, MotorStatus},
     },
     router::RouterContext,
 };
@@ -105,7 +105,7 @@ pub fn motor_spin(_ctx: RouterContext, input: (u8, MotorMovement)) -> Result<(),
     Ok(())
 }
 
-pub fn motor_set_outputs(_ctx: RouterContext, input: (u8, bool)) -> Result<(), rspc::Error> {
+pub fn motor_set_outputs(_ctx: RouterContext, input: (u8, bool)) -> Result<bool, rspc::Error> {
     let (slave, enabled) = input;
     let motor = registry::where_is(format!("motor-{}", slave)).ok_or(rspc::Error::new(
         rspc::ErrorCode::NotFound,
@@ -116,7 +116,25 @@ pub fn motor_set_outputs(_ctx: RouterContext, input: (u8, bool)) -> Result<(), r
         .send_message(MotorMessage::SetOutputs(enabled))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
 
-    Ok(())
+    Ok(enabled)
+}
+
+pub async fn motor_get_status(_ctx: RouterContext, slave: u8) -> Result<MotorStatus, rspc::Error> {
+    let motor: ActorRef<MotorMessage> = registry::where_is(format!("motor-{}", slave))
+        .ok_or(rspc::Error::new(
+            rspc::ErrorCode::NotFound,
+            format!("Motor {} not found", slave),
+        ))?
+        .into();
+
+    Ok(motor
+        .call(MotorMessage::GetStatus, None)
+        .await
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
+        .success_or(rspc::Error::new(
+            rspc::ErrorCode::InternalServerError,
+            "No response from motor".to_owned(),
+        ))?)
 }
 
 pub async fn motor_get_max_speed(_ctx: RouterContext, slave: u8) -> Result<u32, rspc::Error> {

@@ -1,6 +1,6 @@
 import { api } from "@/lib/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
@@ -25,7 +25,7 @@ import {
 } from "../ui/select";
 
 const schema = z.object({
-  direction: z.enum(["clockwise", "counterclockwise"]),
+  direction: z.enum(["mode-1", "mode-2"]),
   speed: z.enum(["slow", "fast"]),
   rotations: z.number().min(1),
 });
@@ -34,21 +34,22 @@ export function TwistingMode() {
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
-  const { mutate: setOutputs } = api.useMutation("motor/set/outputs");
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
-      direction: "clockwise",
+      direction: "mode-1",
       speed: "slow",
       rotations: 1,
     },
     resolver: zodResolver(schema),
   });
 
+  const mode = useWatch({ control: form.control, name: "direction" });
+
   const start = () => {
     const values = form.getValues();
     const payload = {
-      direction: values.direction === "clockwise" ? 0x01 : 0x00,
+      direction: values.direction === "mode-1" ? 0x01 : 0x00,
       speed: values.speed === "slow" ? 1000 : 15000,
       rotations: values.rotations,
     };
@@ -62,7 +63,7 @@ export function TwistingMode() {
     onStart: () => {
       const values = form.getValues();
       const payload = {
-        direction: values.direction === "clockwise" ? 0x01 : 0x00,
+        direction: values.direction === "mode-1" ? 0x01 : 0x00,
         speed: values.speed === "slow" ? 1000 : 15000,
         rotations: values.rotations,
       };
@@ -87,24 +88,20 @@ export function TwistingMode() {
               <FormItem>
                 <FormLabel>Direction</FormLabel>
                 <FormControl>
-                  <Select
-                    onValueChange={onChange}
-                    defaultValue={value}
-                    {...field}
-                  >
+                  <Select onValueChange={onChange} value={value} {...field}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a direction" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="clockwise">Clockwise</SelectItem>
-                      <SelectItem value="counterclockwise">
-                        Counterclockwise
-                      </SelectItem>
+                      <SelectItem value="mode-1">Mode 1</SelectItem>
+                      <SelectItem value="mode-2">Mode 2</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormControl>
                 <FormDescription>
-                  Motors will rotate in same direction.
+                  {mode === "mode-1"
+                    ? "Motor 1 will rotate clockwise, motor 2 will rotate counterclockwise."
+                    : "Motor 1 will rotate counterclockwise, motor 2 will rotate clockwise."}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -117,11 +114,7 @@ export function TwistingMode() {
               <FormItem>
                 <FormLabel>Speed</FormLabel>
                 <FormControl>
-                  <Select
-                    onValueChange={onChange}
-                    defaultValue={value}
-                    {...field}
-                  >
+                  <Select onValueChange={onChange} value={value} {...field}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a speed" />
                     </SelectTrigger>
@@ -182,11 +175,7 @@ export function TwistingMode() {
         </Button>
       </div>
       <div className="col-span-1">
-        {/*<MotorsStatus />*/}
-        <Button onClick={() => setOutputs([1, true])}>Enable motor 1</Button>
-        <Button onClick={() => setOutputs([2, true])}>Enable motor 2</Button>
-        <Button onClick={() => setOutputs([1, false])}>Disable motor 1</Button>
-        <Button onClick={() => setOutputs([2, false])}>Disable motor 2</Button>
+        <MotorsStatus />
       </div>
     </div>
   );

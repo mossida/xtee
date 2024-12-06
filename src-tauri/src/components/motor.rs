@@ -1,7 +1,7 @@
 use ractor::{
     async_trait,
     concurrency::{Duration, JoinHandle},
-    rpc, Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort,
+    rpc, Actor, ActorProcessingErr, ActorRef, RpcReplyPort,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -33,6 +33,7 @@ pub enum MotorMessage {
     Packet(Packet),
 
     SetOutputs(bool),
+    GetStatus(RpcReplyPort<MotorStatus>),
     GetMaxSpeed(RpcReplyPort<u32>),
 }
 
@@ -42,9 +43,12 @@ impl From<Packet> for MotorMessage {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[serde(tag = "status", content = "data")]
+#[serde(rename_all = "kebab-case")]
 pub enum MotorStatus {
     Idle,
+    Stopping,
     Spinning { position: i32, remaining: u32 },
 }
 
@@ -176,7 +180,7 @@ impl Actor for Motor {
         match msg {
             MotorMessage::StartUpdates => {
                 state.updates_handle =
-                    Some(mux.send_interval(Duration::from_millis(1000), move || {
+                    Some(mux.send_interval(Duration::from_millis(500), move || {
                         MuxMessage::Write(Packet::MotorAskStatus { slave })
                     }));
             }
@@ -205,6 +209,10 @@ impl Actor for Motor {
                     outputs: if outputs { 0x01 } else { 0x00 },
                 }))?;
             }
+            // TODO: Temporary
+            MotorMessage::GetStatus(reply) => {
+                reply.send(state.status.clone())?;
+            }
             MotorMessage::GetMaxSpeed(reply) => {
                 reply.send(state.max_speed)?;
             }
@@ -212,17 +220,19 @@ impl Actor for Motor {
                 Packet::MotorStatus {
                     slave,
                     running,
+                    stopping,
                     position,
                     remaining,
                     ..
                 } if slave == self.slave => {
-                    state.status = if running == 1 {
-                        MotorStatus::Spinning {
+                    state.status = match running {
+                        0 => MotorStatus::Idle,
+                        1 if stopping == 0 => MotorStatus::Spinning {
                             position,
                             remaining,
-                        }
-                    } else {
-                        MotorStatus::Idle
+                        },
+                        1 if stopping == 1 => MotorStatus::Stopping,
+                        _ => MotorStatus::Idle,
                     };
 
                     debug!("Motor {} status: {:?}", self.slave, state.status);

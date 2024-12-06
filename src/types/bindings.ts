@@ -2,14 +2,16 @@
 
 export type Procedures = {
     queries: 
-        { key: "controllers", input: never, result: Controller[] },
+        { key: "controllers", input: never, result: Controller[] } | 
+        { key: "motor/get/max-speed", input: number, result: number } | 
+        { key: "motor/get/status", input: number, result: MotorStatus },
     mutations: 
         { key: "actuator/keep", input: number, result: null } | 
         { key: "actuator/load", input: number, result: null } | 
         { key: "actuator/move", input: number, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
         { key: "motor/keep", input: [number, MotorMovement], result: null } | 
-        { key: "motor/set/outputs", input: [number, boolean], result: null } | 
+        { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
         { key: "motor/stop", input: [number, MotorStopMode], result: null } | 
         { key: "restart", input: never, result: null },
@@ -24,5 +26,7 @@ export type ControllerGroup = "default" | "motors"
 export type Event = { type: "weight"; data: number }
 
 export type MotorMovement = { speed: number; direction: number; rotations: number }
+
+export type MotorStatus = { status: "idle" } | { status: "stopping" } | { status: "spinning"; data: { position: number; remaining: number } }
 
 export type MotorStopMode = "graceful" | "emergency"

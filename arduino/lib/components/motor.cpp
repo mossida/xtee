@@ -44,6 +44,8 @@ void Engine::handleKeep(const uint8_t *data, size_t size)
         stepper->runForward();
     else
         stepper->runBackward();
+
+    sendStatus(data[0]);
 }
 
 void Engine::handleMove(const uint8_t *data, size_t size)
@@ -66,6 +68,8 @@ void Engine::handleMove(const uint8_t *data, size_t size)
     auto steps = settings::MOTOR_STEPS * rotations * direction;
 
     stepper->move(static_cast<int32_t>(steps));
+
+    sendStatus(data[0]);
 }
 
 void Engine::handleReportStatus(const uint8_t *data, size_t size)
@@ -101,6 +105,8 @@ void Engine::handleStop(const uint8_t *data, size_t size)
         return stepper->stopMove();
 
     stepper->forceStopAndNewPosition(0);
+
+    sendStatus(data[0]);
 }
 
 void Engine::handleSetSpeed(const uint8_t *data, size_t size)
