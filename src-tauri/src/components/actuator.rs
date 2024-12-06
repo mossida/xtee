@@ -6,14 +6,13 @@ use tokio::task::JoinHandle;
 use tracing::debug;
 
 use crate::{
-    components::master::Event,
     error::ControllerError,
     filter::KalmanFilter,
     protocol::Packet,
     store::{PIDSettings, Store, PID_SETTINGS, SCALE_GAIN},
 };
 
-use super::{controller::ControllerMessage, master::MasterMessage, mux::MuxMessage};
+use super::{controller::ControllerMessage, mux::MuxMessage};
 
 pub struct Actuator;
 

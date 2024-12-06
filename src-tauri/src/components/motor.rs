@@ -229,7 +229,6 @@ impl Actor for Motor {
                 }
                 _ => {}
             },
-            _ => {}
         }
 
         Ok(())
