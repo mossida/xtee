@@ -1,11 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
+use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent};
 use serde::Serialize;
 use specta::Type;
 use tauri::AppHandle;
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
+use tracing::{error, warn};
 
 use crate::{
     error::ControllerError,
@@ -96,16 +97,21 @@ impl Actor for Master {
                 state.ports.insert(controller.serial_port.clone(), true);
 
                 let id = controller.id.clone();
-                let (actor_ref, _) = Actor::spawn_linked(
+                let result = Actor::spawn_linked(
                     Some(id.clone()),
                     controller.clone(),
                     (state.store.clone(), state.app.clone()),
                     myself.get_cell(),
                 )
-                .await?;
+                .await;
 
-                state.refs.insert(id.clone(), actor_ref);
-                state.controllers.insert(id, controller);
+                match result {
+                    Ok((actor_ref, _)) => {
+                        state.refs.insert(id.clone(), actor_ref);
+                        state.controllers.insert(id, controller);
+                    }
+                    Err(e) => error!("Failed to spawn controller: {}", e),
+                }
             }
             MasterMessage::FetchControllers(reply) => {
                 reply.send(state.controllers.values().cloned().collect())?;
@@ -121,6 +127,54 @@ impl Actor for Master {
             }
             _ => {}
         };
+
+        Ok(())
+    }
+
+    async fn handle_supervisor_evt(
+        &self,
+        myself: ActorRef<Self::Msg>,
+        message: SupervisionEvent,
+        state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        match message {
+            SupervisionEvent::ActorTerminated(who, _, _) => {
+                warn!(
+                    "Actor {} terminated",
+                    who.get_name().unwrap_or(who.get_id().to_string())
+                );
+
+                if let Some(id) = who.get_name() {
+                    let controller = state.controllers.remove(&id);
+
+                    if let Some(controller) = controller {
+                        state.groups.remove(&controller.group);
+                        state.ports.remove(&controller.serial_port);
+                    }
+
+                    state.refs.remove(&id);
+                }
+            }
+            SupervisionEvent::ActorFailed(who, err) => {
+                error!(
+                    "Actor {} failed because of {}",
+                    who.get_name().unwrap_or(who.get_id().to_string()),
+                    err
+                );
+
+                if let Some(id) = who.get_name() {
+                    let controller = state.controllers.remove(&id);
+
+                    if let Some(controller) = controller {
+                        state.groups.remove(&controller.group);
+                        state.ports.remove(&controller.serial_port);
+                    }
+
+                    state.refs.remove(&id);
+                }
+            }
+            _ => {}
+        }
 
         Ok(())
     }

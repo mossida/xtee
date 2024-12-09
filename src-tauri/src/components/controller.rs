@@ -187,17 +187,20 @@ impl Actor for Controller {
                 reply.send(state.mux.clone().ok_or(ControllerError::MissingMux)?)?;
             }
             ControllerMessage::Spawn(child) => {
-                let cell = child
+                let result = child
                     .spawn(
                         myself,
                         self.clone(),
                         (state.store.clone(), state.app.clone()),
                     )
-                    .await
-                    .inspect_err(|e| error!("Failed to spawn child: {}", e))?;
+                    .await;
 
-                if let ControllerChild::Mux = child {
-                    state.mux = Some(cell.into())
+                match result {
+                    Ok(cell) if matches!(child, ControllerChild::Mux) => {
+                        state.mux = Some(cell.into())
+                    }
+                    Err(e) => error!("Failed to spawn child: {}", e),
+                    _ => {}
                 }
             }
             ControllerMessage::Start => {
@@ -224,7 +227,8 @@ impl Actor for Controller {
 
                 if let Some(mux) = state.mux.as_ref() {
                     if mux.get_id() == who.get_id() {
-                        myself.kill();
+                        warn!("Mux terminated - attempting restart");
+                        myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
                     }
                 }
             }
@@ -237,7 +241,8 @@ impl Actor for Controller {
 
                 if let Some(mux) = state.mux.as_ref() {
                     if mux.get_id() == who.get_id() {
-                        myself.kill();
+                        warn!("Mux failed - attempting restart");
+                        myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
                     }
                 }
             }

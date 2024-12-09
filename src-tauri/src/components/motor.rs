@@ -162,7 +162,7 @@ impl Actor for Motor {
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
             let controller = myself
-                .try_get_superivisor()
+                .try_get_supervisor()
                 .ok_or(ControllerError::ConfigError)?;
 
             let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)

@@ -31,7 +31,7 @@ specta = { version = "2.0.0-rc.20", features = ["derive"] }
 openssl-sys = { version = "0.9", features = ["vendored"] }
 tauri-plugin-log = "2"
 tauri-plugin-store = "2"
-ractor = "0.13.3"
+ractor = "0.13.4"
 deku = { version = "0.18.1" }
 crc = "3.2.1"
 cobs-codec = "0.1.0"

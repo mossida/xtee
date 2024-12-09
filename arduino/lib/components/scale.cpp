@@ -13,7 +13,7 @@ void Scale::begin()
 
 void Scale::update()
 {
-    if (sensor.is_ready())
+    if (protocol->hasAcknowledged() && sensor.is_ready())
     {
         auto weight = sensor.read();
         protocol->sendPacket(packet::WEIGHT, (uint8_t *)&weight, sizeof(weight));

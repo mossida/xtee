@@ -1,18 +1,16 @@
 use std::{any::TypeId, pin::Pin};
 
 use futures::{stream::SplitSink, SinkExt, Stream};
-use ractor::{async_trait, pg, Actor, ActorCell, ActorProcessingErr, ActorRef};
+use ractor::{async_trait, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
-use tokio_serial::{SerialPortBuilderExt, SerialStream};
-use tokio_util::codec::Framed;
-use tracing::{error, info};
-
-use crate::components::master::SCOPE;
 use crate::{
     error::ControllerError,
     protocol::{Codec, Packet, Protocol},
 };
+use tokio_serial::{SerialPortBuilderExt, SerialStream};
+use tokio_util::codec::Framed;
+use tracing::{debug, error};
 
 use super::controller::Controller;
 use super::{actuator::ActuatorMessage, motor::MotorMessage};
@@ -28,6 +26,7 @@ pub enum MuxMessage {
 
 pub struct MuxState {
     writer: MuxSink,
+    reader: Option<MuxStream>,
 }
 
 pub struct MuxArguments {
@@ -85,7 +84,7 @@ impl StreamMuxNotification for MuxCallback {
     }
 
     fn end_of_stream(&self) {
-        info!("End of stream");
+        debug!("End of stream - waiting for more data");
     }
 }
 
@@ -103,27 +102,50 @@ impl Actor for Mux {
         let protocol = Protocol::new(args.stream);
         let (sink, stream) = protocol.framed(myself.clone());
 
-        let targets: Vec<_> =
-            pg::get_scoped_members(&SCOPE.to_owned(), &args.controller.group.into())
-                .into_iter()
-                .map(|child| {
-                    Box::new(MuxTarget::from(child))
-                        as Box<dyn ractor_actors::streams::Target<MuxStream>>
-                })
-                .collect();
+        Ok(MuxState {
+            writer: sink,
+            reader: Some(stream),
+        })
+    }
+
+    async fn post_start(
+        &self,
+        myself: ActorRef<Self::Msg>,
+        state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        let supervisor = myself
+            .try_get_supervisor()
+            .ok_or(ControllerError::ConfigError)?;
+
+        let children = supervisor.get_children();
+
+        let targets: Vec<_> = children
+            .into_iter()
+            .filter(|child| child.get_type_id() != TypeId::of::<MuxMessage>())
+            .inspect(|child| {
+                debug!(
+                    "Multiplexing to {}",
+                    child.get_name().unwrap_or("".to_string())
+                )
+            })
+            .map(|child| {
+                Box::new(MuxTarget::from(child))
+                    as Box<dyn ractor_actors::streams::Target<MuxStream>>
+            })
+            .collect();
 
         mux_stream(
             StreamMuxConfiguration {
-                stream,
+                stream: state.reader.take().expect("Reader already taken"),
                 targets,
                 callback: MuxCallback,
-                stop_processing_target_on_failure: true,
+                stop_processing_target_on_failure: false,
             },
             Some(myself.get_cell()),
         )
         .await?;
 
-        Ok(MuxState { writer: sink })
+        Ok(())
     }
 
     async fn handle(

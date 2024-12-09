@@ -61,6 +61,7 @@ namespace protocol
 
         void begin(uint32_t speed);
         void update();
+        bool hasAcknowledged();
 
         template <typename T>
         void registerHandler(uint8_t packetId, T *instance, void (T::*handlerPtr)(const uint8_t *, size_t))

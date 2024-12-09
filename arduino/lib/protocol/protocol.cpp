@@ -68,3 +68,8 @@ void Protocol::handleAck()
 {
     ack = true;
 }
+
+bool Protocol::hasAcknowledged()
+{
+    return ack;
+}
