@@ -119,24 +119,6 @@ pub fn motor_set_outputs(_ctx: RouterContext, input: (u8, bool)) -> Result<bool,
     Ok(enabled)
 }
 
-pub async fn motor_get_status(_ctx: RouterContext, slave: u8) -> Result<MotorStatus, rspc::Error> {
-    let motor: ActorRef<MotorMessage> = registry::where_is(format!("motor-{}", slave))
-        .ok_or(rspc::Error::new(
-            rspc::ErrorCode::NotFound,
-            format!("Motor {} not found", slave),
-        ))?
-        .into();
-
-    motor
-        .call(MotorMessage::GetStatus, None)
-        .await
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
-        .success_or(rspc::Error::new(
-            rspc::ErrorCode::InternalServerError,
-            "No response from motor".to_owned(),
-        ))
-}
-
 pub async fn motor_get_max_speed(_ctx: RouterContext, slave: u8) -> Result<u32, rspc::Error> {
     let motor: ActorRef<MotorMessage> = registry::where_is(format!("motor-{}", slave))
         .ok_or(rspc::Error::new(

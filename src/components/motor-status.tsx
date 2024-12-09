@@ -1,3 +1,4 @@
+import { useEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
 import { Lock } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -7,9 +8,8 @@ import { Toggle } from "./ui/toggle";
 export function MotorStatus({ motor }: { motor: 1 | 2 }) {
   const { mutate: setOutputs, data: outputs } =
     api.useMutation("motor/set/outputs");
-  const { data } = api.useQuery("motor/get/status", motor, {
-    refetchInterval: 200,
-  });
+
+  const { data } = useEvent("motor-status");
 
   return (
     <div className="flex flex-col gap-2">

@@ -12,15 +12,15 @@ function formatBalancedNumber(num: number): string {
 }
 
 export function CurrentLoad() {
-  const weight = 0;
+  const { data: weight } = useEvent("weight");
 
   return (
     <div className="flex flex-col items-start w-full">
       <span className="text-sm text-muted-foreground">Current load (kg)</span>
       <span className="font-mono font-medium text-5xl mb-6 mt-3">
-        {formatBalancedNumber(weight)}
+        {formatBalancedNumber(weight ?? 0)}
       </span>
-      <LoadVisualizer current={weight} max={200} />
+      <LoadVisualizer current={weight ?? 0} max={200} />
     </div>
   );
 }

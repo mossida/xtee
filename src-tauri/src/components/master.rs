@@ -3,9 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent};
 use serde::Serialize;
 use specta::Type;
-use tauri::AppHandle;
-use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
+use tauri::{AppHandle, Emitter};
 use tracing::{error, warn};
 
 use crate::{
@@ -13,7 +11,10 @@ use crate::{
     store::{store, Store, CONTROLLERS},
 };
 
-use super::controller::{Controller, ControllerGroup, ControllerMessage};
+use super::{
+    controller::{Controller, ControllerGroup, ControllerMessage},
+    motor::MotorStatus,
+};
 
 pub const SCOPE: &str = "components";
 
@@ -21,9 +22,10 @@ pub struct Master;
 
 #[derive(Clone, Type, Serialize)]
 #[serde(tag = "type", content = "data")]
-#[specta(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
 pub enum Event {
     Weight(f32),
+    MotorStatus(MotorStatus),
 }
 
 pub struct MasterState {
@@ -33,7 +35,6 @@ pub struct MasterState {
     pub ports: HashMap<String, bool>,
     pub groups: HashMap<ControllerGroup, bool>,
     pub controllers: HashMap<String, Controller>,
-    pub channel: broadcast::Sender<Event>,
 }
 
 pub enum MasterMessage {
@@ -42,8 +43,6 @@ pub enum MasterMessage {
     #[allow(dead_code)]
     Event(Event),
     FetchControllers(RpcReplyPort<Vec<Controller>>),
-    #[allow(dead_code)]
-    FetchStream(RpcReplyPort<BroadcastStream<Event>>),
 }
 
 #[async_trait]
@@ -75,7 +74,6 @@ impl Actor for Master {
             ports: HashMap::new(),
             groups: HashMap::new(),
             controllers: HashMap::new(),
-            channel: broadcast::channel(16).0,
         })
     }
 
@@ -116,14 +114,8 @@ impl Actor for Master {
             MasterMessage::FetchControllers(reply) => {
                 reply.send(state.controllers.values().cloned().collect())?;
             }
-            MasterMessage::FetchStream(reply) => {
-                reply.send(BroadcastStream::new(state.channel.subscribe()))?;
-            }
             MasterMessage::Event(event) => {
-                state
-                    .channel
-                    .send(event)
-                    .map_err(|_| ControllerError::PacketError)?;
+                state.app.emit("app:event", event)?;
             }
             _ => {}
         };

@@ -3,8 +3,7 @@
 export type Procedures = {
     queries: 
         { key: "controllers", input: never, result: Controller[] } | 
-        { key: "motor/get/max-speed", input: number, result: number } | 
-        { key: "motor/get/status", input: number, result: MotorStatus },
+        { key: "motor/get/max-speed", input: number, result: number },
     mutations: 
         { key: "actuator/keep", input: number, result: null } | 
         { key: "actuator/load", input: number, result: null } | 
@@ -23,7 +22,7 @@ export type Controller = { id: string; group: ControllerGroup; serial_port: stri
 
 export type ControllerGroup = "default" | "motors"
 
-export type Event = { type: "weight"; data: number }
+export type Event = { type: "weight"; data: number } | { type: "motor-status"; data: MotorStatus }
 
 export type MotorMovement = { speed: number; direction: number; rotations: number }
 

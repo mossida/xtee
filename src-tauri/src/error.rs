@@ -2,6 +2,8 @@
 pub enum ControllerError {
     #[error("Config error")]
     ConfigError,
+    #[error("Invalid store")]
+    InvalidStore,
     #[error("Missing mux")]
     MissingMux,
     #[error("Packet error")]

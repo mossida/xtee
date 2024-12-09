@@ -1,18 +1,19 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{async_trait, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
+use ractor::{async_trait, registry, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
 use tokio::task::JoinHandle;
 use tracing::debug;
 
 use crate::{
+    components::master::Event,
     error::ControllerError,
     filter::KalmanFilter,
     protocol::Packet,
     store::{PIDSettings, Store, PID_SETTINGS, SCALE_GAIN},
 };
 
-use super::{controller::ControllerMessage, mux::MuxMessage};
+use super::{controller::ControllerMessage, master::MasterMessage, mux::MuxMessage};
 
 pub struct Actuator;
 
@@ -38,9 +39,9 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
             precision: 0.25,
             scale_gain: value
                 .get(SCALE_GAIN)
-                .ok_or(ControllerError::ConfigError)?
+                .ok_or(ControllerError::InvalidStore)?
                 .as_f64()
-                .unwrap_or(0.0000672315) as f32,
+                .ok_or(ControllerError::InvalidStore)? as f32,
             scale_offset: 0.0,
             output_limit: 200.0,
             pid_settings: settings,
@@ -71,7 +72,7 @@ impl From<Packet> for ActuatorMessage {
 pub struct ActuatorState {
     pid: Pid<f32>,
     mux: Option<Arc<ActorRef<MuxMessage>>>,
-    //master: Arc<ActorRef<MasterMessage>>,
+    master: Arc<ActorRef<MasterMessage>>,
     filter: KalmanFilter,
     status: ActuatorStatus,
     config: ActuatorArguments,
@@ -106,8 +107,8 @@ impl ActuatorState {
 
             debug!("Actuator handle packet: {:.2}", calculated);
 
-            //self.master
-            //    .send_message(MasterMessage::Event(Event::Weight(calculated)))?;
+            self.master
+                .send_message(MasterMessage::Event(Event::Weight(calculated)))?;
 
             match &self.current_step {
                 Some(handle) => {
@@ -156,8 +157,8 @@ impl Actor for Actuator {
         let mut pid = Pid::new(0.0, config.output_limit);
         let filter = KalmanFilter::new(1.0, 1.0, 1.0, 1.0);
 
-        //let master =
-        //    registry::where_is("master".to_string()).ok_or(ControllerError::PacketError)?;
+        let master =
+            registry::where_is("master".to_string()).ok_or(ControllerError::PacketError)?;
 
         let PIDSettings {
             proportional,
@@ -177,7 +178,7 @@ impl Actor for Actuator {
             pid,
             filter,
             mux: None,
-            //master: Arc::new(master.into()),
+            master: Arc::new(master.into()),
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),

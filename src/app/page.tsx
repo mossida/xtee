@@ -2,7 +2,7 @@
 
 import { CurrentLoad } from "@/components/current-load";
 import { ManualActuator } from "@/components/manual-actuator";
-import { Mode, ModeSelector } from "@/components/mode-selector";
+import { type Mode, ModeSelector } from "@/components/mode-selector";
 import { TwistingMode } from "@/components/motors-modes/twisting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";

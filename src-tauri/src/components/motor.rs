@@ -1,15 +1,21 @@
+use std::sync::Arc;
+
 use ractor::{
     async_trait,
     concurrency::{Duration, JoinHandle},
-    rpc, Actor, ActorProcessingErr, ActorRef, RpcReplyPort,
+    registry, rpc, Actor, ActorProcessingErr, ActorRef, RpcReplyPort,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tracing::debug;
 
-use crate::{components::controller::ControllerMessage, error::ControllerError, protocol::Packet};
+use crate::{
+    components::{controller::ControllerMessage, master::Event},
+    error::ControllerError,
+    protocol::Packet,
+};
 
-use super::mux::MuxMessage;
+use super::{master::MasterMessage, mux::MuxMessage};
 
 pub struct Motor {
     pub slave: u8,
@@ -33,7 +39,6 @@ pub enum MotorMessage {
     Packet(Packet),
 
     SetOutputs(bool),
-    GetStatus(RpcReplyPort<MotorStatus>),
     GetMaxSpeed(RpcReplyPort<u32>),
 }
 
@@ -58,6 +63,7 @@ pub struct MotorState {
     max_speed: u32,
     updates_handle: Option<JoinHandle<()>>,
     mux: Option<ActorRef<MuxMessage>>,
+    master: Arc<ActorRef<MasterMessage>>,
 }
 
 impl MotorState {
@@ -136,11 +142,15 @@ impl Actor for Motor {
         _myself: ActorRef<Self::Msg>,
         _config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
+        let master =
+            registry::where_is("master".to_string()).ok_or(ControllerError::PacketError)?;
+
         Ok(MotorState {
             status: MotorStatus::Idle,
             max_speed: 0,
             updates_handle: None,
             mux: None,
+            master: Arc::new(master.into()),
         })
     }
 
@@ -209,10 +219,6 @@ impl Actor for Motor {
                     outputs: if outputs { 0x01 } else { 0x00 },
                 }))?;
             }
-            // TODO: Temporary
-            MotorMessage::GetStatus(reply) => {
-                reply.send(state.status.clone())?;
-            }
             MotorMessage::GetMaxSpeed(reply) => {
                 reply.send(state.max_speed)?;
             }
@@ -236,6 +242,12 @@ impl Actor for Motor {
                     };
 
                     debug!("Motor {} status: {:?}", self.slave, state.status);
+
+                    state
+                        .master
+                        .send_message(MasterMessage::Event(Event::MotorStatus(
+                            state.status.clone(),
+                        )))?;
                 }
                 Packet::MotorRecognition { slave, max_speed } if slave == self.slave => {
                     debug!("Motor {} max speed: {}", self.slave, max_speed);
