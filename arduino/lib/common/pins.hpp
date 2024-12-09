@@ -15,8 +15,8 @@ namespace pins
     static const uint8_t SCALE_DOUT = 2;
     static const uint8_t SCALE_SCK = 3;
 
-    static const uint8_t ACTUATOR_DIR = 5;
-    static const uint8_t ACTUATOR_PWM = 4;
+    static const uint8_t ACTUATOR_DIR = 8;
+    static const uint8_t ACTUATOR_PWM = 7;
 
     static const Motor MOTOR_1 = {9, 12, 13};
     static const Motor MOTOR_2 = {10, 7, 6};

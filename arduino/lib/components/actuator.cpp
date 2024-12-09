@@ -29,9 +29,6 @@ void Actuator::handleMove(const uint8_t *data, size_t size)
     if (direction != 0 && direction != 1)
         return;
 
-    digitalWriteFast(LED_BUILTIN, HIGH);
-    digitalWriteFast(pins::ACTUATOR_PWM, HIGH);
-
     if (direction == 0)
     {
         digitalWriteFast(pins::ACTUATOR_DIR, LOW);
@@ -40,16 +37,18 @@ void Actuator::handleMove(const uint8_t *data, size_t size)
     {
         digitalWriteFast(pins::ACTUATOR_DIR, HIGH);
     }
+
+    digitalWriteFast(LED_BUILTIN, HIGH);
+    digitalWriteFast(pins::ACTUATOR_PWM, HIGH);
 }
 
 void Actuator::handleStop(const uint8_t *data, size_t size)
 {
-    digitalWriteFast(LED_BUILTIN, LOW);
-
     if (size != 0)
         return;
 
-    digitalWriteFast(LED_BUILTIN, HIGH);
+    digitalWriteFast(LED_BUILTIN, LOW);
+
     digitalWriteFast(pins::ACTUATOR_PWM, LOW);
     digitalWriteFast(pins::ACTUATOR_DIR, LOW);
 }

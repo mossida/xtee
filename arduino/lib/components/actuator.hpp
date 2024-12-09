@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <digitalWriteFast.h>
-
 #include "common.hpp"
 #include "protocol.hpp"
 
