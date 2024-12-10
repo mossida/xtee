@@ -212,6 +212,17 @@ pub fn actuator_move(_ctx: RouterContext, direction: u8) -> Result<(), rspc::Err
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
+pub fn actuator_tune(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
+    let actuator = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
+
+    actuator
+        .send_message(ActuatorMessage::Tune)
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
+}
+
 pub fn actuator_stop(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
     let actuator = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
         rspc::ErrorCode::NotFound,

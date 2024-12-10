@@ -21,6 +21,7 @@ export default function Home() {
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
   const { mutate: loadActuator } = api.useMutation("actuator/load");
   const { mutate: keepActuator } = api.useMutation("actuator/keep");
+  const { mutate: tuneActuator } = api.useMutation("actuator/tune");
 
   return (
     <div className="flex flex-col gap-4">
@@ -41,6 +42,9 @@ export default function Home() {
               </Button>
               <Button size="lg" onClick={() => keepActuator(setpoint)}>
                 Keep loaded
+              </Button>
+              <Button size="lg" onClick={() => tuneActuator()}>
+                Tune
               </Button>
             </div>
           </div>

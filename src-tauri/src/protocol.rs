@@ -9,7 +9,7 @@ use tokio_util::{
     bytes::BytesMut,
     codec::{Decoder, Encoder},
 };
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 
 use crate::{
     components::mux::{MuxMessage, MuxSink, MuxStream},
@@ -108,6 +108,7 @@ impl Protocol {
 
                 async move {
                     if packet == Packet::Ready {
+                        info!("Sending acknolwedgement");
                         mux.send_message(MuxMessage::Write(Packet::Ready)).unwrap()
                     }
 

@@ -9,6 +9,7 @@ export type Procedures = {
         { key: "actuator/load", input: number, result: null } | 
         { key: "actuator/move", input: number, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
+        { key: "actuator/tune", input: never, result: null } | 
         { key: "motor/keep", input: [number, MotorMovement], result: null } | 
         { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
