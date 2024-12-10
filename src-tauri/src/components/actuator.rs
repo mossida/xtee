@@ -1,10 +1,8 @@
 use std::{sync::Arc, time::Duration};
 
 use pid::{ControlOutput, Pid};
-use ractor::{
-    async_trait, registry, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr, RpcReplyPort,
-};
-use tokio::task::JoinHandle;
+use ractor::{async_trait, registry, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
+use tokio::{task::JoinHandle, time::Instant};
 use tracing::{debug, warn};
 
 use crate::{
@@ -39,7 +37,7 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
         Ok(ActuatorArguments {
-            precision: 0.25,
+            precision: 1.0,
             scale_gain: value
                 .get(SCALE_GAIN)
                 .ok_or(ControllerError::InvalidStore)?
@@ -85,6 +83,7 @@ pub struct ActuatorState {
     config: ActuatorArguments,
     current_step: Option<JoinHandle<Result<(), MessagingErr<MuxMessage>>>>,
     current_offset: Option<f32>,
+    last_move: Option<Instant>,
 }
 
 impl ActuatorState {
@@ -103,15 +102,16 @@ impl ActuatorState {
                 }
             }
             ActuatorStatus::Tuning => {
-                if self.tuner.verify_preload(value) {
+                if self.tuner.is_preload_ok() || self.tuner.verify_preload(value) {
                     if self.tuner.is_tuning_complete() {
                         self.status = ActuatorStatus::Idle;
 
-                        let parameters = self.tuner.get_pid_parameters().unwrap();
+                        let (parameters, limits) = self.tuner.get_tuning_results().unwrap();
 
-                        self.pid.p(parameters.kp, parameters.kp);
-                        self.pid.i(parameters.ki, parameters.ki);
-                        self.pid.d(parameters.kd, parameters.kd);
+                        self.pid
+                            .p(parameters.kp, limits.p_limit)
+                            .i(parameters.ki, limits.i_limit)
+                            .d(parameters.kd, limits.d_limit);
 
                         self.tuner.reset();
                     } else {
@@ -139,6 +139,7 @@ impl ActuatorState {
 
             match &self.current_step {
                 Some(handle) if handle.is_finished() => {
+                    self.last_move = Some(Instant::now());
                     self.handle_input(calculated);
                 }
                 None => self.handle_input(calculated),
@@ -190,8 +191,8 @@ impl Actor for Actuator {
         _myself: ActorRef<Self::Msg>,
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
+        let tuner = Tuner::new(100.0, 100.0);
         let mut pid = Pid::new(0.0, config.output_limit);
-        let tuner = Tuner::new(200.0, 50.0);
         let filter = KalmanFilter::new(1.0, 1.0, 1.0, 1.0);
 
         let master =
@@ -206,10 +207,10 @@ impl Actor for Actuator {
             integral_limit,
         } = config.pid_settings;
 
-        // TODO: Understand if limit is the same as the gain
-        pid.p(proportional, proportional_limit);
-        pid.i(integral, integral_limit);
-        pid.d(derivative, derivative_limit);
+        // -limit <= value <= limit
+        //pid.p(proportional, proportional_limit);
+        //pid.i(integral, integral_limit);
+        //pid.d(derivative, derivative_limit);
 
         Ok(ActuatorState {
             pid,
@@ -220,6 +221,7 @@ impl Actor for Actuator {
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),
+            last_move: None,
             config,
         })
     }

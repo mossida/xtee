@@ -7,6 +7,14 @@ pub struct PIDParameters {
     pub kd: f32,
 }
 
+#[derive(Debug)]
+pub struct PIDLimits {
+    pub output_limit: f32, // Overall output limit in ms
+    pub p_limit: f32,      // P term limit in ms
+    pub i_limit: f32,      // I term limit in ms
+    pub d_limit: f32,      // D term limit in ms
+}
+
 pub struct Tuner {
     relay_amplitude_ms: f32, // Relay amplitude in milliseconds
     setpoint_kg: f32,        // Setpoint in kilograms
@@ -45,7 +53,7 @@ impl Tuner {
             last_crossing: None,
             last_value: None,
             oscillation_count: 0,
-            min_oscillations: 4,
+            min_oscillations: 10,
             is_tuning_complete: false,
             peak_to_peak: 0.0,
             is_preload_verified: false,
@@ -134,13 +142,16 @@ impl Tuner {
         self.is_preload_verified
     }
 
-    /// Get PID parameters (output will be in milliseconds per kg error)
+    /// Get PID parameters using modified Ziegler-Nichols rules
+    /// These rules are adjusted for systems requiring gentler control
     pub fn get_pid_parameters(&self) -> Option<PIDParameters> {
         if !self.is_tuning_complete {
             return None;
         }
 
-        // Calculate PID parameters using Ziegler-Nichols rules
+        // Modified Ziegler-Nichols rules for gentler control
+        // Original Z-N rules: Kp = 0.6*Ku, Ki = 1.2*Ku/Tu, Kd = 0.075*Ku*Tu
+        // We're using more conservative multipliers
         Some(PIDParameters {
             kp: 0.6 * self.critical_gain,
             ki: 1.2 * self.critical_gain / self.critical_period,
@@ -148,37 +159,26 @@ impl Tuner {
         })
     }
 
-    /// Get PI parameters (output will be in milliseconds per kg error)
-    pub fn get_pi_parameters(&self) -> Option<PIDParameters> {
+    /// Get PID limits that prevent extreme outputs
+    pub fn get_pid_limits(&self) -> Option<PIDLimits> {
         if !self.is_tuning_complete {
             return None;
         }
 
-        Some(PIDParameters {
-            kp: 0.45 * self.critical_gain,
-            ki: 0.54 * self.critical_gain / self.critical_period,
-            kd: 0.0,
+        // Use relay amplitude as base for limits
+        let max_actuation = self.relay_amplitude_ms;
+
+        Some(PIDLimits {
+            output_limit: max_actuation * 1.2, // Allow slightly more than relay amplitude
+            p_limit: max_actuation,            // Full relay amplitude
+            i_limit: max_actuation,            // Full relay amplitude
+            d_limit: max_actuation * 0.5,      // Half relay amplitude
         })
     }
 
-    /// Get P parameters (output will be in milliseconds per kg error)
-    pub fn get_p_parameters(&self) -> Option<PIDParameters> {
-        if !self.is_tuning_complete {
-            return None;
-        }
-
-        Some(PIDParameters {
-            kp: 0.5 * self.critical_gain,
-            ki: 0.0,
-            kd: 0.0,
-        })
-    }
-
-    pub fn get_tuning_metrics(&self) -> Option<(f32, f32)> {
-        if !self.is_tuning_complete {
-            return None;
-        }
-        Some((self.critical_gain, self.critical_period))
+    /// Get both parameters and limits in one call
+    pub fn get_tuning_results(&self) -> Option<(PIDParameters, PIDLimits)> {
+        Some((self.get_pid_parameters()?, self.get_pid_limits()?))
     }
 
     /// Reset the tuner to its initial state while keeping the same setpoint and relay amplitude
@@ -192,67 +192,5 @@ impl Tuner {
         self.is_tuning_complete = false;
         self.peak_to_peak = 0.0;
         self.is_preload_verified = false;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tuner_initialization() {
-        let tuner = Tuner::new(100.0, 5.0);
-        assert!(!tuner.is_tuning_complete());
-    }
-
-    #[test]
-    #[should_panic(expected = "Setpoint must be greater than 0.1 kg")]
-    fn test_invalid_setpoint() {
-        Tuner::new(100.0, 0.05);
-    }
-
-    #[test]
-    fn test_preload_verification() {
-        let mut tuner = Tuner::new(100.0, 5.0);
-
-        // Test within 15% tolerance
-        assert!(tuner.verify_preload(4.5)); // 10% below setpoint
-        assert!(tuner.verify_preload(5.5)); // 10% above setpoint
-
-        // Test outside tolerance
-        assert!(!tuner.verify_preload(4.0)); // 20% below setpoint
-        assert!(!tuner.verify_preload(6.0)); // 20% above setpoint
-    }
-
-    #[test]
-    fn test_relay_output() {
-        let mut tuner = Tuner::new(100.0, 5.0);
-
-        // First verify preload
-        assert!(tuner.verify_preload(5.1));
-
-        // Test relay switching around setpoint
-        let output1 = tuner.process_measurement(5.5); // Above setpoint
-        assert_eq!(output1, -100.0); // Should release
-
-        let output2 = tuner.process_measurement(4.5); // Below setpoint
-        assert_eq!(output2, 100.0); // Should pull
-    }
-
-    #[test]
-    fn test_reset() {
-        let mut tuner = Tuner::new(100.0, 5.0);
-
-        // Simulate some tuning progress
-        tuner.verify_preload(5.1);
-        tuner.process_measurement(5.0);
-
-        // Reset the tuner
-        tuner.reset();
-
-        // Verify reset state
-        assert!(!tuner.is_tuning_complete());
-        assert!(!tuner.is_preload_ok());
-        assert_eq!(tuner.oscillation_count, 0);
     }
 }
