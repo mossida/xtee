@@ -2990,13 +2990,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "pid"
-version = "4.0.0"
+name = "pid-lite"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7c931ef9756cd5e3fa3d395bfe09df4dfa6f0612c6ca8f6b12927d17ca34e36"
-dependencies = [
- "num-traits",
-]
+checksum = "525af580ce1fff6a619c17736c1d91dcab5d5abff5df3937136f499922dfa73f"
 
 [[package]]
 name = "pin-project-lite"
@@ -5843,7 +5840,7 @@ dependencies = [
  "futures",
  "nanoid",
  "openssl-sys",
- "pid",
+ "pid-lite",
  "ractor",
  "ractor_actors",
  "rspc",

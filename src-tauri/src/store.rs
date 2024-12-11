@@ -43,13 +43,13 @@ fn defaults(store: Arc<Store>) {
             Controller {
                 id: "controller-motors".to_owned(),
                 group: ControllerGroup::Motors,
-                serial_port: "/dev/cu.usbmodem113201".to_owned(),
+                serial_port: "/dev/tty.usbmodem113201".to_owned(),
                 baud_rate: 115200,
             },
             Controller {
                 id: "controller-default".to_owned(),
                 group: ControllerGroup::Default,
-                serial_port: "/dev/cu.wchusbserial11330".to_owned(),
+                serial_port: "/dev/tty.usbserial-11330".to_owned(),
                 baud_rate: 115200,
             },
         ] as Vec<Controller>)

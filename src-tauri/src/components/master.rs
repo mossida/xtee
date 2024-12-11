@@ -24,7 +24,7 @@ pub struct Master;
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "kebab-case")]
 pub enum Event {
-    Weight(f32),
+    Weight(f64),
     MotorStatus(MotorStatus),
 }
 

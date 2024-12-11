@@ -1,14 +1,16 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
-use pid::{ControlOutput, Pid};
+use pid_lite::Controller as Pid;
 use ractor::{async_trait, registry, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
-use tokio::{task::JoinHandle, time::Instant};
-use tracing::{debug, warn};
+use tokio::task::JoinHandle;
+use tracing::{debug, info, warn};
 
 use crate::{
     components::master::Event,
     error::ControllerError,
-    filter::KalmanFilter,
     protocol::Packet,
     store::{PIDSettings, Store, PID_SETTINGS, SCALE_GAIN},
     tuner::Tuner,
@@ -19,10 +21,9 @@ use super::{controller::ControllerMessage, master::MasterMessage, mux::MuxMessag
 pub struct Actuator;
 
 pub struct ActuatorArguments {
-    pub precision: f32,
-    pub scale_gain: f32,
-    pub scale_offset: f32,
-    pub output_limit: f32,
+    pub precision: f64,
+    pub scale_gain: f64,
+    pub scale_offset: f64,
     pub pid_settings: PIDSettings,
 }
 
@@ -37,14 +38,13 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
         Ok(ActuatorArguments {
-            precision: 1.0,
+            precision: 1.5,
             scale_gain: value
                 .get(SCALE_GAIN)
                 .ok_or(ControllerError::InvalidStore)?
                 .as_f64()
-                .ok_or(ControllerError::InvalidStore)? as f32,
+                .ok_or(ControllerError::InvalidStore)?,
             scale_offset: 0.0,
-            output_limit: 200.0,
             pid_settings: settings,
         })
     }
@@ -74,21 +74,21 @@ impl From<Packet> for ActuatorMessage {
 }
 
 pub struct ActuatorState {
-    pid: Pid<f32>,
+    pid: Pid,
     tuner: Tuner,
     mux: Option<Arc<ActorRef<MuxMessage>>>,
     master: Arc<ActorRef<MasterMessage>>,
-    filter: KalmanFilter,
     status: ActuatorStatus,
     config: ActuatorArguments,
     current_step: Option<JoinHandle<Result<(), MessagingErr<MuxMessage>>>>,
-    current_offset: Option<f32>,
-    last_move: Option<Instant>,
+    current_offset: Option<f64>,
+    last_update: Option<Instant>,
 }
 
 impl ActuatorState {
-    fn handle_input(&mut self, value: f32) {
-        let is_setpoint = (value - self.pid.setpoint).abs() < self.config.precision;
+    fn handle_input(&mut self, value: f64) {
+        let target = self.pid.target();
+        let is_setpoint = (value - target).abs() < self.config.precision;
 
         match self.status {
             ActuatorStatus::Keeping if !is_setpoint => {
@@ -106,12 +106,14 @@ impl ActuatorState {
                     if self.tuner.is_tuning_complete() {
                         self.status = ActuatorStatus::Idle;
 
-                        let (parameters, limits) = self.tuner.get_tuning_results().unwrap();
+                        let parameters = self.tuner.get_pid_parameters().unwrap();
 
-                        self.pid
-                            .p(parameters.kp, limits.p_limit)
-                            .i(parameters.ki, limits.i_limit)
-                            .d(parameters.kd, limits.d_limit);
+                        info!("Tuning complete: {:?}", parameters);
+
+                        self.pid.reset();
+                        self.pid.set_proportional_gain(parameters.kp);
+                        self.pid.set_integral_gain(parameters.ki);
+                        self.pid.set_derivative_gain(parameters.kd);
 
                         self.tuner.reset();
                     } else {
@@ -128,21 +130,30 @@ impl ActuatorState {
 
     fn handle_packet(&mut self, packet: Packet) -> Result<(), ActorProcessingErr> {
         if let Packet::Data { value } = packet {
-            let raw = (value as f32) * self.config.scale_gain;
+            let raw = (value as f64) * self.config.scale_gain;
             let offset = self.current_offset.get_or_insert(raw);
-            let calculated = self.filter.update(raw - *offset);
+            let value = raw - *offset;
 
-            debug!("Actuator handle packet: {:.2}", calculated);
+            let now = Instant::now();
+            let elapsed = self
+                .last_update
+                .map(|last| now.duration_since(last))
+                .unwrap_or(Duration::from_millis(1));
+
+            self.last_update = Some(now);
+
+            debug!("Elapsed between data packet: {:?}", elapsed);
 
             self.master
-                .send_message(MasterMessage::Event(Event::Weight(calculated)))?;
+                .send_message(MasterMessage::Event(Event::Weight(value)))?;
 
             match &self.current_step {
-                Some(handle) if handle.is_finished() => {
-                    self.last_move = Some(Instant::now());
-                    self.handle_input(calculated);
+                Some(handle) => {
+                    handle.abort();
+
+                    self.handle_input(value);
                 }
-                None => self.handle_input(calculated),
+                None => self.handle_input(value),
                 _ => {}
             }
         }
@@ -152,29 +163,32 @@ impl ActuatorState {
 
     fn step_pid(
         &mut self,
-        value: f32,
+        value: f64,
     ) -> Result<JoinHandle<Result<(), MessagingErr<MuxMessage>>>, ActorProcessingErr> {
-        let ControlOutput { output, .. } = self.pid.next_control_output(value);
+        let correction = self.pid.update(value);
 
-        debug!("Actuator step: {:.2}", output);
+        debug!(
+            "Actuator step pid with value: {:.2} kg, correction: {:.2} ms",
+            value, correction
+        );
 
-        self.step(output)
+        self.step(correction)
     }
 
     fn step(
         &self,
-        value: f32,
+        value_ms: f64,
     ) -> Result<JoinHandle<Result<(), MessagingErr<MuxMessage>>>, ActorProcessingErr> {
         let mux = self.mux.clone().ok_or(ControllerError::MissingMux)?;
-        let pulse = (value.abs()) as u64;
+        let pulse = ((value_ms.abs()).clamp(10.0, 200.0) * 1000.0) as u64;
 
-        debug!("Moving by: {:?}", pulse);
+        debug!("Moving for: {} microseconds", pulse);
 
         mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
-            direction: if value > 0.0 { 0 } else { 1 },
+            direction: if value_ms > 0.0 { 0 } else { 1 },
         }))?;
 
-        Ok(mux.send_after(Duration::from_millis(pulse), || {
+        Ok(mux.send_after(Duration::from_micros(pulse), || {
             MuxMessage::Write(Packet::ActuatorStop)
         }))
     }
@@ -191,9 +205,8 @@ impl Actor for Actuator {
         _myself: ActorRef<Self::Msg>,
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let tuner = Tuner::new(100.0, 100.0);
-        let mut pid = Pid::new(0.0, config.output_limit);
-        let filter = KalmanFilter::new(1.0, 1.0, 1.0, 1.0);
+        let tuner = Tuner::new(88.0, 100.0);
+        let mut pid = Pid::new(0.0, 0.0, 0.0, 0.0);
 
         let master =
             registry::where_is("master".to_string()).ok_or(ControllerError::PacketError)?;
@@ -202,27 +215,23 @@ impl Actor for Actuator {
             proportional,
             integral,
             derivative,
-            derivative_limit,
-            proportional_limit,
-            integral_limit,
+            ..
         } = config.pid_settings;
 
-        // -limit <= value <= limit
-        //pid.p(proportional, proportional_limit);
-        //pid.i(integral, integral_limit);
-        //pid.d(derivative, derivative_limit);
+        pid.set_proportional_gain(proportional as f64);
+        pid.set_integral_gain(integral as f64);
+        pid.set_derivative_gain(derivative as f64);
 
         Ok(ActuatorState {
             pid,
             tuner,
-            filter,
             mux: None,
             master: Arc::new(master.into()),
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),
-            last_move: None,
             config,
+            last_update: None,
         })
     }
 
@@ -263,11 +272,13 @@ impl Actor for Actuator {
             }
             ActuatorMessage::Load(value) if state.status != ActuatorStatus::Tuning => {
                 state.status = ActuatorStatus::Loading;
-                state.pid.setpoint(value);
+                state.pid.reset();
+                state.pid.set_target(value as f64);
             }
             ActuatorMessage::Keep(value) if state.status != ActuatorStatus::Tuning => {
                 state.status = ActuatorStatus::Keeping;
-                state.pid.setpoint(value);
+                state.pid.reset();
+                state.pid.set_target(value as f64);
             }
             ActuatorMessage::Move(direction) if state.status != ActuatorStatus::Tuning => {
                 mux.send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))?;

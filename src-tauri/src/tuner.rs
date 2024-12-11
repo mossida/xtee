@@ -1,32 +1,33 @@
 use tokio::time::Instant;
+use tracing::info;
 
 #[derive(Debug)]
 pub struct PIDParameters {
-    pub kp: f32,
-    pub ki: f32,
-    pub kd: f32,
+    pub kp: f64,
+    pub ki: f64,
+    pub kd: f64,
 }
 
 #[derive(Debug)]
 pub struct PIDLimits {
-    pub output_limit: f32, // Overall output limit in ms
-    pub p_limit: f32,      // P term limit in ms
-    pub i_limit: f32,      // I term limit in ms
-    pub d_limit: f32,      // D term limit in ms
+    pub output_limit: f64, // Overall output limit in ms
+    pub p_limit: f64,      // P term limit in ms
+    pub i_limit: f64,      // I term limit in ms
+    pub d_limit: f64,      // D term limit in ms
 }
 
 pub struct Tuner {
-    relay_amplitude_ms: f32, // Relay amplitude in milliseconds
-    setpoint_kg: f32,        // Setpoint in kilograms
-    critical_gain: f32,
-    critical_period: f32,
+    relay_amplitude_ms: f64, // Relay amplitude in milliseconds
+    setpoint_kg: f64,        // Setpoint in kilograms
+    critical_gain: f64,
+    critical_period: f64,
     oscillation_start: Option<Instant>,
     last_crossing: Option<Instant>,
-    last_value: Option<f32>,
+    last_value: Option<f64>,
     oscillation_count: u32,
     min_oscillations: u32,
     is_tuning_complete: bool,
-    peak_to_peak: f32,
+    peak_to_peak: f64,
     is_preload_verified: bool,
 }
 
@@ -34,7 +35,7 @@ impl Tuner {
     /// Creates a new tuner
     /// * `relay_amplitude_ms` - The amplitude of the relay output in milliseconds
     /// * `setpoint_kg` - The target force in kilograms around which to oscillate
-    pub fn new(relay_amplitude_ms: f32, setpoint_kg: f32) -> Self {
+    pub fn new(relay_amplitude_ms: f64, setpoint_kg: f64) -> Self {
         assert!(
             setpoint_kg > 0.1,
             "Setpoint must be greater than 0.1 kg for safety"
@@ -53,7 +54,7 @@ impl Tuner {
             last_crossing: None,
             last_value: None,
             oscillation_count: 0,
-            min_oscillations: 10,
+            min_oscillations: 4,
             is_tuning_complete: false,
             peak_to_peak: 0.0,
             is_preload_verified: false,
@@ -62,7 +63,7 @@ impl Tuner {
 
     /// Verify if the initial tension is close enough to the setpoint
     /// Returns true if the preload is acceptable
-    pub fn verify_preload(&mut self, current_kg: f32) -> bool {
+    pub fn verify_preload(&mut self, current_kg: f64) -> bool {
         let error_kg = (self.setpoint_kg - current_kg).abs();
         let acceptable_error = self.setpoint_kg * 0.15; // 15% tolerance
 
@@ -71,11 +72,11 @@ impl Tuner {
     }
 
     /// Process a measurement and return the actuation time in milliseconds
-    pub fn process_measurement(&mut self, current_kg: f32) -> f32 {
+    pub fn process_measurement(&mut self, current_kg: f64) -> f64 {
         // Safety check for preload
         if !self.is_preload_verified {
             if !self.verify_preload(current_kg) {
-                return 0.0; // Don't actuate if preload isn't verified
+                return 0.0;
             }
         }
 
@@ -96,26 +97,20 @@ impl Tuner {
         if let Some(last_value) = self.last_value {
             let last_error = self.setpoint_kg - last_value;
             if error * last_error < 0.0 {
-                // Setpoint crossing detected
                 let now = Instant::now();
 
                 if let Some(last_crossing) = self.last_crossing {
-                    // Calculate period between crossings
-                    let half_period = now.duration_since(last_crossing).as_secs_f32();
+                    let half_period = now.duration_since(last_crossing).as_secs_f64();
                     self.critical_period = half_period * 2.0;
-
-                    // Update peak-to-peak amplitude
                     self.peak_to_peak = self.peak_to_peak.max((current_kg - last_value).abs());
-
-                    // Increment oscillation count
                     self.oscillation_count += 1;
 
-                    // Check if we have enough oscillations
                     if self.oscillation_count >= self.min_oscillations {
-                        // Calculate critical gain using relay feedback method
-                        // Kc = (4 * relay_amplitude) / (π * oscillation_amplitude)
+                        // Calculate critical gain in ms/kg
+                        // relay_amplitude_ms is in ms, peak_to_peak is in kg
+                        // So critical_gain will be in ms/kg
                         self.critical_gain = (4.0 * self.relay_amplitude_ms)
-                            / (std::f32::consts::PI * self.peak_to_peak);
+                            / (std::f64::consts::PI * self.peak_to_peak);
                         self.is_tuning_complete = true;
                         return 0.0;
                     }
@@ -126,11 +121,10 @@ impl Tuner {
 
         self.last_value = Some(current_kg);
 
-        // Return actuation time in milliseconds
         if error > 0.0 {
-            self.relay_amplitude_ms // Pull harder
+            self.relay_amplitude_ms
         } else {
-            -self.relay_amplitude_ms // Release
+            -self.relay_amplitude_ms
         }
     }
 
@@ -142,43 +136,22 @@ impl Tuner {
         self.is_preload_verified
     }
 
-    /// Get PID parameters using modified Ziegler-Nichols rules
-    /// These rules are adjusted for systems requiring gentler control
+    /// Get PID parameters using Ziegler-Nichols rules scaled for practical actuation times
     pub fn get_pid_parameters(&self) -> Option<PIDParameters> {
         if !self.is_tuning_complete {
             return None;
         }
 
-        // Modified Ziegler-Nichols rules for gentler control
-        // Original Z-N rules: Kp = 0.6*Ku, Ki = 1.2*Ku/Tu, Kd = 0.075*Ku*Tu
-        // We're using more conservative multipliers
+        info!(
+            "Tuning results - Critical gain: {:.2} ms/kg, Period: {:.2}s, Peak-to-peak: {:.2}kg",
+            self.critical_gain, self.critical_period, self.peak_to_peak,
+        );
+
         Some(PIDParameters {
             kp: 0.6 * self.critical_gain,
             ki: 1.2 * self.critical_gain / self.critical_period,
             kd: 0.075 * self.critical_gain * self.critical_period,
         })
-    }
-
-    /// Get PID limits that prevent extreme outputs
-    pub fn get_pid_limits(&self) -> Option<PIDLimits> {
-        if !self.is_tuning_complete {
-            return None;
-        }
-
-        // Use relay amplitude as base for limits
-        let max_actuation = self.relay_amplitude_ms;
-
-        Some(PIDLimits {
-            output_limit: max_actuation * 1.2, // Allow slightly more than relay amplitude
-            p_limit: max_actuation,            // Full relay amplitude
-            i_limit: max_actuation,            // Full relay amplitude
-            d_limit: max_actuation * 0.5,      // Half relay amplitude
-        })
-    }
-
-    /// Get both parameters and limits in one call
-    pub fn get_tuning_results(&self) -> Option<(PIDParameters, PIDLimits)> {
-        Some((self.get_pid_parameters()?, self.get_pid_limits()?))
     }
 
     /// Reset the tuner to its initial state while keeping the same setpoint and relay amplitude
