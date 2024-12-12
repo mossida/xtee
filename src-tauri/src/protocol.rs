@@ -13,7 +13,7 @@ use tracing::{debug, error, info, trace};
 
 use crate::{
     components::mux::{MuxMessage, MuxSink, MuxStream},
-    error::ControllerError,
+    error::Error,
 };
 
 // control flow
@@ -155,7 +155,7 @@ impl Codec {
 
 impl Decoder for Codec {
     type Item = Packet;
-    type Error = ControllerError;
+    type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         if let Some(decoded) = self
@@ -197,13 +197,13 @@ impl Decoder for Codec {
 }
 
 impl Encoder<Packet> for Codec {
-    type Error = ControllerError;
+    type Error = Error;
 
     fn encode(&mut self, packet: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
         // Serialize the packet
         let packet_bytes = packet
             .to_bytes()
-            .map_err(|_| ControllerError::PacketError)
+            .map_err(|_| Error::PacketError)
             .inspect_err(|e| error!("Deku serialization error: {:?}", e))?;
 
         // Calculate CRC
@@ -217,7 +217,7 @@ impl Encoder<Packet> for Codec {
 
         self.cobs_codec
             .encode(&frame_buffer, dst)
-            .map_err(|_| ControllerError::PacketError)
+            .map_err(|_| Error::PacketError)
             .inspect_err(|e| error!("COBS encoding error: {:?}", e))?;
 
         debug!(

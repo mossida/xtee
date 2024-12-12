@@ -1,5 +1,6 @@
 #[derive(Debug, thiserror::Error)]
-pub enum ControllerError {
+#[error("Error: {0}")]
+pub enum Error {
     #[error("Config error")]
     ConfigError,
     #[error("Invalid store")]
@@ -8,12 +9,9 @@ pub enum ControllerError {
     MissingMux,
     #[error("Packet error")]
     PacketError,
-    #[error("IO error: {0}")]
     IOError(#[from] std::io::Error),
-    #[error("Serial error: {0}")]
     SerialError(#[from] tokio_serial::Error),
-    #[error("JSON error: {0}")]
     JSONError(#[from] serde_json::Error),
-    #[error("Generic error: {0}")]
+    #[error(transparent)]
     Any(#[from] anyhow::Error),
 }

@@ -35,19 +35,10 @@ impl Tuner {
     /// Creates a new tuner
     /// * `relay_amplitude_ms` - The amplitude of the relay output in milliseconds
     /// * `setpoint_kg` - The target force in kilograms around which to oscillate
-    pub fn new(relay_amplitude_ms: f64, setpoint_kg: f64) -> Self {
-        assert!(
-            setpoint_kg > 0.1,
-            "Setpoint must be greater than 0.1 kg for safety"
-        );
-        assert!(
-            relay_amplitude_ms > 1.0 && relay_amplitude_ms < 1000.0,
-            "Relay amplitude must be between 1 and 1000 milliseconds"
-        );
-
+    pub fn new() -> Self {
         Self {
-            relay_amplitude_ms,
-            setpoint_kg,
+            relay_amplitude_ms: 1.0,
+            setpoint_kg: 0.1,
             critical_gain: 0.0,
             critical_period: 0.0,
             oscillation_start: None,
@@ -59,6 +50,24 @@ impl Tuner {
             peak_to_peak: 0.0,
             is_preload_verified: false,
         }
+    }
+
+    pub fn set_setpoint(&mut self, setpoint_kg: f64) {
+        assert!(
+            setpoint_kg > 0.1,
+            "Setpoint must be greater than 0.1 kg for safety"
+        );
+
+        self.setpoint_kg = setpoint_kg;
+    }
+
+    pub fn set_relay_amplitude(&mut self, relay_amplitude_ms: f64) {
+        assert!(
+            relay_amplitude_ms > 1.0 && relay_amplitude_ms < 1000.0,
+            "Relay amplitude must be between 1 and 1000 milliseconds"
+        );
+
+        self.relay_amplitude_ms = relay_amplitude_ms;
     }
 
     /// Verify if the initial tension is close enough to the setpoint

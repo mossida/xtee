@@ -11,7 +11,7 @@ use tracing::{error, warn};
 
 use crate::{
     components::motor::{Motor, MotorArguments},
-    error::ControllerError,
+    error::Error,
     store::Store,
 };
 
@@ -184,7 +184,7 @@ impl Actor for Controller {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             ControllerMessage::FetchMux(reply) => {
-                reply.send(state.mux.clone().ok_or(ControllerError::MissingMux)?)?;
+                reply.send(state.mux.clone().ok_or(Error::MissingMux)?)?;
             }
             ControllerMessage::Spawn(child) => {
                 let result = child

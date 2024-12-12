@@ -7,11 +7,12 @@ use tauri::{AppHandle, Emitter};
 use tracing::{error, warn};
 
 use crate::{
-    error::ControllerError,
+    error::Error,
     store::{store, Store, StoreKey},
 };
 
 use super::{
+    actuator::ActuatorStatus,
     controller::{Controller, ControllerGroup, ControllerMessage},
     motor::MotorStatus,
 };
@@ -27,6 +28,7 @@ pub enum Event {
     Init,
     Weight(f64),
     MotorStatus(MotorStatus),
+    ActuatorStatus(ActuatorStatus),
 }
 
 pub struct MasterState {
@@ -89,7 +91,7 @@ impl Actor for Master {
                 if state.groups.contains_key(&controller.group)
                     || state.ports.contains_key(&controller.serial_port)
                 {
-                    return Err(ControllerError::ConfigError.into());
+                    return Err(Error::ConfigError.into());
                 }
 
                 state.groups.insert(controller.group.clone(), true);

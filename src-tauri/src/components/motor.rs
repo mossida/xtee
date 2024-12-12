@@ -11,7 +11,7 @@ use tracing::debug;
 
 use crate::{
     components::{controller::ControllerMessage, master::Event},
-    error::ControllerError,
+    error::Error,
     protocol::Packet,
 };
 
@@ -68,7 +68,7 @@ pub struct MotorState {
 
 impl MotorState {
     pub fn keep(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
-        let mux = self.mux.as_ref().ok_or(ControllerError::MissingMux)?;
+        let mux = self.mux.as_ref().ok_or(Error::MissingMux)?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
             slave,
@@ -95,7 +95,7 @@ impl MotorState {
     }
 
     pub fn spin(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
-        let mux = self.mux.as_ref().ok_or(ControllerError::MissingMux)?;
+        let mux = self.mux.as_ref().ok_or(Error::MissingMux)?;
 
         // To be sure we make X rotations, we need to stop the motor first and reset the position
         mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x00 }))?;
@@ -143,7 +143,7 @@ impl Actor for Motor {
         _config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let master =
-            registry::where_is("master".to_string()).ok_or(ControllerError::PacketError)?;
+            registry::where_is("master".to_string()).ok_or(Error::PacketError)?;
 
         Ok(MotorState {
             status: MotorStatus::Idle,
@@ -173,11 +173,11 @@ impl Actor for Motor {
         if state.mux.is_none() {
             let controller = myself
                 .try_get_supervisor()
-                .ok_or(ControllerError::ConfigError)?;
+                .ok_or(Error::ConfigError)?;
 
             let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
                 .await?
-                .success_or(ControllerError::MissingMux)?;
+                .success_or(Error::MissingMux)?;
 
             debug!("Motor got mux: {:?}", mux.get_name());
 
@@ -185,7 +185,7 @@ impl Actor for Motor {
         }
 
         let slave = self.slave;
-        let mux = state.mux.as_ref().ok_or(ControllerError::MissingMux)?;
+        let mux = state.mux.as_ref().ok_or(Error::MissingMux)?;
 
         match msg {
             MotorMessage::StartUpdates => {

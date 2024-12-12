@@ -10,17 +10,15 @@ import { QuantityInput } from "@/components/ui/quantity-input";
 import { api } from "@/lib/client";
 import { useState } from "react";
 
+import { AutoActuator } from "@/components/actuator/auto-actuator";
 import { ManualMode } from "@/components/motors-modes/manual";
 import { ServingMode } from "@/components/motors-modes/serving";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 export default function Home() {
-  const [setpoint, setSetpoint] = useState(0);
   const [mode, setMode] = useState<Mode>("twisting");
 
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
-  const { mutate: loadActuator } = api.useMutation("actuator/load");
-  const { mutate: keepActuator } = api.useMutation("actuator/keep");
 
   return (
     <div className="flex flex-col gap-4">
@@ -28,22 +26,7 @@ export default function Home() {
         <CardContent className="flex flex-row justify-between items-stretch p-6">
           <CurrentLoad />
 
-          <div className="w-full flex-grow flex flex-col justify-between px-4">
-            <QuantityInput
-              min={0}
-              max={250}
-              value={setpoint}
-              onChange={setSetpoint}
-            />
-            <div className="flex flex-col gap-2">
-              <Button size="lg" onClick={() => loadActuator(setpoint)}>
-                Reach load
-              </Button>
-              <Button size="lg" onClick={() => keepActuator(setpoint)}>
-                Keep loaded
-              </Button>
-            </div>
-          </div>
+          <AutoActuator />
 
           <div className="w-full flex-grow">
             <ManualActuator />

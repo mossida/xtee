@@ -38,7 +38,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    values: data ?? {
+    defaultValues: data ?? {
       proportional: 0,
       integral: 0,
       derivative: 0,
@@ -84,7 +84,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
                       <FormItem>
                         <FormLabel>Proportional</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.01} {...field} />
+                          <Input type="number" step={0.0001} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -99,7 +99,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
                       <FormItem>
                         <FormLabel>Integral</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.01} {...field} />
+                          <Input type="number" step={0.0001} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -114,7 +114,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
                       <FormItem>
                         <FormLabel>Derivative</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.01} {...field} />
+                          <Input type="number" step={0.0001} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

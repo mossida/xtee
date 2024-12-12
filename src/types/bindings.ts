@@ -20,11 +20,13 @@ export type Procedures = {
     subscriptions: never
 };
 
+export type ActuatorStatus = { status: "loading"; data: { target: number } } | { status: "keeping"; data: { target: number } } | { status: "tuning" } | { status: "idle" }
+
 export type Controller = { id: string; group: ControllerGroup; serial_port: string; baud_rate: number }
 
 export type ControllerGroup = "default" | "motors"
 
-export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: MotorStatus }
+export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: MotorStatus } | { type: "actuator-status"; data: ActuatorStatus }
 
 export type MotorMovement = { speed: number; direction: number; rotations: number }
 

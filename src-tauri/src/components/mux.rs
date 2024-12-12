@@ -5,7 +5,7 @@ use ractor::{async_trait, Actor, ActorCell, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
 use crate::{
-    error::ControllerError,
+    error::Error,
     protocol::{Codec, Packet, Protocol},
 };
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
@@ -35,7 +35,7 @@ pub struct MuxArguments {
 }
 
 impl TryFrom<Controller> for MuxArguments {
-    type Error = ControllerError;
+    type Error = Error;
 
     fn try_from(controller: Controller) -> Result<Self, Self::Error> {
         let stream = tokio_serial::new(controller.serial_port.clone(), controller.baud_rate)
@@ -113,9 +113,7 @@ impl Actor for Mux {
         myself: ActorRef<Self::Msg>,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let supervisor = myself
-            .try_get_supervisor()
-            .ok_or(ControllerError::ConfigError)?;
+        let supervisor = myself.try_get_supervisor().ok_or(Error::ConfigError)?;
 
         let children = supervisor.get_children();
 
