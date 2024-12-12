@@ -4,7 +4,7 @@ import { useEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
 import { LoadVisualizer } from "./load-visualizer";
 
-function formatBalancedNumber(num: number): string {
+export function formatBalancedNumber(num: number): string {
   if (num === 0) return "0.00";
   if (num < 10) return num.toFixed(3); // 0-9: x.xxx
   if (num < 100) return num.toFixed(3); // 10-99: xx.xxx

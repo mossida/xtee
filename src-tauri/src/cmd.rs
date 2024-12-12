@@ -1,4 +1,3 @@
-use futures::Stream;
 use ractor::{registry, rpc, ActorRef};
 use serde::Deserialize;
 
@@ -9,32 +8,13 @@ use crate::{
         actuator::ActuatorMessage,
         controller::Controller,
         master::{Event, MasterMessage},
-        motor::{MotorMessage, MotorMovement, MotorStatus},
+        motor::{MotorMessage, MotorMovement},
     },
     router::RouterContext,
 };
 
-// TODO: fix error handling
-pub fn events_bus(_ctx: RouterContext, _: ()) -> impl Stream<Item = Event> {
-    async_stream::stream! {
-        /*let master: ActorRef<MasterMessage> = registry::where_is("master".to_string()).expect("master to exist").into();
-
-        let stream = master
-            .call(MasterMessage::FetchStream, None)
-            .await
-            .expect("failed to ask master for stream")
-            .success_or(rspc::Error::new(
-                rspc::ErrorCode::InternalServerError,
-                "No response from master".to_owned(),
-            ))
-            .expect("failed to fetch stream from master")
-        .filter_map(|e| future::ready(e.ok()));
-
-        for await event in stream {
-            yield event;
-        }*/
-        yield Event::Weight(100.0);
-    }
+pub fn events(_ctx: RouterContext, _: ()) -> Event {
+    Event::Init
 }
 
 pub fn restart(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
@@ -177,6 +157,17 @@ pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controlle
         ))?;
 
     Ok(result)
+}
+
+pub fn actuator_reload_settings(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
+    let actor = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
+
+    actor
+        .send_message(ActuatorMessage::ReloadSettings)
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
 pub fn actuator_load(_ctx: RouterContext, setpoint: f32) -> Result<(), rspc::Error> {

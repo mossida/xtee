@@ -12,7 +12,7 @@ use crate::{
     components::master::Event,
     error::ControllerError,
     protocol::Packet,
-    store::{PIDSettings, Store, PID_SETTINGS, SCALE_GAIN},
+    store::{PIDSettings, Store, StoreKey},
     tuner::Tuner,
 };
 
@@ -25,6 +25,15 @@ pub struct ActuatorArguments {
     pub scale_gain: f64,
     pub scale_offset: f64,
     pub pid_settings: PIDSettings,
+    store: Arc<Store>,
+}
+
+impl ActuatorArguments {
+    pub fn reload(&mut self) -> Result<(), ControllerError> {
+        *self = Self::try_from(self.store.clone())?;
+
+        Ok(())
+    }
 }
 
 impl TryFrom<Arc<Store>> for ActuatorArguments {
@@ -32,7 +41,7 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
 
     fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
         let pid_settings = value
-            .get(PID_SETTINGS)
+            .get(StoreKey::ActuatorPidSettings)
             .ok_or(ControllerError::ConfigError)?;
 
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
@@ -40,12 +49,13 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
         Ok(ActuatorArguments {
             precision: 1.5,
             scale_gain: value
-                .get(SCALE_GAIN)
+                .get(StoreKey::ScaleGain)
                 .ok_or(ControllerError::InvalidStore)?
                 .as_f64()
                 .ok_or(ControllerError::InvalidStore)?,
             scale_offset: 0.0,
             pid_settings: settings,
+            store: value,
         })
     }
 }
@@ -65,6 +75,7 @@ pub enum ActuatorMessage {
     Stop,
     Packet(Packet),
     Tune,
+    ReloadSettings,
 }
 
 impl From<Packet> for ActuatorMessage {
@@ -284,6 +295,10 @@ impl Actor for Actuator {
                 mux.send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))?;
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
+            ActuatorMessage::ReloadSettings => {
+                state.config.reload()?;
+                state.current_offset = Some(state.config.scale_offset);
+            }
             _ => {}
         }
 

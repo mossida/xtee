@@ -1,7 +1,7 @@
 "use client";
 
+import { ManualActuator } from "@/components/actuator/manual-actuator";
 import { CurrentLoad } from "@/components/current-load";
-import { ManualActuator } from "@/components/manual-actuator";
 import { type Mode, ModeSelector } from "@/components/mode-selector";
 import { TwistingMode } from "@/components/motors-modes/twisting";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ export default function Home() {
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
   const { mutate: loadActuator } = api.useMutation("actuator/load");
   const { mutate: keepActuator } = api.useMutation("actuator/keep");
-  const { mutate: tuneActuator } = api.useMutation("actuator/tune");
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,9 +41,6 @@ export default function Home() {
               </Button>
               <Button size="lg" onClick={() => keepActuator(setpoint)}>
                 Keep loaded
-              </Button>
-              <Button size="lg" onClick={() => tuneActuator()}>
-                Tune
               </Button>
             </div>
           </div>

@@ -8,7 +8,7 @@ use tracing::{error, warn};
 
 use crate::{
     error::ControllerError,
-    store::{store, Store, CONTROLLERS},
+    store::{store, Store, StoreKey},
 };
 
 use super::{
@@ -24,6 +24,7 @@ pub struct Master;
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "kebab-case")]
 pub enum Event {
+    Init,
     Weight(f64),
     MotorStatus(MotorStatus),
 }
@@ -58,7 +59,7 @@ impl Actor for Master {
     ) -> Result<Self::State, ActorProcessingErr> {
         let store = store(&args)?;
         let controllers = store
-            .get(CONTROLLERS)
+            .get(StoreKey::Controllers)
             .unwrap_or(serde_json::Value::Array(vec![]));
 
         let controllers: Vec<Controller> = serde_json::from_value(controllers)?;

@@ -41,8 +41,6 @@ export function useEvent<T extends Event["type"]>(
 
   useEffect(() => {
     const promise = listen<Payload<T>>("app:event", ({ payload }) => {
-      console.log("payload", payload);
-
       if (payload.type === event)
         client.setQueryData(["event", event], payload.data);
     });

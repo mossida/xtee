@@ -1,5 +1,5 @@
+import { Button } from "../ui/button";
 import { StepActuator } from "./step-actuator";
-import { Button } from "./ui/button";
 
 export function ManualActuator() {
   return (

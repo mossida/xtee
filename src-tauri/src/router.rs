@@ -2,9 +2,9 @@ use rspc::{Config, Router};
 use tauri::AppHandle;
 
 use crate::cmd::{
-    actuator_keep, actuator_load, actuator_move, actuator_stop, actuator_tune, events_bus,
-    get_controllers, motor_get_max_speed, motor_keep, motor_set_outputs, motor_spin, motor_stop,
-    restart,
+    actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
+    actuator_tune, events, get_controllers, motor_get_max_speed, motor_keep, motor_set_outputs,
+    motor_spin, motor_stop, restart,
 };
 
 pub struct RouterContext {
@@ -15,9 +15,9 @@ pub struct RouterContext {
 pub fn router() -> Router<RouterContext> {
     Router::new()
         .config(Config::new().export_ts_bindings("../src/types/bindings.ts"))
+        .query("events", |t| t(events))
         .query("controllers", |t| t(get_controllers))
         .query("motor/get/max-speed", |t| t(motor_get_max_speed))
-        //.query("ports", |t| t(get_ports))
         .mutation("restart", |t| t(restart))
         .mutation("motor/keep", |t| t(motor_keep))
         .mutation("motor/spin", |t| t(motor_spin))
@@ -28,6 +28,6 @@ pub fn router() -> Router<RouterContext> {
         .mutation("actuator/load", |t| t(actuator_load))
         .mutation("actuator/keep", |t| t(actuator_keep))
         .mutation("actuator/tune", |t| t(actuator_tune))
-        .subscription("events", |t| t(events_bus))
+        .mutation("actuator/reload/settings", |t| t(actuator_reload_settings))
         .build()
 }

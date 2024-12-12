@@ -1,44 +1,66 @@
 use std::{sync::Arc, time::Duration};
 
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Error, StoreExt};
 
 use crate::components::controller::{Controller, ControllerGroup};
 
-pub const CONTROLLERS: &str = "controllers";
-pub const PID_SETTINGS: &str = "pid_settings";
-pub const SCALE_GAIN: &str = "scale_gain";
-
 pub type Store = tauri_plugin_store::Store<Wry>;
+
+#[derive(Serialize, Deserialize, Type)]
+pub enum StoreKey {
+    #[serde(rename = "scale.gain")]
+    ScaleGain,
+    #[serde(rename = "actuator.pid.settings")]
+    ActuatorPidSettings,
+    #[serde(rename = "controllers")]
+    Controllers,
+    #[serde(rename = "actuator.tuning.setpoint")]
+    ActuatorTuningSetpoint,
+}
+
+impl AsRef<str> for StoreKey {
+    fn as_ref(&self) -> &str {
+        match self {
+            StoreKey::ScaleGain => "scale.gain",
+            StoreKey::ActuatorPidSettings => "actuator.pid.settings",
+            StoreKey::Controllers => "controllers",
+            StoreKey::ActuatorTuningSetpoint => "actuator.tuning.setpoint",
+        }
+    }
+}
+
+impl Into<String> for StoreKey {
+    fn into(self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct PIDSettings {
     pub proportional: f32,
     pub integral: f32,
     pub derivative: f32,
-    pub proportional_limit: f32,
-    pub integral_limit: f32,
-    pub derivative_limit: f32,
 }
 
 fn defaults(store: Arc<Store>) {
     store.set(
-        PID_SETTINGS,
+        StoreKey::ActuatorPidSettings,
         serde_json::to_value(PIDSettings {
             proportional: 1.2,
             integral: 0.04,
             derivative: 0.15,
-            proportional_limit: 2.0,
-            integral_limit: 0.05,
-            derivative_limit: 0.2,
         })
         .unwrap(),
     );
 
-    store.set(SCALE_GAIN, 0.0000672315);
+    store.set(StoreKey::ActuatorTuningSetpoint, 100.0);
+
+    store.set(StoreKey::ScaleGain, 0.0000672315);
     store.set(
-        CONTROLLERS,
+        StoreKey::Controllers,
         serde_json::to_value(vec![
             Controller {
                 id: "controller-motors".to_owned(),
