@@ -91,7 +91,7 @@ impl Actor for Master {
                 if state.groups.contains_key(&controller.group)
                     || state.ports.contains_key(&controller.serial_port)
                 {
-                    return Err(Error::ConfigError.into());
+                    return Err(Error::Config.into());
                 }
 
                 state.groups.insert(controller.group.clone(), true);
@@ -128,7 +128,7 @@ impl Actor for Master {
 
     async fn handle_supervisor_evt(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         message: SupervisionEvent,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {

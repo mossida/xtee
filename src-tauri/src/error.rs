@@ -2,16 +2,16 @@
 #[error("Error: {0}")]
 pub enum Error {
     #[error("Config error")]
-    ConfigError,
+    Config,
     #[error("Invalid store")]
     InvalidStore,
     #[error("Missing mux")]
     MissingMux,
     #[error("Packet error")]
-    PacketError,
-    IOError(#[from] std::io::Error),
-    SerialError(#[from] tokio_serial::Error),
-    JSONError(#[from] serde_json::Error),
+    Packet,
+    IO(#[from] std::io::Error),
+    Serial(#[from] tokio_serial::Error),
+    Json(#[from] serde_json::Error),
     #[error(transparent)]
     Any(#[from] anyhow::Error),
 }

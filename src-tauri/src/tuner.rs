@@ -83,10 +83,8 @@ impl Tuner {
     /// Process a measurement and return the actuation time in milliseconds
     pub fn process_measurement(&mut self, current_kg: f64) -> f64 {
         // Safety check for preload
-        if !self.is_preload_verified {
-            if !self.verify_preload(current_kg) {
-                return 0.0;
-            }
+        if !self.is_preload_verified && !self.verify_preload(current_kg) {
+            return 0.0;
         }
 
         if self.is_tuning_complete {

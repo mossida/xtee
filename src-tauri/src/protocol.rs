@@ -203,7 +203,7 @@ impl Encoder<Packet> for Codec {
         // Serialize the packet
         let packet_bytes = packet
             .to_bytes()
-            .map_err(|_| Error::PacketError)
+            .map_err(|_| Error::Packet)
             .inspect_err(|e| error!("Deku serialization error: {:?}", e))?;
 
         // Calculate CRC
@@ -217,7 +217,7 @@ impl Encoder<Packet> for Codec {
 
         self.cobs_codec
             .encode(&frame_buffer, dst)
-            .map_err(|_| Error::PacketError)
+            .map_err(|_| Error::Packet)
             .inspect_err(|e| error!("COBS encoding error: {:?}", e))?;
 
         debug!(

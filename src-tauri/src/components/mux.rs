@@ -31,7 +31,6 @@ pub struct MuxState {
 
 pub struct MuxArguments {
     stream: SerialStream,
-    controller: Controller,
 }
 
 impl TryFrom<Controller> for MuxArguments {
@@ -41,7 +40,7 @@ impl TryFrom<Controller> for MuxArguments {
         let stream = tokio_serial::new(controller.serial_port.clone(), controller.baud_rate)
             .open_native_async()?;
 
-        Ok(MuxArguments { stream, controller })
+        Ok(MuxArguments { stream })
     }
 }
 
@@ -113,7 +112,7 @@ impl Actor for Mux {
         myself: ActorRef<Self::Msg>,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let supervisor = myself.try_get_supervisor().ok_or(Error::ConfigError)?;
+        let supervisor = myself.try_get_supervisor().ok_or(Error::Config)?;
 
         let children = supervisor.get_children();
 

@@ -142,8 +142,7 @@ impl Actor for Motor {
         _myself: ActorRef<Self::Msg>,
         _config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let master =
-            registry::where_is("master".to_string()).ok_or(Error::PacketError)?;
+        let master = registry::where_is("master".to_string()).ok_or(Error::Packet)?;
 
         Ok(MotorState {
             status: MotorStatus::Idle,
@@ -171,9 +170,7 @@ impl Actor for Motor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
-            let controller = myself
-                .try_get_supervisor()
-                .ok_or(Error::ConfigError)?;
+            let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
 
             let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
                 .await?

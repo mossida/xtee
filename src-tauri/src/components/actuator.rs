@@ -46,19 +46,19 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
     fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
         let pid_settings = value
             .get(StoreKey::ActuatorPidSettings)
-            .ok_or(Error::ConfigError)?;
+            .ok_or(Error::Config)?;
 
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
-        let scale_gain = value.get(StoreKey::ScaleGain).ok_or(Error::ConfigError)?;
+        let scale_gain = value.get(StoreKey::ScaleGain).ok_or(Error::Config)?;
 
         let tuner_setpoint = value
             .get(StoreKey::ActuatorTuningSetpoint)
-            .ok_or(Error::ConfigError)?;
+            .ok_or(Error::Config)?;
 
         let tuner_relay_amplitude = value
             .get(StoreKey::ActuatorTuningRelayAmplitude)
-            .ok_or(Error::ConfigError)?;
+            .ok_or(Error::Config)?;
 
         Ok(ActuatorArguments {
             precision: 1.5,
@@ -113,9 +113,7 @@ pub struct ActuatorState {
 impl ActuatorState {
     fn send_status(&self) -> Result<(), ActorProcessingErr> {
         self.master
-            .send_message(MasterMessage::Event(Event::ActuatorStatus(
-                self.status.clone(),
-            )))?;
+            .send_message(MasterMessage::Event(Event::ActuatorStatus(self.status)))?;
 
         Ok(())
     }
@@ -203,11 +201,9 @@ impl ActuatorState {
             match &self.current_step {
                 Some(handle) => {
                     handle.abort();
-
                     self.handle_input(value);
                 }
                 None => self.handle_input(value),
-                _ => {}
             }
         }
 
@@ -261,7 +257,7 @@ impl Actor for Actuator {
         let tuner = Tuner::new();
         let pid = Pid::new(0.0, 0.0, 0.0, 0.0);
 
-        let master = registry::where_is("master".to_string()).ok_or(Error::PacketError)?;
+        let master = registry::where_is("master".to_string()).ok_or(Error::Packet)?;
 
         Ok(ActuatorState {
             pid,
@@ -294,7 +290,7 @@ impl Actor for Actuator {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         if state.mux.is_none() {
-            let controller = myself.try_get_supervisor().ok_or(Error::ConfigError)?;
+            let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
 
             let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
                 .await?

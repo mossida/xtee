@@ -36,9 +36,9 @@ impl AsRef<str> for StoreKey {
     }
 }
 
-impl Into<String> for StoreKey {
-    fn into(self) -> String {
-        self.as_ref().to_string()
+impl From<StoreKey> for String {
+    fn from(val: StoreKey) -> Self {
+        val.as_ref().to_string()
     }
 }
 
@@ -69,5 +69,5 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
         )
         .auto_save(Duration::from_millis(100));
 
-    Ok(builder.build()?)
+    builder.build()
 }
