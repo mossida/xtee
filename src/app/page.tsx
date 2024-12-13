@@ -5,8 +5,7 @@ import { CurrentLoad } from "@/components/current-load";
 import { type Mode, ModeSelector } from "@/components/mode-selector";
 import { TwistingMode } from "@/components/motors-modes/twisting";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { QuantityInput } from "@/components/ui/quantity-input";
+import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/client";
 import { useState } from "react";
 

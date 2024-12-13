@@ -1,9 +1,10 @@
 import "@/styles/globals.css";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
-import { cn } from "@/lib/cn";
-import { Providers } from "./providers";
 import { Header } from "@/components/header";
+import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/cn";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
+import { Providers } from "./providers";
 
 export default function RootLayout({
   children,
@@ -21,6 +22,7 @@ export default function RootLayout({
           <Header />
           <div className="p-6 h-full">{children}</div>
         </Providers>
+        <Toaster />
       </body>
     </html>
   );

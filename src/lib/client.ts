@@ -10,6 +10,7 @@ import { NoOpTransport, type RSPCError, createClient } from "@rspc/client";
 import { TauriTransport } from "@rspc/tauri";
 import {
   type DefaultError,
+  useQueries as useQueriesTanstack,
   useQueryClient,
   useMutation as useQueryMutation,
   useQuery as useQueryTanstack,
@@ -22,6 +23,22 @@ export const client = createClient<Procedures>({
 });
 
 export const api = {
+  useQueries: <T extends ProcedureKeys<Procedures, "queries">>(
+    keys: [
+      T,
+      ProcedureInput<Procedures, "queries", T>,
+      UseQueryOptions<string>,
+    ][],
+  ) => {
+    return useQueriesTanstack({
+      queries: keys.map(([key, input, options]) => ({
+        ...options,
+        queryKey: [key],
+        // @ts-expect-error
+        queryFn: () => client.query([key, input]),
+      })),
+    });
+  },
   useQuery: <T extends ProcedureKeys<Procedures, "queries">>(
     key: T,
     input: ProcedureInput<Procedures, "queries", T>,

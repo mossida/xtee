@@ -1,12 +1,12 @@
 use ractor::{registry, rpc, ActorRef};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use specta::Type;
 
 use crate::{
     components::{
         actuator::ActuatorMessage,
-        controller::Controller,
+        controller::{Controller, ControllerGroup},
         master::{Event, MasterMessage},
         motor::{MotorMessage, MotorMovement},
     },
@@ -30,15 +30,13 @@ pub fn restart(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
     Ok(())
 }
 
-#[derive(Default, Type, Deserialize)]
-#[allow(unused)]
+#[derive(Default, Type, Serialize, Deserialize)]
 pub struct Port {
     pub name: String,
     pub manufacturer: Option<String>,
     pub serial_number: Option<String>,
 }
 
-#[allow(unused)]
 pub fn get_ports(_ctx: RouterContext, _: ()) -> Result<Vec<Port>, rspc::Error> {
     let ports = tokio_serial::available_ports()
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
@@ -55,6 +53,40 @@ pub fn get_ports(_ctx: RouterContext, _: ()) -> Result<Vec<Port>, rspc::Error> {
         .collect();
 
     Ok(ports)
+}
+
+pub fn get_groups(_ctx: RouterContext, _: ()) -> Result<Vec<ControllerGroup>, rspc::Error> {
+    Ok(vec![ControllerGroup::Default, ControllerGroup::Motors])
+}
+
+pub fn spawn_controller(_ctx: RouterContext, input: Controller) -> Result<(), rspc::Error> {
+    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Master not found".to_owned(),
+    ))?;
+
+    master
+        .send_message(MasterMessage::Spawn(input))
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controller>, rspc::Error> {
+    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Master not found".to_owned(),
+    ))?;
+
+    let controllers = rpc::call(&master, MasterMessage::FetchControllers, None)
+        .await
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
+        .success_or(rspc::Error::new(
+            rspc::ErrorCode::InternalServerError,
+            "No response from master".to_owned(),
+        ))?;
+
+    Ok(controllers)
 }
 
 pub fn motor_keep(_ctx: RouterContext, input: (u8, MotorMovement)) -> Result<(), rspc::Error> {
@@ -140,23 +172,6 @@ pub fn motor_stop(_ctx: RouterContext, input: (u8, MotorStopMode)) -> Result<(),
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
 
     Ok(())
-}
-
-pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controller>, rspc::Error> {
-    let controller = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
-        rspc::ErrorCode::NotFound,
-        "Master not found".to_owned(),
-    ))?;
-
-    let result = rpc::call(&controller, MasterMessage::FetchControllers, None)
-        .await
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
-        .success_or(rspc::Error::new(
-            rspc::ErrorCode::InternalServerError,
-            "No response from master".to_owned(),
-        ))?;
-
-    Ok(result)
 }
 
 pub fn actuator_reload_settings(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {

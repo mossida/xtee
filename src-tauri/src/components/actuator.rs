@@ -107,7 +107,6 @@ pub struct ActuatorState {
     config: ActuatorArguments,
     current_step: Option<JoinHandle<Result<(), MessagingErr<MuxMessage>>>>,
     current_offset: Option<f64>,
-    last_update: Option<Instant>,
 }
 
 impl ActuatorState {
@@ -185,16 +184,6 @@ impl ActuatorState {
             let offset = self.current_offset.get_or_insert(raw);
             let value = raw - *offset;
 
-            let now = Instant::now();
-            let elapsed = self
-                .last_update
-                .map(|last| now.duration_since(last))
-                .unwrap_or(Duration::from_millis(1));
-
-            self.last_update = Some(now);
-
-            debug!("Elapsed between data packet: {:?}", elapsed);
-
             self.master
                 .send_message(MasterMessage::Event(Event::Weight(value)))?;
 
@@ -268,7 +257,6 @@ impl Actor for Actuator {
             current_step: None,
             current_offset: Some(config.scale_offset),
             config,
-            last_update: None,
         })
     }
 

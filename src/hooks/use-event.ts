@@ -1,7 +1,7 @@
+import { promisify } from "node:util";
 import { isTauri } from "@/lib/constants";
-import type { Event } from "@/types/bindings";
+import type { Event as Events } from "@/types/bindings";
 import {
-  type QueryKey,
   type QueryOptions,
   useQuery,
   useQueryClient,
@@ -9,17 +9,33 @@ import {
 import { type UnlistenFn, listen as listenEvent } from "@tauri-apps/api/event";
 import { useCallback, useEffect } from "react";
 
-type Payload<T extends Event["type"]> = Extract<Event, { type: T }>;
+type Event<T extends EventTypes> = Extract<Events, { type: T }>;
+type EventTypes = Events["type"];
+type EventData<T extends EventTypes> = Event<T> extends { data: unknown }
+  ? Event<T>["data"]
+  : never;
 
-export function useEvent<T extends Event["type"]>(
+export const waitEvent = <T extends EventTypes>(
+  event: T,
+  selector?: (payload: Event<T>) => boolean,
+) => {
+  return new Promise<EventData<T> | null>((resolve) => {
+    listenEvent<Event<T>>("app:event", ({ payload }) => {
+      if (
+        payload.type === event &&
+        "data" in payload &&
+        (selector?.(payload) ?? true)
+      )
+        resolve(payload.data as EventData<T>);
+      else resolve(null);
+    });
+  });
+};
+
+export function useEvent<T extends EventTypes>(
   event: T,
   queryOptions?: Omit<
-    QueryOptions<
-      Payload<T>["data"] | null,
-      Error,
-      Payload<T>["data"] | null,
-      ["event", T]
-    >,
+    QueryOptions<EventData<T> | null, Error, EventData<T> | null, ["event", T]>,
     "queryFn" | "queryKey"
   >,
 ) {
@@ -40,8 +56,8 @@ export function useEvent<T extends Event["type"]>(
   });
 
   useEffect(() => {
-    const promise = listen<Payload<T>>("app:event", ({ payload }) => {
-      if (payload.type === event)
+    const promise = listen<Event<T>>("app:event", ({ payload }) => {
+      if (payload.type === event && "data" in payload)
         client.setQueryData(["event", event], payload.data);
     });
 

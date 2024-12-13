@@ -6,14 +6,11 @@ use specta::Type;
 use tauri::{AppHandle, Emitter};
 use tracing::{error, warn};
 
-use crate::{
-    error::Error,
-    store::{store, Store, StoreKey},
-};
+use crate::store::{store, Store, StoreKey};
 
 use super::{
     actuator::ActuatorStatus,
-    controller::{Controller, ControllerGroup, ControllerMessage},
+    controller::{Controller, ControllerStatus},
     motor::MotorStatus,
 };
 
@@ -29,14 +26,15 @@ pub enum Event {
     Weight(f64),
     MotorStatus(MotorStatus),
     ActuatorStatus(ActuatorStatus),
+    ControllerStatus {
+        controller: Controller,
+        status: ControllerStatus,
+    },
 }
 
 pub struct MasterState {
     pub app: AppHandle,
     pub store: Arc<Store>,
-    pub refs: HashMap<String, ActorRef<ControllerMessage>>,
-    pub ports: HashMap<String, bool>,
-    pub groups: HashMap<ControllerGroup, bool>,
     pub controllers: HashMap<String, Controller>,
 }
 
@@ -66,18 +64,29 @@ impl Actor for Master {
 
         let controllers: Vec<Controller> = serde_json::from_value(controllers)?;
 
+        if controllers.is_empty() {
+            warn!("No controllers found");
+        }
+
         for controller in controllers {
             myself.send_message(MasterMessage::Spawn(controller))?;
         }
 
         Ok(MasterState {
             app: args,
-            refs: HashMap::new(),
             store,
-            ports: HashMap::new(),
-            groups: HashMap::new(),
             controllers: HashMap::new(),
         })
+    }
+
+    async fn post_start(
+        &self,
+        myself: ActorRef<Self::Msg>,
+        _state: &mut Self::State,
+    ) -> Result<(), ActorProcessingErr> {
+        myself.send_message(MasterMessage::Event(Event::Init))?;
+
+        Ok(())
     }
 
     async fn handle(
@@ -88,15 +97,6 @@ impl Actor for Master {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             MasterMessage::Spawn(controller) => {
-                if state.groups.contains_key(&controller.group)
-                    || state.ports.contains_key(&controller.serial_port)
-                {
-                    return Err(Error::Config.into());
-                }
-
-                state.groups.insert(controller.group.clone(), true);
-                state.ports.insert(controller.serial_port.clone(), true);
-
                 let id = controller.id.clone();
                 let result = Actor::spawn_linked(
                     Some(id.clone()),
@@ -107,8 +107,7 @@ impl Actor for Master {
                 .await;
 
                 match result {
-                    Ok((actor_ref, _)) => {
-                        state.refs.insert(id.clone(), actor_ref);
+                    Ok((_, _)) => {
                         state.controllers.insert(id, controller);
                     }
                     Err(e) => error!("Failed to spawn controller: {}", e),
@@ -128,44 +127,41 @@ impl Actor for Master {
 
     async fn handle_supervisor_evt(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         message: SupervisionEvent,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
             SupervisionEvent::ActorTerminated(who, _, _) => {
-                warn!(
-                    "Actor {} terminated",
-                    who.get_name().unwrap_or(who.get_id().to_string())
-                );
+                let id = who.get_name().unwrap_or(who.get_id().to_string());
+                let controller = state.controllers.remove(&id);
 
-                if let Some(id) = who.get_name() {
-                    let controller = state.controllers.remove(&id);
+                who.get_children().iter().for_each(|child| {
+                    child.kill();
+                });
 
-                    if let Some(controller) = controller {
-                        state.groups.remove(&controller.group);
-                        state.ports.remove(&controller.serial_port);
-                    }
-
-                    state.refs.remove(&id);
+                if let Some(controller) = controller {
+                    myself.send_message(MasterMessage::Event(Event::ControllerStatus {
+                        controller,
+                        status: ControllerStatus::Disconnected,
+                    }))?;
                 }
             }
-            SupervisionEvent::ActorFailed(who, err) => {
-                error!(
-                    "Actor {} failed because of {}",
-                    who.get_name().unwrap_or(who.get_id().to_string()),
-                    err
-                );
+            SupervisionEvent::ActorFailed(who, error) => {
+                let id = who.get_name().unwrap_or(who.get_id().to_string());
+                let controller = state.controllers.remove(&id);
 
-                if let Some(id) = who.get_name() {
-                    let controller = state.controllers.remove(&id);
+                who.get_children().iter().for_each(|child| {
+                    child.kill();
+                });
 
-                    if let Some(controller) = controller {
-                        state.groups.remove(&controller.group);
-                        state.ports.remove(&controller.serial_port);
-                    }
-
-                    state.refs.remove(&id);
+                if let Some(controller) = controller {
+                    myself.send_message(MasterMessage::Event(Event::ControllerStatus {
+                        controller,
+                        status: ControllerStatus::Failed {
+                            reason: error.to_string(),
+                        },
+                    }))?;
                 }
             }
             _ => {}

@@ -17,7 +17,7 @@ use crate::{
 
 use super::{
     actuator::{Actuator, ActuatorArguments},
-    master::SCOPE,
+    master::{Event, MasterMessage, SCOPE},
     mux::{Mux, MuxArguments, MuxMessage},
 };
 
@@ -27,6 +27,15 @@ pub struct Controller {
     pub group: ControllerGroup,
     pub serial_port: String,
     pub baud_rate: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(tag = "type", content = "data")]
+#[serde(rename_all = "kebab-case")]
+pub enum ControllerStatus {
+    Connected,
+    Disconnected,
+    Failed { reason: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Type)]
@@ -137,6 +146,7 @@ pub struct ControllerState {
     app: AppHandle,
     mux: Option<ActorRef<MuxMessage>>,
     store: Arc<Store>,
+    restart_count: u32,
 }
 
 impl Controller {
@@ -170,6 +180,7 @@ impl Actor for Controller {
         myself.send_message(ControllerMessage::Start)?;
 
         Ok(ControllerState {
+            restart_count: 0,
             store: args.0,
             app: args.1,
             mux: None,
@@ -206,6 +217,13 @@ impl Actor for Controller {
             ControllerMessage::Start => {
                 myself.stop_children(None);
                 self.spawn_children(&myself).await?;
+
+                let master = myself.try_get_supervisor().ok_or(Error::Config)?;
+
+                master.send_message(MasterMessage::Event(Event::ControllerStatus {
+                    controller: self.clone(),
+                    status: ControllerStatus::Connected,
+                }))?;
             }
         }
 
@@ -227,8 +245,14 @@ impl Actor for Controller {
 
                 if let Some(mux) = state.mux.as_ref() {
                     if mux.get_id() == who.get_id() {
+                        if state.restart_count > 3 {
+                            return Err(Error::MissingMux.into());
+                        }
+
                         warn!("Mux terminated - attempting restart");
                         myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
+
+                        state.restart_count += 1;
                     }
                 }
             }
@@ -239,12 +263,7 @@ impl Actor for Controller {
                     err
                 );
 
-                if let Some(mux) = state.mux.as_ref() {
-                    if mux.get_id() == who.get_id() {
-                        warn!("Mux failed - attempting restart");
-                        myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
-                    }
-                }
+                return Err(err);
             }
             _ => {}
         }

@@ -2,8 +2,10 @@
 
 export type Procedures = {
     queries: 
-        { key: "controllers", input: never, result: Controller[] } | 
-        { key: "events", input: never, result: Event } | 
+        { key: "master/controllers", input: never, result: Controller[] } | 
+        { key: "master/events", input: never, result: Event } | 
+        { key: "master/groups", input: never, result: ControllerGroup[] } | 
+        { key: "master/ports", input: never, result: Port[] } | 
         { key: "motor/get/max-speed", input: number, result: number },
     mutations: 
         { key: "actuator/keep", input: number, result: null } | 
@@ -12,6 +14,7 @@ export type Procedures = {
         { key: "actuator/reload/settings", input: never, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
         { key: "actuator/tune", input: never, result: null } | 
+        { key: "master/spawn", input: Controller, result: null } | 
         { key: "motor/keep", input: [number, MotorMovement], result: null } | 
         { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
@@ -26,10 +29,14 @@ export type Controller = { id: string; group: ControllerGroup; serial_port: stri
 
 export type ControllerGroup = "default" | "motors"
 
-export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: MotorStatus } | { type: "actuator-status"; data: ActuatorStatus }
+export type ControllerStatus = { type: "connected" } | { type: "disconnected" } | { type: "failed"; data: { reason: string } }
+
+export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: MotorStatus } | { type: "actuator-status"; data: ActuatorStatus } | { type: "controller-status"; data: { controller: Controller; status: ControllerStatus } }
 
 export type MotorMovement = { speed: number; direction: number; rotations: number }
 
 export type MotorStatus = { status: "idle" } | { status: "stopping" } | { status: "spinning"; data: { position: number; remaining: number } }
 
 export type MotorStopMode = "graceful" | "emergency"
+
+export type Port = { name: string; manufacturer: string | null; serial_number: string | null }
