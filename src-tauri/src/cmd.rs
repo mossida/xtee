@@ -17,19 +17,6 @@ pub fn events(_ctx: RouterContext, _: ()) -> Event {
     Event::Init
 }
 
-pub fn restart(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
-    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
-        rspc::ErrorCode::NotFound,
-        "master not found, how is app living?".to_owned(),
-    ))?;
-
-    master
-        .send_message(MasterMessage::Restart)
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
-
-    Ok(())
-}
-
 #[derive(Default, Type, Serialize, Deserialize)]
 pub struct Port {
     pub name: String,
@@ -67,6 +54,19 @@ pub fn spawn_controller(_ctx: RouterContext, input: Controller) -> Result<(), rs
 
     master
         .send_message(MasterMessage::Spawn(input))
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
+}
+
+pub fn kill_controller(_ctx: RouterContext, id: String) -> Result<(), rspc::Error> {
+    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Master not found".to_owned(),
+    ))?;
+
+    master
+        .send_message(MasterMessage::Kill(id))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
 
     Ok(())

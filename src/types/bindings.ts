@@ -14,12 +14,12 @@ export type Procedures = {
         { key: "actuator/reload/settings", input: never, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
         { key: "actuator/tune", input: never, result: null } | 
+        { key: "master/kill", input: string, result: null } | 
         { key: "master/spawn", input: Controller, result: null } | 
         { key: "motor/keep", input: [number, MotorMovement], result: null } | 
         { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
-        { key: "motor/stop", input: [number, MotorStopMode], result: null } | 
-        { key: "restart", input: never, result: null },
+        { key: "motor/stop", input: [number, MotorStopMode], result: null },
     subscriptions: never
 };
 

@@ -26,7 +26,6 @@ import {
 } from "./ui/table";
 
 export function ControllersTable() {
-  const client = useQueryClient();
   const queries = api.useQueries([
     ["master/ports", void 0, { refetchInterval: 1000 }],
     ["master/groups", void 0, {}],
@@ -49,10 +48,10 @@ export function ControllersTable() {
   );
 
   const { mutateAsync: spawn } = api.useMutation("master/spawn");
+  const { mutateAsync: kill } = api.useMutation("master/kill");
   const {
     mutate: connect,
     isPending,
-    error,
     variables,
   } = useMutation({
     mutationFn: async (port: string) => {
@@ -77,8 +76,25 @@ export function ControllersTable() {
       if (result === null) {
         throw new Error("Failed to connect to controller");
       }
+    },
+  });
 
-      client.invalidateQueries({ queryKey: ["master/controllers"] });
+  const { mutate: disconnect } = useMutation({
+    mutationFn: async (id: string) => {
+      await kill(id);
+
+      const result = Promise.race([
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+        waitEvent(
+          "controller-status",
+          ({ data: { controller, status } }) =>
+            controller.id === id && status.type === "disconnected",
+        ),
+      ]);
+
+      if (result === null) {
+        throw new Error("Failed to disconnect from controller");
+      }
     },
   });
 
@@ -100,7 +116,9 @@ export function ControllersTable() {
           const controller = controllersByPort.get(port.name);
           const variant = isConnected ? "destructive" : "default";
           const buttonText = isConnected ? "Disconnect" : "Connect";
-          const action = isConnected ? () => {} : connect;
+          const action = isConnected
+            ? () => disconnect(controller?.id ?? "")
+            : connect;
 
           return (
             <TableRow key={port.name}>
@@ -139,7 +157,9 @@ export function ControllersTable() {
                   className="w-full"
                   onClick={() => action(port.name)}
                   variant={variant}
-                  disabled={!groupSelections[port.name] || isPending}
+                  disabled={
+                    (!isConnected && !groupSelections[port.name]) || isPending
+                  }
                 >
                   {isPending && variables === port.name ? (
                     <Spinner />

@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent};
+use ractor::{
+    async_trait, registry, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent,
+};
 use serde::Serialize;
 use specta::Type;
 use tauri::{AppHandle, Emitter};
@@ -39,7 +41,7 @@ pub struct MasterState {
 }
 
 pub enum MasterMessage {
-    Restart,
+    Kill(String),
     Spawn(Controller),
     #[allow(dead_code)]
     Event(Event),
@@ -119,7 +121,24 @@ impl Actor for Master {
             MasterMessage::Event(event) => {
                 state.app.emit("app:event", event)?;
             }
-            _ => {}
+            MasterMessage::Kill(id) => {
+                let controller = state.controllers.remove(&id);
+
+                if let Some(controller) = controller {
+                    let cell =
+                        registry::where_is(controller.id.clone()).ok_or(rspc::Error::new(
+                            rspc::ErrorCode::NotFound,
+                            "Controller not found".to_owned(),
+                        ))?;
+
+                    cell.stop(None);
+
+                    myself.send_message(MasterMessage::Event(Event::ControllerStatus {
+                        controller,
+                        status: ControllerStatus::Disconnected,
+                    }))?;
+                }
+            }
         };
 
         Ok(())
@@ -136,10 +155,6 @@ impl Actor for Master {
                 let id = who.get_name().unwrap_or(who.get_id().to_string());
                 let controller = state.controllers.remove(&id);
 
-                who.get_children().iter().for_each(|child| {
-                    child.kill();
-                });
-
                 if let Some(controller) = controller {
                     myself.send_message(MasterMessage::Event(Event::ControllerStatus {
                         controller,
@@ -150,10 +165,6 @@ impl Actor for Master {
             SupervisionEvent::ActorFailed(who, error) => {
                 let id = who.get_name().unwrap_or(who.get_id().to_string());
                 let controller = state.controllers.remove(&id);
-
-                who.get_children().iter().for_each(|child| {
-                    child.kill();
-                });
 
                 if let Some(controller) = controller {
                     myself.send_message(MasterMessage::Event(Event::ControllerStatus {

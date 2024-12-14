@@ -20,11 +20,6 @@ export default function GeneralSettings() {
         <CardContent>
           <ControllersTable />
         </CardContent>
-        <CardFooter className="flex justify-end gap-4">
-          <Button variant="destructive" className="hover:bg-destructive">
-            Restart
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );

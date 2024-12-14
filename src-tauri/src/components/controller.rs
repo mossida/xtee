@@ -63,6 +63,7 @@ impl From<ControllerGroup> for Vec<ControllerChild> {
     }
 }
 
+#[derive(PartialEq, Eq)]
 pub enum ControllerChild {
     Mux,
     Actuator,
@@ -198,20 +199,16 @@ impl Actor for Controller {
                 reply.send(state.mux.clone().ok_or(Error::MissingMux)?)?;
             }
             ControllerMessage::Spawn(child) => {
-                let result = child
+                let cell = child
                     .spawn(
                         myself,
                         self.clone(),
                         (state.store.clone(), state.app.clone()),
                     )
-                    .await;
+                    .await?;
 
-                match result {
-                    Ok(cell) if matches!(child, ControllerChild::Mux) => {
-                        state.mux = Some(cell.into())
-                    }
-                    Err(e) => error!("Failed to spawn child: {}", e),
-                    _ => {}
+                if child == ControllerChild::Mux {
+                    state.mux = Some(cell.into())
                 }
             }
             ControllerMessage::Start => {
