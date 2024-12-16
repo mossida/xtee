@@ -73,37 +73,4 @@ export const api = {
       },
     });
   },
-  useSubscription: <T extends ProcedureKeys<Procedures, "subscriptions">>(
-    key: T,
-    select: (data: ProcedureResult<Procedures, "subscriptions", T>) => boolean,
-    options?: UseQueryOptions<T>,
-  ) => {
-    const queryClient = useQueryClient();
-
-    useEffect(
-      () =>
-        // @ts-expect-error
-        client.addSubscription([key], {
-          onData: (data) => {
-            if (select?.(data)) {
-              queryClient.setQueryData([key], data);
-            }
-          },
-          onError: (error) => {
-            console.error(error);
-          },
-        }),
-      [key, queryClient, select],
-    );
-
-    return useQueryTanstack<
-      unknown,
-      DefaultError,
-      ProcedureResult<Procedures, "subscriptions", T>
-    >({
-      ...options,
-      queryKey: [key],
-      queryFn: () => null,
-    });
-  },
 };

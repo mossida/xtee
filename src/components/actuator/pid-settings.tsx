@@ -31,14 +31,14 @@ const schema = z.object({
   derivative: z.number().min(0).max(10),
 });
 
-export function PidSettings({ onOpen }: { onOpen: () => void }) {
+export function PidSettings({ onOpen }: { onOpen?: () => void }) {
   const { data, isFetching } = store.useQuery("actuator.pid.settings");
   const { mutateAsync: save } = store.useMutation("actuator.pid.settings");
   const { mutateAsync: reload } = api.useMutation("actuator/reload/settings");
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: data ?? {
+    values: data ?? {
       proportional: 0,
       integral: 0,
       derivative: 0,
@@ -84,7 +84,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
                       <FormItem>
                         <FormLabel>Proportional</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.0001} {...field} />
+                          <Input type="number" step={0.000001} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -99,7 +99,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
                       <FormItem>
                         <FormLabel>Integral</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.0001} {...field} />
+                          <Input type="number" step={0.000001} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -114,7 +114,7 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
                       <FormItem>
                         <FormLabel>Derivative</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.0001} {...field} />
+                          <Input type="number" step={0.000001} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -127,14 +127,14 @@ export function PidSettings({ onOpen }: { onOpen: () => void }) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-end gap-4">
-        <Button
+        {/* <Button
           variant="secondary"
           size={"lg"}
           disabled={isFetching}
           onClick={() => onOpen()}
         >
           Auto Tune
-        </Button>
+        </Button> */}
         <Button
           className=""
           size={"lg"}

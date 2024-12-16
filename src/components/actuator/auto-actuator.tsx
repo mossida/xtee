@@ -1,17 +1,19 @@
-import { useEvent } from "@/hooks/use-event";
+"use client";
 import { api } from "@/lib/client";
+import { actuatorStatusAtom } from "@/state";
+import { useAtomValue } from "jotai";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { QuantityInput } from "../ui/quantity-input";
 
 export function AutoActuator() {
+  const status = useAtomValue(actuatorStatusAtom);
+  const type = status?.status;
+
   const [setpoint, setSetpoint] = useState(0);
 
-  const { data } = useEvent("actuator-status");
   const { mutate: loadActuator } = api.useMutation("actuator/load");
   const { mutate: keepActuator } = api.useMutation("actuator/keep");
-
-  const { status } = data ?? { status: "unknown" };
 
   return (
     <div className="w-full flex-grow flex flex-col justify-between px-4">
@@ -25,14 +27,14 @@ export function AutoActuator() {
         <Button
           size="lg"
           onClick={() => loadActuator(setpoint)}
-          disabled={status !== "idle"}
+          disabled={type !== "idle"}
         >
           Reach load
         </Button>
         <Button
           size="lg"
           onClick={() => keepActuator(setpoint)}
-          disabled={status !== "idle"}
+          disabled={type !== "idle"}
         >
           Keep loaded
         </Button>

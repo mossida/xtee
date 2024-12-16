@@ -14,24 +14,36 @@ pub type Store = tauri_plugin_store::Store<Wry>;
 pub enum StoreKey {
     #[serde(rename = "scale.gain")]
     ScaleGain,
-    #[serde(rename = "actuator.pid.settings")]
-    ActuatorPidSettings,
-    #[serde(rename = "controllers")]
+    #[serde(rename = "scale.offset")]
+    ScaleOffset,
+    #[serde(rename = "controllers.spawn")]
     Controllers,
     #[serde(rename = "actuator.tuning.setpoint")]
     ActuatorTuningSetpoint,
     #[serde(rename = "actuator.tuning.relay-amplitude")]
     ActuatorTuningRelayAmplitude,
+    #[serde(rename = "actuator.pid.settings")]
+    ActuatorPidSettings,
+    #[serde(rename = "actuator.maxLoad")]
+    ActuatorMaxLoad,
+    #[serde(rename = "actuator.minLoad")]
+    ActuatorMinLoad,
+    #[serde(rename = "actuator.precision")]
+    ActuatorPrecision,
 }
 
 impl AsRef<str> for StoreKey {
     fn as_ref(&self) -> &str {
         match self {
             StoreKey::ScaleGain => "scale.gain",
-            StoreKey::ActuatorPidSettings => "actuator.pid.settings",
-            StoreKey::Controllers => "controllers",
+            StoreKey::ScaleOffset => "scale.offset",
+            StoreKey::Controllers => "controllers.spawn",
             StoreKey::ActuatorTuningSetpoint => "actuator.tuning.setpoint",
             StoreKey::ActuatorTuningRelayAmplitude => "actuator.tuning.relay-amplitude",
+            StoreKey::ActuatorPidSettings => "actuator.pid.settings",
+            StoreKey::ActuatorMaxLoad => "actuator.maxLoad",
+            StoreKey::ActuatorMinLoad => "actuator.minLoad",
+            StoreKey::ActuatorPrecision => "actuator.precision",
         }
     }
 }
@@ -53,6 +65,7 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
     let builder = app
         .store_builder("store.json")
         .default(StoreKey::ScaleGain, 0.0000672315)
+        .default(StoreKey::ScaleOffset, 0.0)
         .default(
             StoreKey::ActuatorPidSettings,
             serde_json::to_value(PIDSettings {
@@ -61,13 +74,16 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
                 derivative: 0.15,
             })?,
         )
+        .default(StoreKey::ActuatorMaxLoad, 200.0)
+        .default(StoreKey::ActuatorMinLoad, 0.0)
         .default(StoreKey::ActuatorTuningSetpoint, 100.0)
         .default(StoreKey::ActuatorTuningRelayAmplitude, 100.0)
+        .default(StoreKey::ActuatorPrecision, 1.0)
         .default(
             StoreKey::Controllers,
             serde_json::to_value(vec![] as Vec<Controller>)?,
         )
-        .auto_save(Duration::from_millis(100));
+        .auto_save(Duration::ZERO);
 
     builder.build()
 }

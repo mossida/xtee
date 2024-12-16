@@ -1,3 +1,4 @@
+import type { Controller } from "@/types/bindings";
 import {
   type DefaultError,
   type UseMutationOptions,
@@ -13,9 +14,12 @@ import { isTauri } from "./constants";
 export const storeContainer = isTauri ? await load("store.json") : null;
 
 export type Store = {
+  "controllers.spawn": Controller[];
   "scale.gain": number;
   "scale.offset": number;
   "actuator.maxLoad": number;
+  "actuator.minLoad": number;
+  "actuator.precision": number;
   "actuator.tuning.setpoint": number;
   "actuator.tuning.relayAmplitude": number;
   "actuator.pid.settings": {
@@ -26,6 +30,8 @@ export type Store = {
 };
 
 type StoreKey = keyof Store;
+
+type Mutation<T extends StoreKey> = [key: T, value: Store[T]];
 
 export const store = {
   useQuery: <T extends StoreKey>(
@@ -46,18 +52,19 @@ export const store = {
       })),
     });
   },
-  useMutation: <T extends StoreKey>(
-    key: T,
-    options?: UseMutationOptions<void, DefaultError, Store[T]>,
+  useMutation: (
+    options?: UseMutationOptions<void, DefaultError, Mutation<StoreKey>[]>,
   ) => {
     const client = useQueryClient();
 
     return useMutationTanstack({
       ...options,
-      mutationFn: async (value: Store[T]) => {
-        await storeContainer?.set(key, value);
+      mutationFn: async <M extends Mutation<StoreKey>[]>(value: M) => {
+        await Promise.all(
+          value.map(([key, value]) => storeContainer?.set(key, value)),
+        );
 
-        client.invalidateQueries({ queryKey: [key] });
+        client.invalidateQueries({ queryKey: value.map(([key]) => key) });
       },
     });
   },

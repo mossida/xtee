@@ -4,26 +4,24 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { useCallback, useState } from "react";
 import { Button } from "./ui/button";
 
-export const MODES = ["twisting", "serving", "manual"] as const;
-
-export type Mode = (typeof MODES)[number];
-
-export function ModeSelector({
+export function ModeSelector<M extends ReadonlyArray<string>>({
   value,
+  modes,
   onChange,
 }: {
-  value: Mode;
-  onChange: (mode: Mode) => void;
+  value: M[number];
+  modes: M;
+  onChange: (mode: M[number]) => void;
 }) {
   const nextMode = useCallback(() => {
-    const index = MODES.indexOf(value);
-    onChange(MODES[index + 1] ?? MODES[0]);
-  }, [value, onChange]);
+    const index = modes.indexOf(value);
+    onChange(modes[index + 1] ?? (modes[0] as M[number]));
+  }, [value, onChange, modes]);
 
   const prevMode = useCallback(() => {
-    const index = MODES.indexOf(value);
-    onChange(MODES[index - 1] ?? (MODES[MODES.length - 1] as Mode));
-  }, [value, onChange]);
+    const index = modes.indexOf(value);
+    onChange(modes[index - 1] ?? (modes[modes.length - 1] as M[number]));
+  }, [value, onChange, modes]);
 
   return (
     <>

@@ -29,6 +29,8 @@ pub struct ActuatorArguments {
     pub pid_settings: PIDSettings,
     pub tuner_setpoint: f64,
     pub tuner_relay_amplitude: f64,
+    pub max_load: f64,
+    pub min_load: f64,
     store: Arc<Store>,
 }
 
@@ -51,7 +53,7 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
         let scale_gain = value.get(StoreKey::ScaleGain).ok_or(Error::Config)?;
-
+        let scale_offset = value.get(StoreKey::ScaleOffset).ok_or(Error::Config)?;
         let tuner_setpoint = value
             .get(StoreKey::ActuatorTuningSetpoint)
             .ok_or(Error::Config)?;
@@ -60,12 +62,20 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
             .get(StoreKey::ActuatorTuningRelayAmplitude)
             .ok_or(Error::Config)?;
 
+        let max_load = value.get(StoreKey::ActuatorMaxLoad).ok_or(Error::Config)?;
+        let min_load = value.get(StoreKey::ActuatorMinLoad).ok_or(Error::Config)?;
+        let precision = value
+            .get(StoreKey::ActuatorPrecision)
+            .ok_or(Error::Config)?;
+
         Ok(ActuatorArguments {
-            precision: 1.5,
+            precision: precision.as_f64().ok_or(Error::InvalidStore)?,
             scale_gain: scale_gain.as_f64().ok_or(Error::InvalidStore)?,
             tuner_setpoint: tuner_setpoint.as_f64().ok_or(Error::InvalidStore)?,
             tuner_relay_amplitude: tuner_relay_amplitude.as_f64().ok_or(Error::InvalidStore)?,
-            scale_offset: 0.0,
+            max_load: max_load.as_f64().ok_or(Error::InvalidStore)?,
+            min_load: min_load.as_f64().ok_or(Error::InvalidStore)?,
+            scale_offset: scale_offset.as_f64().ok_or(Error::InvalidStore)?,
             pid_settings: settings,
             store: value,
         })
@@ -310,10 +320,11 @@ impl Actor for Actuator {
             ActuatorMessage::Load(value) if state.status != ActuatorStatus::Tuning => {
                 state.status = ActuatorStatus::Loading { target: value };
 
-                state.pid.reset();
-                state.pid.set_target(value as f64);
-
                 let settings = &state.config.pid_settings;
+                let target = (value as f64).clamp(state.config.min_load, state.config.max_load);
+
+                state.pid.reset();
+                state.pid.set_target(target);
 
                 info!("Loading: {:.2} kg with settings: {:?}", value, settings);
 
@@ -322,8 +333,10 @@ impl Actor for Actuator {
             ActuatorMessage::Keep(value) if state.status != ActuatorStatus::Tuning => {
                 state.status = ActuatorStatus::Keeping { target: value };
 
+                let target = (value as f64).clamp(state.config.min_load, state.config.max_load);
+
                 state.pid.reset();
-                state.pid.set_target(value as f64);
+                state.pid.set_target(target);
 
                 state.send_status()?;
             }

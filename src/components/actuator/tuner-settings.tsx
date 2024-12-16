@@ -36,13 +36,9 @@ export function TunerSettings() {
 
   const [setpoint, relayAmplitude] = queries.map((query) => query.data);
 
-  const { mutate: mutateSetpoint, isPending: isPendingSetpoint } =
-    store.useMutation("actuator.tuning.setpoint");
-  const { mutate: mutateRelayAmplitude, isPending: isPendingRelayAmplitude } =
-    store.useMutation("actuator.tuning.relayAmplitude");
+  const { mutate, isPending } = store.useMutation();
 
   const isFetching = queries.some((query) => query.isFetching);
-  const isPending = isPendingSetpoint || isPendingRelayAmplitude;
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -55,8 +51,10 @@ export function TunerSettings() {
   const save = () => {
     const values = mapValues(form.getValues(), (value) => Number(value));
 
-    mutateSetpoint(values.setpoint);
-    mutateRelayAmplitude(values.relayAmplitude);
+    mutate([
+      ["actuator.tuning.setpoint", values.setpoint],
+      ["actuator.tuning.relayAmplitude", values.relayAmplitude],
+    ]);
   };
 
   return (

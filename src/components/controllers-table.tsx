@@ -2,6 +2,7 @@
 
 import { waitEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
+import { store } from "@/lib/store";
 import type { Controller, ControllerGroup, Port } from "@/types/bindings";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -32,6 +33,8 @@ export function ControllersTable() {
     ["master/controllers", void 0, { refetchInterval: 1000 }],
   ]);
 
+  const { mutateAsync: save } = store.useMutation();
+
   const [ports, groups, controllers] = queries.map((query) => query.data) as [
     Port[],
     ControllerGroup[],
@@ -57,12 +60,14 @@ export function ControllersTable() {
     mutationFn: async (port: string) => {
       const id = crypto.randomUUID();
 
-      await spawn({
+      const controller = {
         serial_port: port,
         group: groupSelections[port] as ControllerGroup,
         baud_rate: 115200,
         id,
-      });
+      };
+
+      await spawn(controller);
 
       const result = Promise.race([
         new Promise((resolve) => setTimeout(resolve, 3000)),
@@ -76,6 +81,8 @@ export function ControllersTable() {
       if (result === null) {
         throw new Error("Failed to connect to controller");
       }
+
+      await save([["controllers.spawn", [...(controllers ?? []), controller]]]);
     },
   });
 

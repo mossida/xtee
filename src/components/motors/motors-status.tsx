@@ -1,5 +1,5 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { MotorStatus } from "./motor-status";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 export function MotorsStatus() {
   return (

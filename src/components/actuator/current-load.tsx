@@ -1,8 +1,7 @@
 "use client";
 
 import { useEvent } from "@/hooks/use-event";
-import { api } from "@/lib/client";
-import { LoadVisualizer } from "./load-visualizer";
+import { LoadVisualizer } from "../load-visualizer";
 
 export function formatBalancedNumber(num: number): string {
   if (num === 0) return "0.00";
@@ -12,7 +11,7 @@ export function formatBalancedNumber(num: number): string {
 }
 
 export function CurrentLoad() {
-  const { data: weight } = useEvent("weight");
+  const weight = useEvent("weight");
 
   return (
     <div className="flex flex-col items-start w-full">

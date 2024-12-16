@@ -1,13 +1,6 @@
-import { promisify } from "node:util";
-import { isTauri } from "@/lib/constants";
 import type { Event as Events } from "@/types/bindings";
-import {
-  type QueryOptions,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { type UnlistenFn, listen as listenEvent } from "@tauri-apps/api/event";
-import { useCallback, useEffect } from "react";
+import { listen as listenTauri } from "@tauri-apps/api/event";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 
 type Event<T extends EventTypes> = Extract<Events, { type: T }>;
 type EventTypes = Events["type"];
@@ -20,7 +13,7 @@ export const waitEvent = <T extends EventTypes>(
   selector?: (payload: Event<T>) => boolean,
 ) => {
   return new Promise<EventData<T> | null>((resolve) => {
-    listenEvent<Event<T>>("app:event", ({ payload }) => {
+    listenTauri<Event<T>>("app:event", ({ payload }) => {
       if (
         payload.type === event &&
         "data" in payload &&
@@ -32,39 +25,36 @@ export const waitEvent = <T extends EventTypes>(
   });
 };
 
-export function useEvent<T extends EventTypes>(
+export const listenEvent = <T extends EventTypes>(
   event: T,
-  queryOptions?: Omit<
-    QueryOptions<EventData<T> | null, Error, EventData<T> | null, ["event", T]>,
-    "queryFn" | "queryKey"
-  >,
-) {
-  const client = useQueryClient();
+  callback: (payload: Event<T>) => void,
+) => {
+  return listenTauri<Event<T>>("app:event", ({ payload }) => {
+    if (payload.type === event && "data" in payload) callback(payload);
+  });
+};
 
-  const listen = useCallback(
-    <P>(...args: Parameters<typeof listenEvent<P>>) =>
-      isTauri
-        ? listenEvent<P>(...args)
-        : (new Promise((resolve) => resolve(() => {})) as Promise<UnlistenFn>),
-    [],
+export function useEvent<T extends EventTypes>(event: T) {
+  const dataRef = useRef<EventData<T> | null>(null);
+
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      const promise = listenEvent(event, (payload) => {
+        if (payload.type === event) {
+          callback();
+
+          if ("data" in payload) dataRef.current = payload.data as EventData<T>;
+        }
+      });
+
+      return () => promise.then((unlisten) => unlisten());
+    },
+    [event],
   );
 
-  const query = useQuery({
-    ...queryOptions,
-    queryKey: ["event", event],
-    queryFn: async () => null,
-  });
-
-  useEffect(() => {
-    const promise = listen<Event<T>>("app:event", ({ payload }) => {
-      if (payload.type === event && "data" in payload)
-        client.setQueryData(["event", event], payload.data);
-    });
-
-    return () => {
-      promise.then((unlisten) => unlisten());
-    };
-  }, [client, event, listen]);
-
-  return query;
+  return useSyncExternalStore(
+    subscribe,
+    () => dataRef.current,
+    () => dataRef.current,
+  );
 }

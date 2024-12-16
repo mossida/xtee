@@ -1,9 +1,11 @@
+"use client";
+
 import { useEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
 import { store } from "@/lib/store";
 import type { DialogProps } from "@radix-ui/react-dialog";
+import { formatBalancedNumber } from "../actuator/current-load";
 import { StepActuator } from "../actuator/step-actuator";
-import { formatBalancedNumber } from "../current-load";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
 import {
@@ -15,7 +17,7 @@ import {
 } from "../ui/dialog";
 
 export function TuneActuatorModal(props: DialogProps) {
-  const { data: weight } = useEvent("weight");
+  const weight = useEvent("weight");
   const { data: setpoint } = store.useQuery("actuator.tuning.setpoint");
   const { mutate: tune } = api.useMutation("actuator/tune");
 
