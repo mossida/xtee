@@ -83,6 +83,7 @@ export function TouchNumberInput({
             min={min}
             max={max}
             step={step}
+            readOnly
             className="h-14 text-center text-2xl pr-10"
           />
           {suffix && (

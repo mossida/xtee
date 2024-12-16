@@ -33,8 +33,6 @@ const schema = z.object({
 });
 
 export function GeneralSettings() {
-  "use no memo";
-
   const queries = store.useQueries([
     "scale.gain",
     "scale.offset",

@@ -31,7 +31,7 @@ export type ControllerGroup = "default" | "motors"
 
 export type ControllerStatus = { type: "connected" } | { type: "disconnected" } | { type: "failed"; data: { reason: string } }
 
-export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: MotorStatus } | { type: "actuator-status"; data: ActuatorStatus } | { type: "controller-status"; data: { controller: Controller; status: ControllerStatus } }
+export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: [number, MotorStatus] } | { type: "actuator-status"; data: ActuatorStatus } | { type: "controller-status"; data: { controller: Controller; status: ControllerStatus } }
 
 export type MotorMovement = { speed: number; direction: number; rotations: number }
 

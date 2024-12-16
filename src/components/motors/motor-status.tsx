@@ -1,8 +1,10 @@
 "use client";
 
-import { useEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
+import { motorStatusFamily } from "@/state";
+import { useAtomValue } from "jotai";
 import { Lock } from "lucide-react";
+import { useEffect } from "react";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { Toggle } from "../ui/toggle";
@@ -11,7 +13,7 @@ export function MotorStatus({ motor }: { motor: 1 | 2 }) {
   const { mutate: setOutputs, data: outputs } =
     api.useMutation("motor/set/outputs");
 
-  const data = useEvent("motor-status");
+  const data = useAtomValue(motorStatusFamily(motor));
 
   return (
     <div className="flex flex-col gap-2">

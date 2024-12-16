@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogNumberInput } from "@/components/dialog-number-input";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -20,8 +21,10 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
+import { motorStatusFamily } from "@/state";
 import type { MotorMovement } from "@/types/bindings";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAtomValue } from "jotai";
 import { useForm } from "react-hook-form";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
@@ -60,6 +63,9 @@ export function ManualMode() {
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
 
+  const motor1Status = useAtomValue(motorStatusFamily(1));
+  const motor2Status = useAtomValue(motorStatusFamily(2));
+
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
       motor1: {
@@ -84,6 +90,11 @@ export function ManualMode() {
     spin([2, payload[1]]);
   };
 
+  const askStop = () => {
+    stop([1, "graceful"]);
+    stop([2, "graceful"]);
+  };
+
   const bind = useLongPress(() => {}, {
     threshold: 0,
     onStart: () => {
@@ -93,10 +104,8 @@ export function ManualMode() {
       keep([1, payload[0]]);
       keep([2, payload[1]]);
     },
-    onFinish: () => {
-      stop([1, "graceful"]);
-      stop([2, "graceful"]);
-    },
+    onFinish: askStop,
+    onCancel: askStop,
   });
 
   return (
@@ -136,17 +145,17 @@ export function ManualMode() {
               <FormField
                 name="motor1.speed"
                 control={form.control}
-                render={({ field }) => (
+                render={({ field: { value, ...field } }) => (
                   <FormItem>
-                    <FormLabel>Speed</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <DialogNumberInput
+                        label="Speed"
+                        value={value.toString()}
                         min={1}
+                        max={1000}
+                        allowFloat={false}
+                        allowNegative={false}
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(Number(e.target.value));
-                        }}
                       />
                     </FormControl>
                     <FormDescription>
@@ -159,17 +168,17 @@ export function ManualMode() {
               <FormField
                 name="motor1.rotations"
                 control={form.control}
-                render={({ field }) => (
+                render={({ field: { value, ...field } }) => (
                   <FormItem>
-                    <FormLabel>Rotations</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <DialogNumberInput
+                        label="Rotations"
+                        value={value.toString()}
                         min={1}
+                        max={1000}
+                        allowFloat={false}
+                        allowNegative={false}
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(Number(e.target.value));
-                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -209,17 +218,17 @@ export function ManualMode() {
               <FormField
                 name="motor2.speed"
                 control={form.control}
-                render={({ field }) => (
+                render={({ field: { value, ...field } }) => (
                   <FormItem>
-                    <FormLabel>Speed</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <DialogNumberInput
+                        label="Speed"
+                        value={value.toString()}
                         min={1}
+                        max={1000}
+                        allowFloat={false}
+                        allowNegative={false}
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(Number(e.target.value));
-                        }}
                       />
                     </FormControl>
                     <FormDescription>
@@ -232,17 +241,17 @@ export function ManualMode() {
               <FormField
                 name="motor2.rotations"
                 control={form.control}
-                render={({ field }) => (
+                render={({ field: { value, ...field } }) => (
                   <FormItem>
-                    <FormLabel>Rotations</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
+                      <DialogNumberInput
+                        label="Rotations"
+                        value={value.toString()}
                         min={1}
+                        max={1000}
+                        allowFloat={false}
+                        allowNegative={false}
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(Number(e.target.value));
-                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -259,7 +268,11 @@ export function ManualMode() {
             <Button
               className="w-full h-16"
               onClick={start}
-              disabled={!form.formState.isValid}
+              disabled={
+                !form.formState.isValid ||
+                !motor1Status?.status ||
+                !motor2Status?.status
+              }
             >
               Start rotations
             </Button>
@@ -268,7 +281,11 @@ export function ManualMode() {
             <Button
               className="w-full h-16"
               {...bind()}
-              disabled={!form.formState.isValid}
+              disabled={
+                !form.formState.isValid ||
+                !motor1Status?.status ||
+                !motor2Status?.status
+              }
             >
               Move manually
             </Button>
@@ -277,6 +294,7 @@ export function ManualMode() {
         <Button
           className="w-full hover:bg-destructive flex-grow"
           variant="destructive"
+          disabled={!motor1Status?.status || !motor2Status?.status}
           onClick={() => {
             stop([1, "emergency"]);
             stop([2, "emergency"]);

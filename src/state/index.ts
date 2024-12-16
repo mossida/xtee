@@ -1,8 +1,9 @@
 import { listenEvent } from "@/hooks/use-event";
-import type { ActuatorStatus } from "@/types/bindings";
+import type { ActuatorStatus, MotorStatus } from "@/types/bindings";
 
 import { atom } from "jotai";
 import { withAtomEffect } from "jotai-effect";
+import { atomFamily } from "jotai/utils";
 
 export const actuatorStatusAtom = withAtomEffect(
   atom<ActuatorStatus | null>(null),
@@ -13,4 +14,16 @@ export const actuatorStatusAtom = withAtomEffect(
 
     return () => promise.then((unsubscribe) => unsubscribe());
   },
+);
+
+export const motorStatusFamily = atomFamily((motor: 1 | 2) =>
+  withAtomEffect(atom<MotorStatus | null>(null), (_, set) => {
+    const promise = listenEvent("motor-status", (payload) => {
+      if (payload.data[0] === motor) {
+        set(motorStatusFamily(motor), payload.data[1]);
+      }
+    });
+
+    return () => promise.then((unsubscribe) => unsubscribe());
+  }),
 );

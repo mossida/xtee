@@ -26,7 +26,7 @@ pub struct Master;
 pub enum Event {
     Init,
     Weight(f64),
-    MotorStatus(MotorStatus),
+    MotorStatus(u8, MotorStatus),
     ActuatorStatus(ActuatorStatus),
     ControllerStatus {
         controller: Controller,

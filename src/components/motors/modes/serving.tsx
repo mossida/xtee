@@ -1,5 +1,6 @@
 "use client";
 
+import { DialogNumberInput } from "@/components/dialog-number-input";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -19,7 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/client";
+import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAtomValue } from "jotai";
 import { useForm, useWatch } from "react-hook-form";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
@@ -60,6 +63,9 @@ export function ServingMode() {
     },
     resolver: zodResolver(schema),
   });
+
+  const motor1Status = useAtomValue(motorStatusFamily(1));
+  const motor2Status = useAtomValue(motorStatusFamily(2));
 
   const start = () => {
     const values = form.getValues();
@@ -137,17 +143,17 @@ export function ServingMode() {
           <FormField
             name="rotations"
             control={form.control}
-            render={({ field }) => (
+            render={({ field: { value, ...field } }) => (
               <FormItem>
-                <FormLabel>Rotations</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
+                  <DialogNumberInput
+                    label="Rotations"
+                    value={value.toString()}
                     min={1}
+                    max={1000}
+                    allowFloat={false}
+                    allowNegative={false}
                     {...field}
-                    onChange={(e) => {
-                      field.onChange(Number(e.target.value));
-                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -159,12 +165,28 @@ export function ServingMode() {
       <div className="flex flex-col justify-stretch gap-2 col-span-1">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Button className="w-full h-16" onClick={start}>
+            <Button
+              className="w-full h-16"
+              onClick={start}
+              disabled={
+                !form.formState.isValid ||
+                !motor1Status?.status ||
+                !motor2Status?.status
+              }
+            >
               Start rotations
             </Button>
           </div>
           <div>
-            <Button className="w-full h-16" {...bind()}>
+            <Button
+              className="w-full h-16"
+              {...bind()}
+              disabled={
+                !form.formState.isValid ||
+                !motor1Status?.status ||
+                !motor2Status?.status
+              }
+            >
               Move manually
             </Button>
           </div>
@@ -172,6 +194,7 @@ export function ServingMode() {
         <Button
           className="w-full hover:bg-destructive flex-grow"
           variant="destructive"
+          disabled={!motor1Status?.status || !motor2Status?.status}
           onClick={() => {
             stop([1, "emergency"]);
             stop([2, "emergency"]);

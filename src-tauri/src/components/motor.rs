@@ -243,6 +243,7 @@ impl Actor for Motor {
                     state
                         .master
                         .send_message(MasterMessage::Event(Event::MotorStatus(
+                            self.slave,
                             state.status.clone(),
                         )))?;
                 }
