@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { mapValues } from "remeda";
 import { z } from "zod";
+import { DialogNumberInput } from "../dialog-number-input";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -26,14 +27,15 @@ import { Input } from "../ui/input";
 import { Spinner } from "../ui/spinner";
 
 const schema = z.object({
-  proportional: z.number().min(0).max(10),
-  integral: z.number().min(0).max(10),
-  derivative: z.number().min(0).max(10),
+  proportional: z.number({ coerce: true }).min(0).max(10),
+  integral: z.number({ coerce: true }).min(0).max(10),
+  derivative: z.number({ coerce: true }).min(0).max(10),
 });
 
 export function PidSettings({ onOpen }: { onOpen?: () => void }) {
   const { data, isFetching } = store.useQuery("actuator.pid.settings");
-  const { mutateAsync: save } = store.useMutation("actuator.pid.settings");
+
+  const { mutateAsync: save } = store.useMutation();
   const { mutateAsync: reload } = api.useMutation("actuator/reload/settings");
 
   const form = useForm<z.infer<typeof schema>>({
@@ -47,7 +49,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
-      await save(mapValues(data, (value) => Number(value)));
+      await save([["actuator.pid.settings", data]]);
       await new Promise((resolve) => setTimeout(resolve, 500));
       await reload();
     },
@@ -80,11 +82,16 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                   <FormField
                     control={form.control}
                     name="proportional"
-                    render={({ field }) => (
+                    render={({ field: { value, ...field } }) => (
                       <FormItem>
-                        <FormLabel>Proportional</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.000001} {...field} />
+                          <DialogNumberInput
+                            min={-10}
+                            max={10}
+                            label="Proportional"
+                            value={value.toString()}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -95,11 +102,16 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                   <FormField
                     control={form.control}
                     name="integral"
-                    render={({ field }) => (
+                    render={({ field: { value, ...field } }) => (
                       <FormItem>
-                        <FormLabel>Integral</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.000001} {...field} />
+                          <DialogNumberInput
+                            min={-10}
+                            max={10}
+                            label="Integral"
+                            value={value.toString()}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -110,11 +122,16 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                   <FormField
                     control={form.control}
                     name="derivative"
-                    render={({ field }) => (
+                    render={({ field: { value, ...field } }) => (
                       <FormItem>
-                        <FormLabel>Derivative</FormLabel>
                         <FormControl>
-                          <Input type="number" step={0.000001} {...field} />
+                          <DialogNumberInput
+                            min={-10}
+                            max={10}
+                            label="Derivative"
+                            value={value.toString()}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

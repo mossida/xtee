@@ -1,3 +1,5 @@
+"use client";
+
 import { api } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { Button, type ButtonProps } from "../ui/button";

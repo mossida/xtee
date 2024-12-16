@@ -1,10 +1,13 @@
 "use client";
+
 import { api } from "@/lib/client";
+import { store } from "@/lib/store";
 import { actuatorStatusAtom } from "@/state";
 import { useAtomValue } from "jotai";
 import { useState } from "react";
+import { clamp } from "remeda";
+import { TouchNumberInput } from "../touch-number-input";
 import { Button } from "../ui/button";
-import { QuantityInput } from "../ui/quantity-input";
 
 export function AutoActuator() {
   const status = useAtomValue(actuatorStatusAtom);
@@ -15,13 +18,22 @@ export function AutoActuator() {
   const { mutate: loadActuator } = api.useMutation("actuator/load");
   const { mutate: keepActuator } = api.useMutation("actuator/keep");
 
+  const queries = store.useQueries(["actuator.maxLoad", "actuator.minLoad"]);
+
+  const max = queries[0]?.data ?? 250;
+  const min = queries[1]?.data ?? 0;
+
   return (
     <div className="w-full flex-grow flex flex-col justify-between px-4">
-      <QuantityInput
-        min={0}
-        max={250}
+      <TouchNumberInput
+        min={min}
+        max={max}
         value={setpoint}
-        onChange={setSetpoint}
+        suffix="kgs"
+        className="mb-6"
+        onChange={(step) =>
+          setSetpoint((setpoint) => clamp(setpoint + step, { min, max }))
+        }
       />
       <div className="flex flex-col gap-2">
         <Button

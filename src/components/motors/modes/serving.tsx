@@ -1,10 +1,6 @@
-import { api } from "@/lib/client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
-import { useLongPress } from "use-long-press";
-import { z } from "zod";
-import { MotorsStatus } from "../motors-status";
-import { Button } from "../ui/button";
+"use client";
+
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -13,16 +9,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../ui/form";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "@/components/ui/select";
+import { api } from "@/lib/client";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, useWatch } from "react-hook-form";
+import { useLongPress } from "use-long-press";
+import { z } from "zod";
+import { MotorsStatus } from "../motors-status";
 
 const schema = z.object({
   direction: z.enum(["clockwise", "counterclockwise"]),

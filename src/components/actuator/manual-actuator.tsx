@@ -1,3 +1,5 @@
+"use client";
+
 import { actuatorStatusAtom } from "@/state";
 import { useAtomValue } from "jotai";
 import { Button } from "../ui/button";

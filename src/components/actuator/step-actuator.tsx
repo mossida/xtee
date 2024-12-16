@@ -1,3 +1,5 @@
+"use client";
+
 import { api } from "@/lib/client";
 import { useLongPress } from "use-long-press";
 import { Button, type ButtonProps } from "../ui/button";
