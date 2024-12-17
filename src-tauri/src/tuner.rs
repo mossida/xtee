@@ -8,14 +8,6 @@ pub struct PIDParameters {
     pub kd: f64,
 }
 
-#[derive(Debug)]
-pub struct PIDLimits {
-    pub output_limit: f64, // Overall output limit in ms
-    pub p_limit: f64,      // P term limit in ms
-    pub i_limit: f64,      // I term limit in ms
-    pub d_limit: f64,      // D term limit in ms
-}
-
 pub struct Tuner {
     relay_amplitude_ms: f64, // Relay amplitude in milliseconds
     setpoint_kg: f64,        // Setpoint in kilograms
