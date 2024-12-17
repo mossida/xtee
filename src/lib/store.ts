@@ -8,10 +8,10 @@ import {
   useQueryClient,
   useQuery as useQueryTanstack,
 } from "@tanstack/react-query";
-import { load } from "@tauri-apps/plugin-store";
+import { LazyStore } from "@tauri-apps/plugin-store";
 import { isTauri } from "./constants";
 
-export const storeContainer = isTauri ? await load("store.json") : null;
+export const storeContainer = isTauri ? new LazyStore("store.json") : null;
 
 export type Store = {
   "controllers.spawn": Controller[];
