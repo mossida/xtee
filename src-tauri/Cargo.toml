@@ -14,22 +14,27 @@ edition = "2021"
 name = "xtee_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+opt-level = 3
+strip = true
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
-tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
+
 serde = { version = "1", features = ["derive"] }
-typeshare = "1"
 serde_json = "1"
 
 rspc = { version = "0.3.1", features = ["tracing"] }
 rspc-tauri = { version = "0.1.1" }
 specta = { version = "2.0.0-rc.20", features = ["derive"] }
 
-tauri-plugin-log = "2"
-tauri-plugin-store = "2"
 ractor = "0.13.5"
 deku = { version = "0.18.1" }
 crc = "3.2.1"
@@ -42,7 +47,7 @@ ractor_actors = "0.4.4"
 tokio-serial = "5.4.4"
 serialport = { version = "4", features = ["serde"] }
 futures = "0.3.31"
-thiserror = "2.0.6"
+thiserror = "2.0.7"
 anyhow = "1.0.94"
 pid-lite = "1.2.0"
 time = { version = "0", features = ['macros', 'serde'] }

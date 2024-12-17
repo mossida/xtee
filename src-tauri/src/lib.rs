@@ -21,7 +21,6 @@ pub fn run() {
             RouterContext { handle }
         }))
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_shell::init())
         .setup(setup_app)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

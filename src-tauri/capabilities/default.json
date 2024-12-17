@@ -3,11 +3,5 @@
 	"identifier": "default",
 	"description": "Capability for the main window",
 	"windows": ["main"],
-	"permissions": [
-		"core:default",
-		"log:default",
-		"store:default",
-		"shell:allow-open",
-		"core:webview:allow-set-webview-zoom"
-	]
+	"permissions": ["core:default", "store:default"]
 }
