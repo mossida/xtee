@@ -1,8 +1,8 @@
+import { cn } from "@/lib/cn";
 import * as ToastPrimitives from "@radix-ui/react-toast";
 import { type VariantProps, cva } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
-import { cn } from "@/lib/cn";
 
 const ToastProvider = ToastPrimitives.Provider;
 
@@ -31,7 +31,6 @@ const toastVariants = cva(
         success: "",
         progress: "",
         spinner: "",
-        ai: "",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
       },

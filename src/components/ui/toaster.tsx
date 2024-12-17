@@ -1,7 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { Icons } from "./icons";
+import { Check, Loader2, X } from "lucide-react";
 import { Progress } from "./progress";
 import {
   Toast,
@@ -36,12 +35,9 @@ export function Toaster() {
                     <div className="flex space-x-2 items-center">
                       {props?.variant && (
                         <div className="w-[20px] h-[20px] flex items-center">
-                          {props.variant === "ai" && (
-                            <Icons.AI className="text-[#0064D9]" />
-                          )}
-                          {props?.variant === "success" && <Icons.Check />}
+                          {props?.variant === "success" && <Check />}
                           {props?.variant === "error" && (
-                            <Icons.Error className="text-[#FF3638]" />
+                            <X className="text-[#FF3638]" />
                           )}
                           {props?.variant === "progress" && (
                             <Loader2 className="h-4 w-4 animate-spin" />

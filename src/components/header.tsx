@@ -1,9 +1,9 @@
 "use client";
 
+import { ArrowLeft, Settings } from "lucide-react";
 import Link from "next/link";
-import { Button } from "./ui/button";
-import { Icons } from "./ui/icons";
 import { usePathname } from "next/navigation";
+import { Button } from "./ui/button";
 
 export function Header() {
   const pathname = usePathname();
@@ -15,7 +15,7 @@ export function Header() {
       ) : (
         <Link href="/">
           <Button variant="outline" className="pl-2">
-            <Icons.ArrowLeft className="size-5" />
+            <ArrowLeft className="size-5 mr-2" />
             Back
           </Button>
         </Link>
@@ -23,7 +23,7 @@ export function Header() {
       {!pathname.includes("/settings") && (
         <Link href="/settings/general">
           <Button variant="outline" size="icon">
-            <Icons.Settings className="size-5" />
+            <Settings className="size-5" />
           </Button>
         </Link>
       )}

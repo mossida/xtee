@@ -4,9 +4,7 @@ const config: NextConfig = {
   output: "export",
   experimental: {
     reactCompiler: true,
-  },
-  images: {
-    unoptimized: true,
+    optimizePackageImports: ["remeda"],
   },
 };
 
