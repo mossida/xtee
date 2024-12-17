@@ -17,9 +17,6 @@ export default function RootLayout({
       className={cn(`${GeistSans.variable} ${GeistMono.variable}`)}
       suppressHydrationWarning
     >
-      <head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js" async />
-      </head>
       <body>
         <Providers>
           <Header />
