@@ -150,7 +150,7 @@ export function ControllersTable() {
                   <SelectTrigger>
                     <SelectValue placeholder="Select group" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     {groups.map((group) => (
                       <SelectItem key={group} value={group}>
                         {group}

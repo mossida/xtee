@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// A simple 1D Kalman filter implementation for smoothing weight measurements
 #[derive(Debug, Clone)]
 pub struct KalmanFilter {
