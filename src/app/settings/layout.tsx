@@ -20,6 +20,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             label: "Motors",
             path: "/settings/motors",
           },
+          {
+            label: "Debug",
+            path: "/settings/debug",
+          },
         ]}
       />
       {children}
