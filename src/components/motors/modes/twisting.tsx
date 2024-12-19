@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/client";
+import { type Store, store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
@@ -26,14 +27,24 @@ import { useForm, useWatch } from "react-hook-form";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
+import { twistingSpeeds } from "../speeds-settings";
 
 const schema = z.object({
   direction: z.enum(["mode-1", "mode-2"]),
-  speed: z.enum(["slow", "fast"]),
+  speed: z.enum(twistingSpeeds),
   rotations: z.number().min(1),
 });
 
+type Schema = z.infer<typeof schema>;
+
 export function TwistingMode() {
+  const queries = store.useQueries(["motors.limits", "motors.speeds"]);
+
+  const [limits, speeds] = queries.map((query) => query.data) as [
+    Store["motors.limits"] | null,
+    Store["motors.speeds"] | null,
+  ];
+
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
@@ -52,11 +63,15 @@ export function TwistingMode() {
 
   const mode = useWatch({ control: form.control, name: "direction" });
 
+  const speedToValue = (speed: Schema["speed"]) => {
+    return speeds?.twisting[speed] ?? 1;
+  };
+
   const start = () => {
     const values = form.getValues();
     const payload = {
       direction: values.direction === "mode-1" ? 0x01 : 0x00,
-      speed: values.speed === "slow" ? 1000 : 15000,
+      speed: speedToValue(values.speed),
       rotations: values.rotations,
     };
 
@@ -70,7 +85,7 @@ export function TwistingMode() {
       const values = form.getValues();
       const payload = {
         direction: values.direction === "mode-1" ? 0x01 : 0x00,
-        speed: values.speed === "slow" ? 1000 : 15000,
+        speed: speedToValue(values.speed),
         rotations: values.rotations,
       };
 
@@ -139,12 +154,12 @@ export function TwistingMode() {
             control={form.control}
             render={({ field: { value, ...field } }) => (
               <FormItem>
+                <FormLabel>Rotations</FormLabel>
                 <FormControl>
                   <DialogNumberInput
-                    label="Rotations"
                     value={value.toString()}
                     min={1}
-                    max={1000}
+                    max={limits?.maxRotations}
                     allowFloat={false}
                     allowNegative={false}
                     {...field}

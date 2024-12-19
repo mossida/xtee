@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
+import { store } from "@/lib/store";
+import { Store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import type { MotorMovement } from "@/types/bindings";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,6 +61,13 @@ function valuesToPayload(values: z.infer<typeof schema>) {
 }
 
 export function ManualMode() {
+  const queries = store.useQueries(["motors.limits", "motors.speeds"]);
+
+  const [limits, speeds] = queries.map((query) => query.data) as [
+    Store["motors.limits"] | null,
+    Store["motors.speeds"] | null,
+  ];
+
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
@@ -147,12 +156,12 @@ export function ManualMode() {
                 control={form.control}
                 render={({ field: { value, ...field } }) => (
                   <FormItem>
+                    <FormLabel>Speed</FormLabel>
                     <FormControl>
                       <DialogNumberInput
-                        label="Speed"
                         value={value.toString()}
                         min={1}
-                        max={1000}
+                        max={limits?.maxSpeed ?? 1}
                         allowFloat={false}
                         allowNegative={false}
                         {...field}
@@ -170,12 +179,12 @@ export function ManualMode() {
                 control={form.control}
                 render={({ field: { value, ...field } }) => (
                   <FormItem>
+                    <FormLabel>Rotations</FormLabel>
                     <FormControl>
                       <DialogNumberInput
-                        label="Rotations"
                         value={value.toString()}
                         min={1}
-                        max={1000}
+                        max={limits?.maxRotations ?? 1000}
                         allowFloat={false}
                         allowNegative={false}
                         {...field}
@@ -220,14 +229,14 @@ export function ManualMode() {
                 control={form.control}
                 render={({ field: { value, ...field } }) => (
                   <FormItem>
+                    <FormLabel>Speed</FormLabel>
                     <FormControl>
                       <DialogNumberInput
-                        label="Speed"
-                        value={value.toString()}
                         min={1}
-                        max={1000}
+                        max={limits?.maxSpeed ?? 1}
                         allowFloat={false}
                         allowNegative={false}
+                        value={value.toString()}
                         {...field}
                       />
                     </FormControl>
@@ -243,14 +252,14 @@ export function ManualMode() {
                 control={form.control}
                 render={({ field: { value, ...field } }) => (
                   <FormItem>
+                    <FormLabel>Rotations</FormLabel>
                     <FormControl>
                       <DialogNumberInput
-                        label="Rotations"
-                        value={value.toString()}
                         min={1}
-                        max={1000}
+                        max={limits?.maxRotations ?? 1}
                         allowFloat={false}
                         allowNegative={false}
+                        value={value.toString()}
                         {...field}
                       />
                     </FormControl>

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import { speedToRpm } from "@/lib/constants";
 import { type Store, store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -27,15 +28,14 @@ import {
   FormLabel,
   FormMessage,
 } from "../ui/form";
-import { Input } from "../ui/input";
 import { Spinner } from "../ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
-const servingSpeeds = ["slow", "medium", "fast"] as const;
-const twistingSpeeds = ["slow", "fast"] as const;
+export const servingSpeeds = ["slow", "medium", "fast"] as const;
+export const twistingSpeeds = ["slow", "fast"] as const;
 
-type ServingSpeed = (typeof servingSpeeds)[number];
-type TwistingSpeed = (typeof twistingSpeeds)[number];
+export type ServingSpeed = (typeof servingSpeeds)[number];
+export type TwistingSpeed = (typeof twistingSpeeds)[number];
 
 const speedSchema = z.object({
   twisting: z.object(
@@ -126,7 +126,7 @@ export function SpeedsSettings() {
                             <div className="flex items-center space-x-2">
                               <DialogNumberInput
                                 min={1}
-                                max={motorsLimits?.maxSpeed}
+                                max={speedToRpm(motorsLimits?.maxSpeed ?? 1)}
                                 allowFloat={false}
                                 allowNegative={false}
                                 value={value.toString()}
@@ -163,7 +163,7 @@ export function SpeedsSettings() {
                             <div className="flex items-center space-x-2">
                               <DialogNumberInput
                                 min={1}
-                                max={motorsLimits?.maxSpeed}
+                                max={speedToRpm(motorsLimits?.maxSpeed ?? 1)}
                                 allowFloat={false}
                                 allowNegative={false}
                                 value={value.toString()}

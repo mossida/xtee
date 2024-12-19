@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/client";
+import { store } from "@/lib/store";
+import type { Store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
@@ -27,16 +29,20 @@ import { useForm, useWatch } from "react-hook-form";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
+import { servingSpeeds } from "../speeds-settings";
 
 const schema = z.object({
   direction: z.enum(["clockwise", "counterclockwise"]),
-  speed: z.enum(["slow", "medium", "fast"]),
+  speed: z.enum(servingSpeeds),
   rotations: z.number().min(1),
 });
 
-function valuesToPayload(motor: 1 | 2, values: z.infer<typeof schema>) {
-  const speed =
-    values.speed === "slow" ? 1000 : values.speed === "medium" ? 5000 : 15000;
+function valuesToPayload(
+  motor: 1 | 2,
+  values: z.infer<typeof schema>,
+  speeds: Store["motors.speeds"] | null,
+) {
+  const speed = speeds?.serving[values.speed] ?? 1;
 
   const directions =
     motor === 1 ? ([0x01, 0x00] as const) : ([0x00, 0x01] as const);
@@ -51,6 +57,13 @@ function valuesToPayload(motor: 1 | 2, values: z.infer<typeof schema>) {
 }
 
 export function ServingMode() {
+  const queries = store.useQueries(["motors.limits", "motors.speeds"]);
+
+  const [limits, speeds] = queries.map((query) => query.data) as [
+    Store["motors.limits"] | null,
+    Store["motors.speeds"] | null,
+  ];
+
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
@@ -70,8 +83,8 @@ export function ServingMode() {
   const start = () => {
     const values = form.getValues();
 
-    spin([1, valuesToPayload(1, values)]);
-    spin([2, valuesToPayload(2, values)]);
+    spin([1, valuesToPayload(1, values, speeds)]);
+    spin([2, valuesToPayload(2, values, speeds)]);
   };
 
   const bind = useLongPress(() => {}, {
@@ -79,8 +92,8 @@ export function ServingMode() {
     onStart: () => {
       const values = form.getValues();
 
-      keep([1, valuesToPayload(1, values)]);
-      keep([2, valuesToPayload(2, values)]);
+      keep([1, valuesToPayload(1, values, speeds)]);
+      keep([2, valuesToPayload(2, values, speeds)]);
     },
     onFinish: () => {
       stop([1, "graceful"]);
@@ -145,14 +158,14 @@ export function ServingMode() {
             control={form.control}
             render={({ field: { value, ...field } }) => (
               <FormItem>
+                <FormLabel>Rotations</FormLabel>
                 <FormControl>
                   <DialogNumberInput
-                    label="Rotations"
-                    value={value.toString()}
                     min={1}
-                    max={1000}
+                    max={limits?.maxRotations ?? 1}
                     allowFloat={false}
                     allowNegative={false}
+                    value={value.toString()}
                     {...field}
                   />
                 </FormControl>
