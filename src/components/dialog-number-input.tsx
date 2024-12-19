@@ -121,7 +121,7 @@ export function DialogNumberInput({
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 flex-grow">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Input

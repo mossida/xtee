@@ -72,6 +72,7 @@ pub struct PIDSettings {
 pub struct MotorsLimits {
     pub max_speed: u32,
     pub max_rotations: u32,
+    pub acceleration: u32,
 }
 
 pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
@@ -97,6 +98,7 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
             serde_json::to_value(MotorsLimits {
                 max_speed: 1,
                 max_rotations: 1,
+                acceleration: 1,
             })?,
         )
         .default(

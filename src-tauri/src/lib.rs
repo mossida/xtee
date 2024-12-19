@@ -1,5 +1,5 @@
 use router::{router, RouterContext};
-use setup::{setup_app, setup_logging};
+use setup::setup_app;
 
 mod cmd;
 mod components;
@@ -12,11 +12,22 @@ mod store;
 mod tuner;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-
 pub fn run() {
-    setup_logging();
+    #[cfg(debug_assertions)]
+    let devtools = tauri_plugin_devtools::init();
+    let mut builder = tauri::Builder::default();
 
-    tauri::Builder::default()
+    #[cfg(debug_assertions)]
+    {
+        builder = builder.plugin(devtools);
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        setup::setup_logging();
+    }
+
+    builder
         .plugin(rspc_tauri::plugin(router().arced(), |handle| {
             RouterContext { handle }
         }))

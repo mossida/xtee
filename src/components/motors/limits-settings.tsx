@@ -2,12 +2,10 @@
 
 import { api } from "@/lib/client";
 import { cn } from "@/lib/cn";
-import { speedToRpm } from "@/lib/constants";
+import { rpmToSpeed, speedToRpm } from "@/lib/constants";
 import { store } from "@/lib/store";
-import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { mapValues } from "remeda";
@@ -33,9 +31,13 @@ import {
 } from "../ui/form";
 import { Spinner } from "../ui/spinner";
 
+const u16 = 65535;
+const u32 = 4294967295;
+
 const schema = z.object({
-  maxSpeed: z.number({ coerce: true }).min(1),
-  maxRotations: z.number({ coerce: true }).min(1),
+  maxSpeed: z.number({ coerce: true }).min(1).max(speedToRpm(u32)),
+  maxRotations: z.number({ coerce: true }).min(1).max(u16),
+  acceleration: z.number({ coerce: true }).min(1).max(speedToRpm(u32)),
 });
 
 type LimitSettings = z.infer<typeof schema>;
@@ -60,19 +62,31 @@ export function LimitsSettings() {
   const { mutateAsync: reload } = api.useMutation("motor/reload/settings");
   const { mutateAsync: save } = store.useMutation();
 
+  const values = {
+    maxSpeed: speedToRpm(motorsLimits?.maxSpeed ?? 1),
+    maxRotations: motorsLimits?.maxRotations ?? 1,
+    acceleration: speedToRpm(motorsLimits?.acceleration ?? 1),
+  };
+
   const form = useForm<LimitSettings>({
     resolver: zodResolver(schema),
-    values: motorsLimits ?? {
-      maxSpeed: 1,
-      maxRotations: 1,
-    },
+    values,
   });
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: LimitSettings) => {
       const payload = mapValues(data, (value) => Number(value));
 
-      await save([["motors.limits", payload]]);
+      await save([
+        [
+          "motors.limits",
+          {
+            maxSpeed: rpmToSpeed(payload.maxSpeed),
+            maxRotations: payload.maxRotations,
+            acceleration: rpmToSpeed(payload.acceleration),
+          },
+        ],
+      ]);
       await reload();
     },
   });
@@ -103,6 +117,35 @@ export function LimitsSettings() {
           >
             <Form {...form}>
               <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name={"acceleration"}
+                  render={({ field: { value, ...field } }) => (
+                    <FormItem>
+                      <FormLabel>Acceleration</FormLabel>
+                      <FormDescription>
+                        The acceleration of the motors.
+                      </FormDescription>
+
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <DialogNumberInput
+                            min={1}
+                            max={speedToRpm(u32)}
+                            value={value.toString()}
+                            allowFloat={false}
+                            allowNegative={false}
+                            {...field}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            RPM/s
+                          </span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -119,7 +162,7 @@ export function LimitsSettings() {
                           <div className="flex items-center space-x-2">
                             <DialogNumberInput
                               min={1}
-                              max={hardwareMaxSpeed ?? 2000}
+                              max={speedToRpm(hardwareMaxSpeed ?? u32)}
                               value={value.toString()}
                               allowFloat={false}
                               allowNegative={false}
@@ -146,10 +189,13 @@ export function LimitsSettings() {
                     render={({ field: { value, ...field } }) => (
                       <FormItem>
                         <FormLabel>Maximum Rotations</FormLabel>
+                        <FormDescription>
+                          The maximum number of rotations the motor can make.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={1}
-                            max={10000}
+                            max={u16}
                             value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}

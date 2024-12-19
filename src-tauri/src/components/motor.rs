@@ -99,7 +99,7 @@ impl MotorState {
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
             slave,
-            acceleration: 1000,
+            acceleration: self.config.limits.acceleration,
         }))?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorKeep {
@@ -137,7 +137,7 @@ impl MotorState {
         // TODO: Understand why we need to set the acceleration here
         mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
             slave,
-            acceleration: 1000,
+            acceleration: self.config.limits.acceleration,
         }))?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorMove {

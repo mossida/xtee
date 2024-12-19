@@ -58,3 +58,4 @@ tracing-subscriber = { version = "0", features = [
   'json',
 ] }
 nanoid = "0.4.0"
+tauri-plugin-devtools = "2.0.0"

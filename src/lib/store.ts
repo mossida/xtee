@@ -30,6 +30,7 @@ export type Store = {
   "motors.limits": {
     maxSpeed: number;
     maxRotations: number;
+    acceleration: number;
   };
   "motors.speeds": {
     twisting: {
