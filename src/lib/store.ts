@@ -27,6 +27,21 @@ export type Store = {
     integral: number;
     derivative: number;
   };
+  "motors.limits": {
+    maxSpeed: number;
+    maxRotations: number;
+  };
+  "motors.speeds": {
+    twisting: {
+      slow: number;
+      fast: number;
+    };
+    serving: {
+      slow: number;
+      medium: number;
+      fast: number;
+    };
+  };
 };
 
 type StoreKey = keyof Store;

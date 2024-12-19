@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
 import { store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { mapValues } from "remeda";
 import { z } from "zod";
@@ -16,12 +17,12 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "../ui/form";
-import { Input } from "../ui/input";
 import { Spinner } from "../ui/spinner";
 
 const schema = z.object({
@@ -33,6 +34,8 @@ const schema = z.object({
 });
 
 export function GeneralSettings() {
+  "use no memo";
+
   const queries = store.useQueries([
     "scale.gain",
     "scale.offset",
@@ -42,9 +45,6 @@ export function GeneralSettings() {
   ]);
 
   const isFetching = queries.some((query) => query.isFetching);
-
-  const { mutate, isPending } = store.useMutation();
-
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     values: {
@@ -56,17 +56,22 @@ export function GeneralSettings() {
     },
   });
 
-  const save = () => {
-    const values = form.getValues();
+  const { mutateAsync: save } = store.useMutation();
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (data: z.infer<typeof schema>) => {
+      const payload = mapValues(data, (value) => Number(value));
 
-    mutate([
-      ["scale.gain", values.scaleGain],
-      ["scale.offset", values.scaleOffset],
-      ["actuator.maxLoad", values.maxLoad],
-      ["actuator.minLoad", values.minLoad],
-      ["actuator.precision", values.precision],
-    ]);
-  };
+      await save([
+        ["scale.gain", payload.scaleGain],
+        ["scale.offset", payload.scaleOffset],
+        ["actuator.maxLoad", payload.maxLoad],
+        ["actuator.minLoad", payload.minLoad],
+        ["actuator.precision", payload.precision],
+      ]);
+    },
+  });
+
+  console.log(form.formState);
 
   return (
     <Card className="flex flex-col">
@@ -97,11 +102,15 @@ export function GeneralSettings() {
                     name="scaleGain"
                     render={({ field: { value, ...field } }) => (
                       <FormItem className="flex-grow">
+                        <FormLabel>Scale gain</FormLabel>
+                        <FormDescription>
+                          Multiplier applied to load cell readings. Adjusts
+                          measurement sensitivity.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={-10}
                             max={10}
-                            label="Scale gain"
                             value={value.toString()}
                             {...field}
                           />
@@ -115,11 +124,15 @@ export function GeneralSettings() {
                     name="scaleOffset"
                     render={({ field: { value, ...field } }) => (
                       <FormItem className="flex-grow">
+                        <FormLabel>Scale offset</FormLabel>
+                        <FormDescription>
+                          Constant value added to load cell readings. Used for
+                          zero calibration.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={-100}
                             max={100}
-                            label="Scale offset"
                             value={value.toString()}
                             {...field}
                           />
@@ -135,11 +148,15 @@ export function GeneralSettings() {
                     name="precision"
                     render={({ field: { value, ...field } }) => (
                       <FormItem>
+                        <FormLabel>Delta</FormLabel>
+                        <FormDescription>
+                          The minimum amount of load that will be used to detect
+                          if the actuator has reached setpoint.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={0}
                             max={10}
-                            label="Precision"
                             value={value.toString()}
                             {...field}
                           />
@@ -155,11 +172,15 @@ export function GeneralSettings() {
                     name="maxLoad"
                     render={({ field: { value, ...field } }) => (
                       <FormItem className="flex-grow">
+                        <FormLabel>Max Load</FormLabel>
+                        <FormDescription>
+                          Maximum allowable load value. System will stop if
+                          exceeded.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={0}
                             max={500}
-                            label="Max Load"
                             value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}
@@ -175,11 +196,15 @@ export function GeneralSettings() {
                     name="minLoad"
                     render={({ field: { value, ...field } }) => (
                       <FormItem className="flex-grow">
+                        <FormLabel>Min Load</FormLabel>
+                        <FormDescription>
+                          Minimum allowable load value. System will stop if
+                          reached.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={0}
                             max={500}
-                            label="Min Load"
                             value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}
@@ -201,7 +226,7 @@ export function GeneralSettings() {
           className=""
           size={"lg"}
           disabled={isFetching || !form.formState.isDirty}
-          onClick={save}
+          onClick={() => mutate(form.getValues())}
         >
           {isPending ? <Spinner size={16} /> : "Save"}
         </Button>

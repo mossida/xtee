@@ -13,7 +13,6 @@ import { useLongPress } from "use-long-press";
 interface DialogNumberInputProps {
   ref?: React.Ref<HTMLInputElement>;
   name: string;
-  label: string;
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;
@@ -27,7 +26,6 @@ interface DialogNumberInputProps {
 export function DialogNumberInput({
   ref,
   name,
-  label,
   value,
   onChange,
   onBlur,
@@ -124,7 +122,6 @@ export function DialogNumberInput({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={name}>{label}</Label>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Input
@@ -136,16 +133,19 @@ export function DialogNumberInput({
             disabled={disabled}
             onBlur={onBlur}
             readOnly
-            className="cursor-pointer"
-            aria-label={`Open numeric keypad for ${label}`}
+            className="cursor-pointer font-mono"
+            aria-label={`Open numeric keypad for ${name}`}
           />
         </DialogTrigger>
         <VisuallyHidden>
-          <DialogTitle>{label}</DialogTitle>
+          <DialogTitle>{name}</DialogTitle>
         </VisuallyHidden>
         <DialogContent className="sm:max-w-[425px] !p-7">
           <div className="grid gap-4">
-            <div className="text-2xl font-bold text-center" aria-live="polite">
+            <div
+              className="text-2xl font-bold text-center font-mono"
+              aria-live="polite"
+            >
               {tempValue || "0"}
             </div>
             <div className="grid grid-cols-3 gap-2">

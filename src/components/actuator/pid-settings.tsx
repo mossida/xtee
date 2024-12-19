@@ -18,6 +18,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,6 +34,8 @@ const schema = z.object({
 });
 
 export function PidSettings({ onOpen }: { onOpen?: () => void }) {
+  "use no memo";
+
   const { data, isFetching } = store.useQuery("actuator.pid.settings");
 
   const { mutateAsync: save } = store.useMutation();
@@ -56,11 +59,11 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
   });
 
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>PID settings</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-grow">
         <div className="grid grid-cols-1 grid-rows-1">
           <div
             className={cn(
@@ -84,11 +87,15 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                     name="proportional"
                     render={({ field: { value, ...field } }) => (
                       <FormItem>
+                        <FormLabel>Proportional</FormLabel>
+                        <FormDescription>
+                          Responds to the current error. Higher values create
+                          stronger immediate responses to deviations.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={-10}
                             max={10}
-                            label="Proportional"
                             value={value.toString()}
                             {...field}
                           />
@@ -104,11 +111,15 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                     name="integral"
                     render={({ field: { value, ...field } }) => (
                       <FormItem>
+                        <FormLabel>Integral</FormLabel>
+                        <FormDescription>
+                          Accounts for past errors. Helps eliminate steady-state
+                          error but can cause oscillation if too high.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={-10}
                             max={10}
-                            label="Integral"
                             value={value.toString()}
                             {...field}
                           />
@@ -124,11 +135,15 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                     name="derivative"
                     render={({ field: { value, ...field } }) => (
                       <FormItem>
+                        <FormLabel>Derivative</FormLabel>
+                        <FormDescription>
+                          Predicts future errors. Reduces overshoot but can
+                          amplify noise if set too high.
+                        </FormDescription>
                         <FormControl>
                           <DialogNumberInput
                             min={-10}
                             max={10}
-                            label="Derivative"
                             value={value.toString()}
                             {...field}
                           />
@@ -155,7 +170,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
         <Button
           className=""
           size={"lg"}
-          disabled={isFetching || !form.formState.isDirty}
+          disabled={isPending || !form.formState.isDirty}
           onClick={() => mutate(form.getValues())}
         >
           {isPending ? <Spinner size={16} /> : "Save"}

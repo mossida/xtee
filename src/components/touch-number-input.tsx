@@ -36,8 +36,8 @@ export function TouchNumberInput({
   const increment = () => handleChange(step);
   const decrement = () => handleChange(-step);
 
-  const incrementInterval = () => setInterval(() => increment(), 70);
-  const decrementInterval = () => setInterval(() => decrement(), 70);
+  const incrementInterval = () => setInterval(() => increment(), 30);
+  const decrementInterval = () => setInterval(() => decrement(), 30);
 
   const stopTimer = () => {
     if (timerRef.current) {
@@ -47,6 +47,7 @@ export function TouchNumberInput({
   };
 
   const incrementPress = useLongPress(() => {}, {
+    threshold: 1000,
     onStart: () => {
       timerRef.current = incrementInterval();
     },
@@ -55,6 +56,7 @@ export function TouchNumberInput({
   });
 
   const decrementPress = useLongPress(() => {}, {
+    threshold: 1000,
     onStart: () => {
       timerRef.current = decrementInterval();
     },
