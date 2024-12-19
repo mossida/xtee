@@ -32,6 +32,8 @@ pub enum StoreKey {
     ActuatorPrecision,
     #[serde(rename = "motors.limits")]
     MotorsLimits,
+    #[serde(rename = "motors.speeds")]
+    MotorsSpeeds,
 }
 
 impl AsRef<str> for StoreKey {
@@ -47,6 +49,7 @@ impl AsRef<str> for StoreKey {
             StoreKey::ActuatorMinLoad => "actuator.minLoad",
             StoreKey::ActuatorPrecision => "actuator.precision",
             StoreKey::MotorsLimits => "motors.limits",
+            StoreKey::MotorsSpeeds => "motors.speeds",
         }
     }
 }
@@ -65,9 +68,10 @@ pub struct PIDSettings {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MotorsLimits {
-    pub maxSpeed: u32,
-    pub maxRotations: u32,
+    pub max_speed: u32,
+    pub max_rotations: u32,
 }
 
 pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
@@ -78,9 +82,9 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
         .default(
             StoreKey::ActuatorPidSettings,
             serde_json::to_value(PIDSettings {
-                proportional: 1.2,
-                integral: 0.04,
-                derivative: 0.15,
+                proportional: 1.0,
+                integral: 0.0,
+                derivative: 0.0,
             })?,
         )
         .default(StoreKey::ActuatorMaxLoad, 200.0)
@@ -91,8 +95,8 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
         .default(
             StoreKey::MotorsLimits,
             serde_json::to_value(MotorsLimits {
-                maxSpeed: 500,
-                maxRotations: 1000,
+                max_speed: 1,
+                max_rotations: 1,
             })?,
         )
         .default(

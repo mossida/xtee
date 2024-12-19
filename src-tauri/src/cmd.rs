@@ -1,4 +1,4 @@
-use ractor::{registry, rpc, ActorRef};
+use ractor::{pg, registry, rpc, ActorRef};
 use serde::{Deserialize, Serialize};
 
 use specta::Type;
@@ -7,7 +7,7 @@ use crate::{
     components::{
         actuator::ActuatorMessage,
         controller::{Controller, ControllerGroup},
-        master::{Event, MasterMessage},
+        master::{Event, MasterMessage, SCOPE},
         motor::{MotorMessage, MotorMovement},
     },
     router::RouterContext,
@@ -170,6 +170,18 @@ pub fn motor_stop(_ctx: RouterContext, input: (u8, MotorStopMode)) -> Result<(),
             MotorMessage::EmergencyStop
         })
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
+}
+
+pub fn motor_reload_settings(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
+    let actors = pg::get_scoped_local_members(&SCOPE.to_owned(), &ControllerGroup::Motors.into());
+
+    for actor in actors {
+        actor
+            .send_message(MotorMessage::ReloadSettings)
+            .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+    }
 
     Ok(())
 }

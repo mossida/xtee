@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
 use pid_lite::Controller as Pid;
 use ractor::{async_trait, registry, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
@@ -144,9 +141,13 @@ impl ActuatorState {
         info!("Applied new config");
     }
 
-    fn handle_input(&mut self, value: f64) {
+    fn handle_input(&mut self, value: f64) -> Result<(), ActorProcessingErr> {
         let target = self.pid.target();
         let is_setpoint = (value - target).abs() < self.config.precision;
+
+        if value < self.config.min_load || value > self.config.max_load {
+            return self.stop();
+        }
 
         match self.status {
             ActuatorStatus::Keeping { .. } if !is_setpoint => {
@@ -154,8 +155,7 @@ impl ActuatorState {
             }
             ActuatorStatus::Loading { .. } => {
                 if is_setpoint {
-                    self.status = ActuatorStatus::Idle;
-                    let _ = self.send_status();
+                    self.stop()?;
                 } else {
                     self.current_step = self.step_pid(value).ok();
                 }
@@ -186,6 +186,8 @@ impl ActuatorState {
             }
             _ => {}
         }
+
+        Ok(())
     }
 
     fn handle_packet(&mut self, packet: Packet) -> Result<(), ActorProcessingErr> {
@@ -197,13 +199,13 @@ impl ActuatorState {
             self.master
                 .send_message(MasterMessage::Event(Event::Weight(value)))?;
 
-            match &self.current_step {
+            return match &self.current_step {
                 Some(handle) => {
                     handle.abort();
-                    self.handle_input(value);
+                    self.handle_input(value)
                 }
                 None => self.handle_input(value),
-            }
+            };
         }
 
         Ok(())
@@ -239,6 +241,17 @@ impl ActuatorState {
         Ok(mux.send_after(Duration::from_micros(pulse), || {
             MuxMessage::Write(Packet::ActuatorStop)
         }))
+    }
+
+    fn stop(&mut self) -> Result<(), ActorProcessingErr> {
+        let mux = self.mux.clone().ok_or(Error::MissingMux)?;
+
+        mux.send_message(MuxMessage::Write(Packet::ActuatorStop))?;
+
+        self.status = ActuatorStatus::Idle;
+        self.send_status()?;
+
+        Ok(())
     }
 }
 

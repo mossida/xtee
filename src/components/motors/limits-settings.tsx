@@ -1,9 +1,14 @@
 "use client";
 
+import { api } from "@/lib/client";
 import { cn } from "@/lib/cn";
+import { speedToRpm } from "@/lib/constants";
 import { store } from "@/lib/store";
+import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useAtomValue } from "jotai";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { mapValues } from "remeda";
 import { z } from "zod";
@@ -29,8 +34,8 @@ import {
 import { Spinner } from "../ui/spinner";
 
 const schema = z.object({
-  maxSpeed: z.number({ coerce: true }).min(1).max(2000),
-  maxRotations: z.number({ coerce: true }).min(1).max(10000),
+  maxSpeed: z.number({ coerce: true }).min(1),
+  maxRotations: z.number({ coerce: true }).min(1),
 });
 
 type LimitSettings = z.infer<typeof schema>;
@@ -38,15 +43,28 @@ type LimitSettings = z.infer<typeof schema>;
 export function LimitsSettings() {
   "use no memo";
 
-  const { data: motorsLimits, isFetching } = store.useQuery("motors.limits");
+  const motors = api.useQueries([
+    ["motor/get/max-speed", 1, {}],
+    ["motor/get/max-speed", 2, {}],
+  ]);
 
+  const hardwareMaxSpeed = useMemo(
+    () =>
+      motors
+        .map((motor) => motor.data)
+        .reduce((a, b) => Math.min(a, b), Number.POSITIVE_INFINITY),
+    [motors],
+  );
+
+  const { data: motorsLimits, isFetching } = store.useQuery("motors.limits");
+  const { mutateAsync: reload } = api.useMutation("motor/reload/settings");
   const { mutateAsync: save } = store.useMutation();
 
   const form = useForm<LimitSettings>({
     resolver: zodResolver(schema),
     values: motorsLimits ?? {
-      maxSpeed: 500,
-      maxRotations: 1000,
+      maxSpeed: 1,
+      maxRotations: 1,
     },
   });
 
@@ -55,6 +73,7 @@ export function LimitsSettings() {
       const payload = mapValues(data, (value) => Number(value));
 
       await save([["motors.limits", payload]]);
+      await reload();
     },
   });
 
@@ -91,11 +110,16 @@ export function LimitsSettings() {
                     render={({ field: { value, ...field } }) => (
                       <FormItem>
                         <FormLabel>Maximum Speed</FormLabel>
+                        <FormDescription>
+                          If the maximum limit is lower than one of speeds
+                          settings, the motor will use the limit instead.
+                        </FormDescription>
+
                         <FormControl>
                           <div className="flex items-center space-x-2">
                             <DialogNumberInput
                               min={1}
-                              max={2000}
+                              max={hardwareMaxSpeed ?? 2000}
                               value={value.toString()}
                               allowFloat={false}
                               allowNegative={false}
@@ -106,10 +130,12 @@ export function LimitsSettings() {
                             </span>
                           </div>
                         </FormControl>
-                        <FormDescription>
-                          If the maximum limit is lower than one of speeds
-                          settings, the motor will use the limit instead.
-                        </FormDescription>
+                        {!!hardwareMaxSpeed && (
+                          <FormDescription className="text-xs text-yellow-500">
+                            Hardware reported a maximum speed of{" "}
+                            {speedToRpm(hardwareMaxSpeed)} RPM
+                          </FormDescription>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

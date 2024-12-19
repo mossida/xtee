@@ -120,7 +120,7 @@ impl ControllerChild {
                 let (motor, _) = Motor::spawn_linked(
                     Some(name),
                     Motor { slave: *slave },
-                    MotorArguments {},
+                    MotorArguments::try_from(args.0)?,
                     myself.get_cell(),
                 )
                 .await?;

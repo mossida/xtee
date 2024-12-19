@@ -24,16 +24,16 @@ export const client = createClient<Procedures>({
 
 export const api = {
   useQueries: <T extends ProcedureKeys<Procedures, "queries">>(
-    keys: [
+    keys: readonly (readonly [
       T,
       ProcedureInput<Procedures, "queries", T>,
       UseQueryOptions<string>,
-    ][],
+    ])[],
   ) => {
     return useQueriesTanstack({
       queries: keys.map(([key, input, options]) => ({
         ...options,
-        queryKey: [key],
+        queryKey: [key, input],
         // @ts-expect-error
         queryFn: () => client.query([key, input]),
       })),

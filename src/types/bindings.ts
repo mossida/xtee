@@ -17,6 +17,7 @@ export type Procedures = {
         { key: "master/kill", input: string, result: null } | 
         { key: "master/spawn", input: Controller, result: null } | 
         { key: "motor/keep", input: [number, MotorMovement], result: null } | 
+        { key: "motor/reload/settings", input: never, result: null } | 
         { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
         { key: "motor/stop", input: [number, MotorStopMode], result: null },

@@ -13,6 +13,7 @@ use crate::{
     components::{controller::ControllerMessage, master::Event},
     error::Error,
     protocol::Packet,
+    store::{MotorsLimits, Store, StoreKey},
 };
 
 use super::{master::MasterMessage, mux::MuxMessage};
@@ -28,6 +29,13 @@ pub struct MotorMovement {
     pub rotations: u16,
 }
 
+impl MotorMovement {
+    pub fn clamp(&mut self, limits: &MotorsLimits) {
+        self.speed = self.speed.clamp(1, limits.max_speed);
+        self.rotations = self.rotations.clamp(1, limits.max_rotations as u16);
+    }
+}
+
 #[derive(Debug)]
 pub enum MotorMessage {
     StartUpdates,
@@ -40,6 +48,8 @@ pub enum MotorMessage {
 
     SetOutputs(bool),
     GetMaxSpeed(RpcReplyPort<u32>),
+
+    ReloadSettings,
 }
 
 impl From<Packet> for MotorMessage {
@@ -57,18 +67,24 @@ pub enum MotorStatus {
     Spinning { position: i32, remaining: u32 },
 }
 
-#[derive(Debug)]
 pub struct MotorState {
     status: MotorStatus,
     max_speed: u32,
+    config: MotorArguments,
     updates_handle: Option<JoinHandle<()>>,
     mux: Option<ActorRef<MuxMessage>>,
     master: Arc<ActorRef<MasterMessage>>,
 }
 
 impl MotorState {
-    pub fn keep(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
+    pub fn keep(
+        &mut self,
+        slave: u8,
+        movement: &mut MotorMovement,
+    ) -> Result<(), ActorProcessingErr> {
         let mux = self.mux.as_ref().ok_or(Error::MissingMux)?;
+
+        movement.clamp(&self.config.limits);
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
             slave,
@@ -94,8 +110,14 @@ impl MotorState {
         Ok(())
     }
 
-    pub fn spin(&mut self, slave: u8, movement: MotorMovement) -> Result<(), ActorProcessingErr> {
+    pub fn spin(
+        &mut self,
+        slave: u8,
+        movement: &mut MotorMovement,
+    ) -> Result<(), ActorProcessingErr> {
         let mux = self.mux.as_ref().ok_or(Error::MissingMux)?;
+
+        movement.clamp(&self.config.limits);
 
         // To be sure we make X rotations, we need to stop the motor first and reset the position
         mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x00 }))?;
@@ -128,8 +150,29 @@ impl MotorState {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct MotorArguments {}
+pub struct MotorArguments {
+    pub limits: MotorsLimits,
+    store: Arc<Store>,
+}
+
+impl MotorArguments {
+    pub fn reload(&mut self) -> Result<(), Error> {
+        *self = Self::try_from(self.store.clone())?;
+
+        Ok(())
+    }
+}
+
+impl TryFrom<Arc<Store>> for MotorArguments {
+    type Error = Error;
+
+    fn try_from(store: Arc<Store>) -> Result<Self, Error> {
+        let limits_value = store.get(StoreKey::MotorsLimits).ok_or(Error::Config)?;
+        let limits: MotorsLimits = serde_json::from_value(limits_value)?;
+
+        Ok(Self { limits, store })
+    }
+}
 
 #[async_trait]
 impl Actor for Motor {
@@ -140,13 +183,14 @@ impl Actor for Motor {
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        _config: Self::Arguments,
+        config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let master = registry::where_is("master".to_string()).ok_or(Error::Packet)?;
 
         Ok(MotorState {
             status: MotorStatus::Idle,
             max_speed: 0,
+            config,
             updates_handle: None,
             mux: None,
             master: Arc::new(master.into()),
@@ -200,15 +244,15 @@ impl Actor for Motor {
                     mode: 0x00,
                 }))?;
             }
-            MotorMessage::Keep(movement) => {
+            MotorMessage::Keep(mut movement) => {
                 debug!("Keeping motor {} with {:?}", self.slave, movement);
 
-                state.keep(self.slave, movement)?;
+                state.keep(self.slave, &mut movement)?;
             }
-            MotorMessage::Spin(movement) => {
+            MotorMessage::Spin(mut movement) => {
                 debug!("Spinning motor {} with {:?}", self.slave, movement);
 
-                state.spin(self.slave, movement)?;
+                state.spin(self.slave, &mut movement)?;
             }
             MotorMessage::SetOutputs(outputs) => {
                 mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
@@ -218,6 +262,9 @@ impl Actor for Motor {
             }
             MotorMessage::GetMaxSpeed(reply) => {
                 reply.send(state.max_speed)?;
+            }
+            MotorMessage::ReloadSettings => {
+                state.config.reload()?;
             }
             MotorMessage::Packet(packet) => match packet {
                 Packet::MotorStatus {
