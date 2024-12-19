@@ -11,7 +11,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -22,7 +21,7 @@ import {
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
 import { store } from "@/lib/store";
-import { Store } from "@/lib/store";
+import type { Store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import type { MotorMovement } from "@/types/bindings";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,13 +34,13 @@ import { MotorsStatus } from "../motors-status";
 const schema = z.object({
   motor1: z.object({
     direction: z.enum(["clockwise", "counterclockwise"]),
-    speed: z.number().min(1),
-    rotations: z.number().min(1),
+    speed: z.number({ coerce: true }).min(1),
+    rotations: z.number({ coerce: true }).min(1),
   }),
   motor2: z.object({
     direction: z.enum(["clockwise", "counterclockwise"]),
-    speed: z.number().min(1),
-    rotations: z.number().min(1),
+    speed: z.number({ coerce: true }).min(1),
+    rotations: z.number({ coerce: true }).min(1),
   }),
 });
 
@@ -52,8 +51,8 @@ function valuesToPayload(values: z.infer<typeof schema>) {
     payload.push({
       direction:
         values[`motor${motor}`].direction === "clockwise" ? 0x01 : 0x00,
-      speed: Math.round(rpmToSpeed(values[`motor${motor}`].speed)),
-      rotations: values[`motor${motor}`].rotations,
+      speed: Math.round(rpmToSpeed(Number(values[`motor${motor}`].speed))),
+      rotations: Number(values[`motor${motor}`].rotations),
     });
   }
 
