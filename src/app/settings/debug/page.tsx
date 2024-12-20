@@ -16,5 +16,5 @@ export default function DebugPage() {
     store: Object.fromEntries(store ?? []),
   };
 
-  return <JsonViewer data={debugObject} initialExpanded={true} />;
+  return <JsonViewer data={debugObject} />;
 }
