@@ -71,8 +71,6 @@ export function GeneralSettings() {
     },
   });
 
-  console.log(form.formState);
-
   return (
     <Card className="flex flex-col">
       <CardHeader>
