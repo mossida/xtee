@@ -6,19 +6,19 @@ import type {
 
 export type ProcedureKeys<
   B extends ProceduresDef,
-  T extends keyof ProceduresDef
+  T extends keyof ProceduresDef,
 > = B[T]["key"];
 
 export type ProcedureResult<
   B extends ProceduresDef,
   T extends keyof ProceduresDef,
-  K extends ProcedureKeys<B, T>
+  K extends ProcedureKeys<B, T>,
 > = Extract<B[T], { key: K }>["result"];
 
 export type ProcedureInput<
   B extends ProceduresDef,
   T extends keyof ProceduresDef,
-  K extends ProcedureKeys<B, T>
+  K extends ProcedureKeys<B, T>,
 > = Extract<B[T], { key: K }>["input"] extends never
   ? // biome-ignore lint/suspicious/noConfusingVoidType: <explanation>
     void
@@ -31,7 +31,7 @@ export type UseQueryOptions<T extends ProcedureKeys<ProceduresDef, "queries">> =
   >;
 
 export type UseMutationOptions<
-  T extends ProcedureKeys<ProceduresDef, "mutations">
+  T extends ProcedureKeys<ProceduresDef, "mutations">,
 > = Omit<
   UseMutationOptionsTanstack<
     ProcedureResult<ProceduresDef, "mutations", T>,

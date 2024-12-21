@@ -12,13 +12,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { api } from "@/lib/client";
 import { type Store, store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
@@ -111,15 +104,15 @@ export function TwistingMode() {
               <FormItem>
                 <FormLabel>Direction</FormLabel>
                 <FormControl>
-                  <Select onValueChange={onChange} value={value} {...field}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a direction" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mode-1">Mode 1</SelectItem>
-                      <SelectItem value="mode-2">Mode 2</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ComboboxDropdown
+                    hasSearch={false}
+                    className="!animate-none"
+                    onSelect={({ id }) => onChange(id)}
+                    items={[
+                      { id: "mode-1", label: "Mode 1" },
+                      { id: "mode-2", label: "Mode 2" },
+                    ]}
+                  />
                 </FormControl>
                 <FormDescription>
                   {mode === "mode-1"
@@ -137,18 +130,10 @@ export function TwistingMode() {
               <FormItem>
                 <FormLabel>Speed</FormLabel>
                 <FormControl>
-                  {/* <Select onValueChange={onChange} value={value} {...field}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a speed" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="slow">Slow</SelectItem>
-                      <SelectItem value="fast">Fast</SelectItem>
-                    </SelectContent>
-                  </Select> */}
                   <ComboboxDropdown
-                    onSelect={({ id }) => onChange(id)}
                     hasSearch={false}
+                    className="!animate-none"
+                    onSelect={({ id }) => onChange(id)}
                     items={twistingSpeeds.map((speed) => ({
                       id: speed,
                       label: capitalize(speed),

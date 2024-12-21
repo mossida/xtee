@@ -2,6 +2,7 @@
 
 import { DialogNumberInput } from "@/components/dialog-number-input";
 import { Button } from "@/components/ui/button";
+import { ComboboxDropdown } from "@/components/ui/combobox";
 import {
   Form,
   FormControl,
@@ -112,17 +113,15 @@ export function ServingMode() {
               <FormItem>
                 <FormLabel>Direction</FormLabel>
                 <FormControl>
-                  <Select onValueChange={onChange} value={value} {...field}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a direction" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="clockwise">Clockwise</SelectItem>
-                      <SelectItem value="counterclockwise">
-                        Counterclockwise
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ComboboxDropdown
+                    hasSearch={false}
+                    className="!animate-none"
+                    onSelect={({ id }) => onChange(id)}
+                    items={[
+                      { id: "clockwise", label: "Clockwise" },
+                      { id: "counterclockwise", label: "Counterclockwise" },
+                    ]}
+                  />
                 </FormControl>
                 <FormDescription>
                   Motors will rotate in the selected direction.
@@ -138,16 +137,15 @@ export function ServingMode() {
               <FormItem>
                 <FormLabel>Speed</FormLabel>
                 <FormControl>
-                  <Select onValueChange={onChange} value={value} {...field}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a speed" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="slow">Slow</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="fast">Fast</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ComboboxDropdown
+                    hasSearch={false}
+                    className="!animate-none"
+                    onSelect={({ id }) => onChange(id)}
+                    items={servingSpeeds.map((speed) => ({
+                      id: speed,
+                      label: speed,
+                    }))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

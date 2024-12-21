@@ -8,11 +8,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ControllerRenderProps } from "react-hook-form";
 import { useLongPress } from "use-long-press";
 
 interface DialogNumberInputProps {
@@ -127,7 +125,7 @@ export function DialogNumberInput({
 
   return (
     <div className="space-y-2 flex-grow">
-      <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Input
             ref={ref}

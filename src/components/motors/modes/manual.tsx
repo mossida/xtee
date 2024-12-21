@@ -2,6 +2,7 @@
 
 import { DialogNumberInput } from "@/components/dialog-number-input";
 import { Button } from "@/components/ui/button";
+import { ComboboxDropdown } from "@/components/ui/combobox";
 import {
   Form,
   FormControl,
@@ -11,13 +12,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
 import { store } from "@/lib/store";
@@ -130,21 +124,15 @@ export function ManualMode() {
                   <FormItem>
                     <FormLabel>Direction</FormLabel>
                     <FormControl>
-                      <Select
-                        onValueChange={onChange}
-                        defaultValue={value}
-                        {...field}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a direction" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="clockwise">Clockwise</SelectItem>
-                          <SelectItem value="counterclockwise">
-                            Counterclockwise
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <ComboboxDropdown
+                        hasSearch={false}
+                        className="!animate-none"
+                        onSelect={({ id }) => onChange(id)}
+                        items={[
+                          { id: "clockwise", label: "Clockwise" },
+                          { id: "counterclockwise", label: "Counterclockwise" },
+                        ]}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -203,21 +191,15 @@ export function ManualMode() {
                   <FormItem>
                     <FormLabel>Direction</FormLabel>
                     <FormControl>
-                      <Select
-                        onValueChange={onChange}
-                        defaultValue={value}
-                        {...field}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a direction" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="clockwise">Clockwise</SelectItem>
-                          <SelectItem value="counterclockwise">
-                            Counterclockwise
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <ComboboxDropdown
+                        hasSearch={false}
+                        className="!animate-none"
+                        onSelect={({ id }) => onChange(id)}
+                        items={[
+                          { id: "clockwise", label: "Clockwise" },
+                          { id: "counterclockwise", label: "Counterclockwise" },
+                        ]}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

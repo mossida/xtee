@@ -9,6 +9,7 @@ import { useState } from "react";
 import { uniqueBy } from "remeda";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { ComboboxDropdown } from "./ui/combobox";
 import {
   Select,
   SelectContent,
@@ -135,29 +136,18 @@ export function ControllersTable() {
                 <Badge variant="tag">{port.serial_number ?? "N/A"}</Badge>
               </TableCell>
               <TableCell>
-                <Select
+                <ComboboxDropdown
+                  hasSearch={false}
+                  className="!animate-none"
                   disabled={isConnected}
-                  value={
-                    isConnected ? controller?.group : groupSelections[port.name]
-                  }
-                  onValueChange={(value) => {
+                  items={groups.map((group) => ({ id: group, label: group }))}
+                  onSelect={({ id }) => {
                     setGroupSelections((prev) => ({
                       ...prev,
-                      [port.name]: value,
+                      [port.name]: id,
                     }));
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group} value={group}>
-                        {group}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </TableCell>
               <TableCell>
                 <Button
