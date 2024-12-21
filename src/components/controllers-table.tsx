@@ -35,7 +35,8 @@ export function ControllersTable() {
     Controller[],
   ];
 
-  const groupItems = groups.map((group) => ({ id: group, label: group }));
+  const groupItems =
+    groups?.map((group) => ({ id: group, label: group })) ?? [];
   const groupItemsById = new Map(groupItems.map((item) => [item.id, item]));
 
   const [groupSelections, setGroupSelections] = useState<
