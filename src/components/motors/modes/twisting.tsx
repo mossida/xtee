@@ -2,6 +2,7 @@
 
 import { DialogNumberInput } from "@/components/dialog-number-input";
 import { Button } from "@/components/ui/button";
+import { ComboboxDropdown } from "@/components/ui/combobox";
 import {
   Form,
   FormControl,
@@ -24,6 +25,7 @@ import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
 import { useForm, useWatch } from "react-hook-form";
+import { capitalize } from "remeda";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
@@ -135,7 +137,7 @@ export function TwistingMode() {
               <FormItem>
                 <FormLabel>Speed</FormLabel>
                 <FormControl>
-                  <Select onValueChange={onChange} value={value} {...field}>
+                  {/* <Select onValueChange={onChange} value={value} {...field}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a speed" />
                     </SelectTrigger>
@@ -143,7 +145,15 @@ export function TwistingMode() {
                       <SelectItem value="slow">Slow</SelectItem>
                       <SelectItem value="fast">Fast</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </Select> */}
+                  <ComboboxDropdown
+                    onSelect={({ id }) => onChange(id)}
+                    hasSearch={false}
+                    items={twistingSpeeds.map((speed) => ({
+                      id: speed,
+                      label: capitalize(speed),
+                    }))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

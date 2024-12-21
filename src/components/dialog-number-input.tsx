@@ -1,7 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogOverlay,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DialogTitle } from "@radix-ui/react-dialog";
@@ -122,7 +127,7 @@ export function DialogNumberInput({
 
   return (
     <div className="space-y-2 flex-grow">
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
         <DialogTrigger asChild>
           <Input
             ref={ref}
@@ -140,6 +145,7 @@ export function DialogNumberInput({
         <VisuallyHidden>
           <DialogTitle>{name}</DialogTitle>
         </VisuallyHidden>
+
         <DialogContent className="sm:max-w-[425px] !p-7">
           <div className="grid gap-4">
             <div
