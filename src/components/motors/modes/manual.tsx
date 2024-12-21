@@ -15,24 +15,30 @@ import {
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
 import { store } from "@/lib/store";
-import type { Store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import type { MotorMovement } from "@/types/bindings";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
 import { useForm } from "react-hook-form";
+import { capitalize } from "remeda";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
 
+const directions = ["clockwise", "counterclockwise"] as const;
+const directionItems = directions.map((direction) => ({
+  id: direction,
+  label: capitalize(direction),
+}));
+
 const schema = z.object({
   motor1: z.object({
-    direction: z.enum(["clockwise", "counterclockwise"]),
+    direction: z.enum(directions),
     speed: z.number({ coerce: true }).min(1),
     rotations: z.number({ coerce: true }).min(1),
   }),
   motor2: z.object({
-    direction: z.enum(["clockwise", "counterclockwise"]),
+    direction: z.enum(directions),
     speed: z.number({ coerce: true }).min(1),
     rotations: z.number({ coerce: true }).min(1),
   }),
@@ -42,11 +48,12 @@ function valuesToPayload(values: z.infer<typeof schema>) {
   const payload: MotorMovement[] = [];
 
   for (const motor of [1, 2] as const) {
+    const value = values[`motor${motor}`];
+
     payload.push({
-      direction:
-        values[`motor${motor}`].direction === "clockwise" ? 0x01 : 0x00,
-      speed: Math.round(rpmToSpeed(Number(values[`motor${motor}`].speed))),
-      rotations: Number(values[`motor${motor}`].rotations),
+      direction: value.direction === "clockwise" ? 0x01 : 0x00,
+      speed: Math.round(rpmToSpeed(Number(value.speed))),
+      rotations: Number(value.rotations),
     });
   }
 
@@ -54,13 +61,7 @@ function valuesToPayload(values: z.infer<typeof schema>) {
 }
 
 export function ManualMode() {
-  const queries = store.useQueries(["motors.limits", "motors.speeds"]);
-
-  const [limits, speeds] = queries.map((query) => query.data) as [
-    Store["motors.limits"] | null,
-    Store["motors.speeds"] | null,
-  ];
-
+  const { data: limits } = store.useQuery("motors.limits");
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
@@ -120,7 +121,7 @@ export function ManualMode() {
               <FormField
                 name="motor1.direction"
                 control={form.control}
-                render={({ field: { onChange, value, ...field } }) => (
+                render={({ field: { onChange, value } }) => (
                   <FormItem>
                     <FormLabel>Direction</FormLabel>
                     <FormControl>
@@ -128,10 +129,10 @@ export function ManualMode() {
                         hasSearch={false}
                         popoverProps={{ className: "!animate-none" }}
                         onSelect={({ id }) => onChange(id)}
-                        items={[
-                          { id: "clockwise", label: "Clockwise" },
-                          { id: "counterclockwise", label: "Counterclockwise" },
-                        ]}
+                        items={directionItems}
+                        selectedItem={directionItems.find(
+                          (item) => item.id === value,
+                        )}
                       />
                     </FormControl>
                     <FormMessage />
@@ -187,7 +188,7 @@ export function ManualMode() {
               <FormField
                 name="motor2.direction"
                 control={form.control}
-                render={({ field: { onChange, value, ...field } }) => (
+                render={({ field: { onChange, value } }) => (
                   <FormItem>
                     <FormLabel>Direction</FormLabel>
                     <FormControl>
@@ -195,10 +196,10 @@ export function ManualMode() {
                         hasSearch={false}
                         popoverProps={{ className: "!animate-none" }}
                         onSelect={({ id }) => onChange(id)}
-                        items={[
-                          { id: "clockwise", label: "Clockwise" },
-                          { id: "counterclockwise", label: "Counterclockwise" },
-                        ]}
+                        items={directionItems}
+                        selectedItem={directionItems.find(
+                          (item) => item.id === value,
+                        )}
                       />
                     </FormControl>
                     <FormMessage />

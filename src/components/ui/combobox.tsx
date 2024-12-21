@@ -60,10 +60,10 @@ export function ComboboxDropdown<T extends ComboboxItem>({
   className,
 }: Props<T>) {
   const [open, setOpen] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState("");
   const [internalSelectedItem, setInternalSelectedItem] = React.useState<
     T | undefined
   >();
-  const [inputValue, setInputValue] = React.useState("");
 
   const selectedItem = incomingSelectedItem ?? internalSelectedItem;
 

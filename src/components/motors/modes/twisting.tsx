@@ -24,8 +24,19 @@ import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
 import { twistingSpeeds } from "../speeds-settings";
 
+const modes = ["mode-1", "mode-2"] as const;
+const modeItems = modes.map((mode) => ({
+  id: mode,
+  label: capitalize(mode),
+}));
+
+const speedItems = twistingSpeeds.map((speed) => ({
+  id: speed,
+  label: capitalize(speed),
+}));
+
 const schema = z.object({
-  direction: z.enum(["mode-1", "mode-2"]),
+  mode: z.enum(modes),
   speed: z.enum(twistingSpeeds),
   rotations: z.number().min(1),
 });
@@ -46,7 +57,7 @@ export function TwistingMode() {
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
-      direction: "mode-1",
+      mode: "mode-1",
       speed: "slow",
       rotations: 1,
     },
@@ -56,7 +67,7 @@ export function TwistingMode() {
   const motor1Status = useAtomValue(motorStatusFamily(1));
   const motor2Status = useAtomValue(motorStatusFamily(2));
 
-  const mode = useWatch({ control: form.control, name: "direction" });
+  const mode = useWatch({ control: form.control, name: "mode" });
 
   const speedToValue = (speed: Schema["speed"]) => {
     return speeds?.twisting[speed] ?? 1;
@@ -65,7 +76,7 @@ export function TwistingMode() {
   const start = () => {
     const values = form.getValues();
     const payload = {
-      direction: values.direction === "mode-1" ? 0x01 : 0x00,
+      direction: values.mode === "mode-1" ? 0x01 : 0x00,
       speed: speedToValue(values.speed),
       rotations: values.rotations,
     };
@@ -79,7 +90,7 @@ export function TwistingMode() {
     onStart: () => {
       const values = form.getValues();
       const payload = {
-        direction: values.direction === "mode-1" ? 0x01 : 0x00,
+        direction: values.mode === "mode-1" ? 0x01 : 0x00,
         speed: speedToValue(values.speed),
         rotations: values.rotations,
       };
@@ -98,9 +109,9 @@ export function TwistingMode() {
       <div className="col-span-1 space-y-4">
         <Form {...form}>
           <FormField
-            name="direction"
+            name="mode"
             control={form.control}
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, value } }) => (
               <FormItem>
                 <FormLabel>Direction</FormLabel>
                 <FormControl>
@@ -108,10 +119,8 @@ export function TwistingMode() {
                     hasSearch={false}
                     popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
-                    items={[
-                      { id: "mode-1", label: "Mode 1" },
-                      { id: "mode-2", label: "Mode 2" },
-                    ]}
+                    items={modeItems}
+                    selectedItem={modeItems.find((item) => item.id === value)}
                   />
                 </FormControl>
                 <FormDescription>
@@ -126,7 +135,7 @@ export function TwistingMode() {
           <FormField
             name="speed"
             control={form.control}
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, value } }) => (
               <FormItem>
                 <FormLabel>Speed</FormLabel>
                 <FormControl>
@@ -134,10 +143,8 @@ export function TwistingMode() {
                     hasSearch={false}
                     popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
-                    items={twistingSpeeds.map((speed) => ({
-                      id: speed,
-                      label: capitalize(speed),
-                    }))}
+                    items={speedItems}
+                    selectedItem={speedItems.find((item) => item.id === value)}
                   />
                 </FormControl>
                 <FormMessage />

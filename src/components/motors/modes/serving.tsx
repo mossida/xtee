@@ -12,14 +12,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { api } from "@/lib/client";
 import { store } from "@/lib/store";
 import type { Store } from "@/lib/store";
@@ -27,13 +19,25 @@ import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
 import { useForm, useWatch } from "react-hook-form";
+import { capitalize } from "remeda";
 import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
 import { servingSpeeds } from "../speeds-settings";
 
+const directions = ["clockwise", "counterclockwise"] as const;
+const directionItems = directions.map((direction) => ({
+  id: direction,
+  label: capitalize(direction),
+}));
+
+const speedItems = servingSpeeds.map((speed) => ({
+  id: speed,
+  label: capitalize(speed),
+}));
+
 const schema = z.object({
-  direction: z.enum(["clockwise", "counterclockwise"]),
+  direction: z.enum(directions),
   speed: z.enum(servingSpeeds),
   rotations: z.number().min(1),
 });
@@ -109,7 +113,7 @@ export function ServingMode() {
           <FormField
             name="direction"
             control={form.control}
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, value } }) => (
               <FormItem>
                 <FormLabel>Direction</FormLabel>
                 <FormControl>
@@ -117,10 +121,10 @@ export function ServingMode() {
                     hasSearch={false}
                     popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
-                    items={[
-                      { id: "clockwise", label: "Clockwise" },
-                      { id: "counterclockwise", label: "Counterclockwise" },
-                    ]}
+                    items={directionItems}
+                    selectedItem={directionItems.find(
+                      (item) => item.id === value,
+                    )}
                   />
                 </FormControl>
                 <FormDescription>
@@ -133,7 +137,7 @@ export function ServingMode() {
           <FormField
             name="speed"
             control={form.control}
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, value } }) => (
               <FormItem>
                 <FormLabel>Speed</FormLabel>
                 <FormControl>
@@ -141,10 +145,8 @@ export function ServingMode() {
                     hasSearch={false}
                     popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
-                    items={servingSpeeds.map((speed) => ({
-                      id: speed,
-                      label: speed,
-                    }))}
+                    items={speedItems}
+                    selectedItem={speedItems.find((item) => item.id === value)}
                   />
                 </FormControl>
                 <FormMessage />

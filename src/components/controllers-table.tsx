@@ -10,13 +10,6 @@ import { uniqueBy } from "remeda";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ComboboxDropdown } from "./ui/combobox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
 import { Spinner } from "./ui/spinner";
 import {
   Table,
@@ -42,8 +35,11 @@ export function ControllersTable() {
     Controller[],
   ];
 
+  const groupItems = groups.map((group) => ({ id: group, label: group }));
+  const groupItemsById = new Map(groupItems.map((item) => [item.id, item]));
+
   const [groupSelections, setGroupSelections] = useState<
-    Record<string, string>
+    Record<string, ControllerGroup>
   >({});
 
   const uniquePorts = uniqueBy(ports ?? [], (p) => p.serial_number);
@@ -128,6 +124,11 @@ export function ControllersTable() {
             ? () => disconnect(controller?.id ?? "")
             : connect;
 
+          const group =
+            isConnected && controller?.group
+              ? controller.group
+              : groupSelections[port.name];
+
           return (
             <TableRow key={port.name}>
               <TableCell className="font-medium">{port.name}</TableCell>
@@ -140,7 +141,11 @@ export function ControllersTable() {
                   hasSearch={false}
                   popoverProps={{ className: "!animate-none" }}
                   disabled={isConnected}
-                  items={groups.map((group) => ({ id: group, label: group }))}
+                  items={groupItems.map((item) => ({
+                    ...item,
+                    disabled: isConnected && group === item.id,
+                  }))}
+                  selectedItem={group ? groupItemsById.get(group) : undefined}
                   onSelect={({ id }) => {
                     setGroupSelections((prev) => ({
                       ...prev,
