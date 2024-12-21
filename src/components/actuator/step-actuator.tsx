@@ -1,7 +1,7 @@
 "use client";
 
+import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
-import { useLongPress } from "use-long-press";
 import { Button, type ButtonProps } from "../ui/button";
 
 export function StepActuator({
@@ -11,14 +11,14 @@ export function StepActuator({
   const { mutate: moveActuator } = api.useMutation("actuator/move");
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
 
-  const bind = useLongPress(() => {}, {
-    threshold: 0,
+  const ref = useLongPress({
     onStart: () => moveActuator(direction === "forward" ? 1 : 0),
-    onFinish: () => stopActuator(),
+    onEnd: () => stopActuator(),
+    events: ["touchstart", "contextmenu"],
   });
 
   return (
-    <Button size="lg" {...bind()} {...props}>
+    <Button ref={ref} size="lg" {...props}>
       Step {direction}
     </Button>
   );
