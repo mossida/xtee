@@ -115,7 +115,7 @@ export function ServingMode() {
                 <FormControl>
                   <ComboboxDropdown
                     hasSearch={false}
-                    className="!animate-none"
+                    popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
                     items={[
                       { id: "clockwise", label: "Clockwise" },
@@ -139,7 +139,7 @@ export function ServingMode() {
                 <FormControl>
                   <ComboboxDropdown
                     hasSearch={false}
-                    className="!animate-none"
+                    popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
                     items={servingSpeeds.map((speed) => ({
                       id: speed,

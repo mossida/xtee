@@ -106,7 +106,7 @@ export function TwistingMode() {
                 <FormControl>
                   <ComboboxDropdown
                     hasSearch={false}
-                    className="!animate-none"
+                    popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
                     items={[
                       { id: "mode-1", label: "Mode 1" },
@@ -132,7 +132,7 @@ export function TwistingMode() {
                 <FormControl>
                   <ComboboxDropdown
                     hasSearch={false}
-                    className="!animate-none"
+                    popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
                     items={twistingSpeeds.map((speed) => ({
                       id: speed,

@@ -126,7 +126,7 @@ export function ManualMode() {
                     <FormControl>
                       <ComboboxDropdown
                         hasSearch={false}
-                        className="!animate-none"
+                        popoverProps={{ className: "!animate-none" }}
                         onSelect={({ id }) => onChange(id)}
                         items={[
                           { id: "clockwise", label: "Clockwise" },
@@ -193,7 +193,7 @@ export function ManualMode() {
                     <FormControl>
                       <ComboboxDropdown
                         hasSearch={false}
-                        className="!animate-none"
+                        popoverProps={{ className: "!animate-none" }}
                         onSelect={({ id }) => onChange(id)}
                         items={[
                           { id: "clockwise", label: "Clockwise" },
