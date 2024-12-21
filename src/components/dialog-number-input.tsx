@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLongPress } from "use-long-press";
 
 interface DialogNumberInputProps {
   ref?: React.Ref<HTMLInputElement>;
@@ -40,7 +39,6 @@ export function DialogNumberInput({
 }: DialogNumberInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tempValue, setTempValue] = useState(value);
-  const backspaceIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setTempValue(value);
@@ -97,31 +95,6 @@ export function DialogNumberInput({
     onChange(tempValue || "0");
     setIsOpen(false);
   }, [tempValue, onChange]);
-
-  const bindLongPress = useLongPress(
-    (_event, { context }) => {
-      if (context === "backspace") {
-        backspaceIntervalRef.current = setInterval(() => {
-          setTempValue((prev) => {
-            const newValue = prev.slice(0, -1);
-            validateAndSetValue(newValue);
-            return newValue;
-          });
-        }, 100);
-      } else if (context === "clear") {
-        validateAndSetValue("");
-      }
-    },
-    {
-      onFinish: (_event, { context }) => {
-        if (context === "backspace" && backspaceIntervalRef.current) {
-          clearInterval(backspaceIntervalRef.current);
-        }
-      },
-      threshold: 500,
-      captureEvent: true,
-    },
-  );
 
   return (
     <div className="space-y-2 flex-grow">
@@ -183,7 +156,6 @@ export function DialogNumberInput({
               <Button
                 variant="outline"
                 onClick={() => handleKeyPress("clear")}
-                {...bindLongPress("clear")}
                 disabled={disabled}
               >
                 Clear
@@ -191,7 +163,6 @@ export function DialogNumberInput({
               <Button
                 variant="outline"
                 onClick={() => handleKeyPress("backspace")}
-                {...bindLongPress("backspace")}
                 disabled={disabled}
               >
                 ⌫

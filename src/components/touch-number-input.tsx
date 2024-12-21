@@ -3,10 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { useLongPress } from "@/hooks/use-long-press";
 import { cn } from "@/lib/cn";
 import { Minus, Plus } from "lucide-react";
-import React, { useRef, useState } from "react";
-import { useLongPress } from "use-long-press";
+import React, { useRef } from "react";
 
 interface TouchNumberInputProps {
   min?: number;
@@ -46,31 +46,27 @@ export function TouchNumberInput({
     }
   };
 
-  const incrementPress = useLongPress(() => {}, {
-    threshold: 1000,
+  const incrementPress = useLongPress({
     onStart: () => {
       timerRef.current = incrementInterval();
     },
-    onFinish: stopTimer,
-    onCancel: stopTimer,
+    onEnd: stopTimer,
   });
 
-  const decrementPress = useLongPress(() => {}, {
-    threshold: 1000,
+  const decrementPress = useLongPress({
     onStart: () => {
       timerRef.current = decrementInterval();
     },
-    onFinish: stopTimer,
-    onCancel: stopTimer,
+    onEnd: stopTimer,
   });
 
   return (
     <div className={cn("w-full max-w-sm space-y-4", className)}>
       <div className="flex items-center space-x-2">
         <Button
+          ref={decrementPress}
           variant="outline"
           size="icon"
-          {...decrementPress()}
           onClick={() => decrement()}
           disabled={value <= min}
           className="h-14 w-14 text-2xl"
@@ -95,9 +91,9 @@ export function TouchNumberInput({
           )}
         </div>
         <Button
+          ref={incrementPress}
           variant="outline"
           size="icon"
-          {...incrementPress()}
           onClick={() => increment()}
           disabled={value >= max}
           className="h-14 w-14 text-2xl"

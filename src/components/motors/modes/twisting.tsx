@@ -12,6 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { type Store, store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
@@ -19,7 +20,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
 import { useForm, useWatch } from "react-hook-form";
 import { capitalize } from "remeda";
-import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
 import { twistingSpeeds } from "../speeds-settings";
@@ -85,8 +85,7 @@ export function TwistingMode() {
     spin([2, payload]);
   };
 
-  const bind = useLongPress(() => {}, {
-    threshold: 0,
+  const ref = useLongPress({
     onStart: () => {
       const values = form.getValues();
       const payload = {
@@ -98,7 +97,7 @@ export function TwistingMode() {
       keep([1, payload]);
       keep([2, payload]);
     },
-    onFinish: () => {
+    onEnd: () => {
       stop([1, "graceful"]);
       stop([2, "graceful"]);
     },
@@ -190,8 +189,8 @@ export function TwistingMode() {
           </div>
           <div>
             <Button
+              ref={ref}
               className="w-full h-16"
-              {...bind()}
               disabled={
                 !form.formState.isValid ||
                 !motor1Status?.status ||

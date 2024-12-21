@@ -14,7 +14,6 @@ export function StepActuator({
   const ref = useLongPress({
     onStart: () => moveActuator(direction === "forward" ? 1 : 0),
     onEnd: () => stopActuator(),
-    events: ["touchstart", "contextmenu"],
   });
 
   return (

@@ -1,59 +1,51 @@
-import { useToast } from "@/components/ui/use-toast";
+import { deviceType, supportsTouchEvents } from "detect-it";
 import type { RefCallback } from "react";
 
-type StartEvent = "pointerdown" | "mousedown" | "touchstart";
-type EndEvent = "pointerup" | "mouseup" | "touchend" | "contextmenu";
+const kind = ["mouse", "pointer", "touch"] as const;
 
-export type LongPressOptions = {
+const start = {
+  mouse: "mousedown",
+  pointer: "pointerdown",
+  touch: "touchstart",
+} as const;
+
+const end = {
+  mouse: ["mouseup", "mouseleave"],
+  pointer: ["pointerup", "pointerleave"],
+  touch: ["touchend", "contextmenu"],
+} as const;
+
+type Options = {
+  type?: (typeof kind)[number];
   onStart: () => void;
   onEnd: () => void;
-  events?: [StartEvent, EndEvent];
 };
 
 export function useLongPress<T extends Element>({
   onStart,
   onEnd,
-  events: [startEvent, endEvent] = ["pointerdown", "pointerup"],
-}: LongPressOptions) {
-  const { toast } = useToast();
+  type: userType,
+}: Options) {
+  let type = userType;
 
-  const debugEvents = [
-    "pointerdown",
-    "pointerup",
-    "pointercancel",
-    "mousedown",
-    "mouseup",
-    "mousecancel",
-    "touchstart",
-    "touchend",
-    "touchcancel",
-    "contextmenu",
-  ];
-
-  const debugEvent = (event: Event) => {
-    toast({
-      title: event.type,
-      description: event.type,
-    });
-  };
+  if (!type) {
+    if (deviceType === "mouseOnly") type = "mouse";
+    else if (deviceType === "touchOnly") type = "touch";
+    else if (deviceType === "hybrid" && supportsTouchEvents) type = "touch";
+    else type = "pointer";
+  }
 
   const ref = (element: T | null) => {
     if (!element) return;
 
-    element.addEventListener(startEvent, onStart);
-    element.addEventListener(endEvent, onEnd);
+    const endEvents = end[type];
 
-    for (const event of debugEvents) {
-      element.addEventListener(event, debugEvent);
-    }
+    element.addEventListener(start[type], onStart);
+    for (const event of endEvents) element.addEventListener(event, onEnd);
 
     return () => {
-      element.removeEventListener(startEvent, onStart);
-      element.removeEventListener(endEvent, onEnd);
-
-      for (const event of debugEvents) {
-        element.removeEventListener(event, debugEvent);
-      }
+      element.removeEventListener(start[type], onStart);
+      for (const event of endEvents) element.removeEventListener(event, onEnd);
     };
   };
 

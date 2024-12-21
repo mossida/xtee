@@ -12,6 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
 import { store } from "@/lib/store";
@@ -21,7 +22,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
 import { useForm } from "react-hook-form";
 import { capitalize } from "remeda";
-import { useLongPress } from "use-long-press";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
 
@@ -98,8 +98,7 @@ export function ManualMode() {
     stop([2, "graceful"]);
   };
 
-  const bind = useLongPress(() => {}, {
-    threshold: 0,
+  const ref = useLongPress({
     onStart: () => {
       const values = form.getValues();
       const payload = valuesToPayload(values);
@@ -107,8 +106,7 @@ export function ManualMode() {
       keep([1, payload[0]]);
       keep([2, payload[1]]);
     },
-    onFinish: askStop,
-    onCancel: askStop,
+    onEnd: askStop,
   });
 
   return (
@@ -270,8 +268,8 @@ export function ManualMode() {
           </div>
           <div>
             <Button
+              ref={ref}
               className="w-full h-16"
-              {...bind()}
               disabled={
                 !form.formState.isValid ||
                 !motor1Status?.status ||
