@@ -57,8 +57,6 @@
 	}
 	body {
 		font-family: var(--font-sans), system-ui, sans-serif;
-		/* Fixes Radix primitives from blocking pointer events */
-		pointer-events: auto !important;
 		@apply bg-background text-foreground touch-manipulation;
 	}
 }

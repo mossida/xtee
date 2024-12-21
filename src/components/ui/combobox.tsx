@@ -175,8 +175,8 @@ export function ComboboxDropdown<T extends ComboboxItem>({
       </PopoverTrigger>
 
       <PopoverContent
-        className={cn("p-0", popoverProps?.className)}
         {...popoverProps}
+        className={cn("p-0", popoverProps?.className)}
         style={{
           width: "var(--radix-popover-trigger-width)",
           ...popoverProps?.style,
