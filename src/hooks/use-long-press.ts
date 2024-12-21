@@ -1,5 +1,5 @@
 import { deviceType, supportsTouchEvents } from "detect-it";
-import type { RefCallback } from "react";
+import { type RefCallback, useCallback, useMemo, useRef } from "react";
 
 const kind = ["mouse", "pointer", "touch"] as const;
 
@@ -17,6 +17,7 @@ const end = {
 
 type Options = {
   type?: (typeof kind)[number];
+  threshold?: number;
   onStart: () => void;
   onEnd: () => void;
 };
@@ -25,29 +26,44 @@ export function useLongPress<T extends Element>({
   onStart,
   onEnd,
   type: userType,
+  threshold = 0,
 }: Options) {
-  let type = userType;
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  if (!type) {
-    if (deviceType === "mouseOnly") type = "mouse";
-    else if (deviceType === "touchOnly") type = "touch";
-    else if (deviceType === "hybrid" && supportsTouchEvents) type = "touch";
-    else type = "pointer";
-  }
+  const type = useMemo(() => {
+    if (userType) return userType;
 
-  const ref = (element: T | null) => {
-    if (!element) return;
+    if (deviceType === "mouseOnly") return "mouse";
+    if (deviceType === "touchOnly") return "touch";
+    if (deviceType === "hybrid" && supportsTouchEvents) return "touch";
+    return "pointer";
+  }, [userType]);
 
-    const endEvents = end[type];
+  const startCallback = useCallback(() => {
+    if (threshold > 0) timerRef.current = setTimeout(onStart, threshold);
+    else onStart();
+  }, [onStart, threshold]);
 
-    element.addEventListener(start[type], onStart);
-    for (const event of endEvents) element.addEventListener(event, onEnd);
+  const endCallback = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    onEnd();
+  }, [onEnd]);
 
-    return () => {
-      element.removeEventListener(start[type], onStart);
-      for (const event of endEvents) element.removeEventListener(event, onEnd);
-    };
-  };
+  return useCallback(
+    (element: T | null) => {
+      if (!element) return;
 
-  return ref as RefCallback<T>;
+      element.addEventListener(start[type], startCallback);
+      for (const event of end[type])
+        element.addEventListener(event, endCallback);
+
+      return () => {
+        element.removeEventListener(start[type], startCallback);
+        for (const event of end[type])
+          element.removeEventListener(event, endCallback);
+      };
+    },
+    [startCallback, endCallback, type],
+  ) as RefCallback<T>;
 }

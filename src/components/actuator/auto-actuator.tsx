@@ -29,7 +29,6 @@ export function AutoActuator() {
         min={min}
         max={max}
         value={setpoint}
-        suffix="kgs"
         className="mb-6"
         onChange={(step) =>
           setSetpoint((setpoint) => clamp(setpoint + step, { min, max }))
