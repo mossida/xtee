@@ -1,21 +1,24 @@
-"use client";
-
 import "@/styles/globals.css";
 import { Header } from "@/components/header";
 import { Toaster } from "@/components/ui/toaster";
-import { useDisableDefaults } from "@/hooks/use-disable-defaults";
 import { cn } from "@/lib/cn";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import type { Viewport } from "next";
 import { Providers } from "./providers";
+
+export const viewport: Viewport = {
+  initialScale: 1,
+  maximumScale: 1,
+  minimumScale: 1,
+  userScalable: false,
+};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  useDisableDefaults();
-
   return (
     <html
       lang="en"

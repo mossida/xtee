@@ -12,6 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
@@ -98,15 +99,21 @@ export function ManualMode() {
     stop([2, "graceful"]);
   };
 
+  const { lock, unlock } = useLockScroll();
+
   const ref = useLongPress({
     onStart: () => {
+      lock();
       const values = form.getValues();
       const payload = valuesToPayload(values);
 
       keep([1, payload[0]]);
       keep([2, payload[1]]);
     },
-    onEnd: askStop,
+    onEnd: () => {
+      unlock();
+      askStop();
+    },
   });
 
   return (

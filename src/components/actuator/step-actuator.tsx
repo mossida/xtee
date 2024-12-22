@@ -1,5 +1,6 @@
 "use client";
 
+import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { Button, type ButtonProps } from "../ui/button";
@@ -11,9 +12,17 @@ export function StepActuator({
   const { mutate: moveActuator } = api.useMutation("actuator/move");
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
 
+  const { lock, unlock } = useLockScroll();
+
   const ref = useLongPress({
-    onStart: () => moveActuator(direction === "forward"),
-    onEnd: () => stopActuator(),
+    onStart: () => {
+      lock();
+      moveActuator(direction === "forward");
+    },
+    onEnd: () => {
+      unlock();
+      stopActuator();
+    },
   });
 
   return (

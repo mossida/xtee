@@ -12,6 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { type Store, store } from "@/lib/store";
@@ -85,8 +86,11 @@ export function TwistingMode() {
     spin([2, payload]);
   };
 
+  const { lock, unlock } = useLockScroll();
+
   const ref = useLongPress({
     onStart: () => {
+      lock();
       const values = form.getValues();
       const payload = {
         direction: values.mode === "mode-1",
@@ -98,6 +102,7 @@ export function TwistingMode() {
       keep([2, payload]);
     },
     onEnd: () => {
+      unlock();
       stop([1, "graceful"]);
       stop([2, "graceful"]);
     },
