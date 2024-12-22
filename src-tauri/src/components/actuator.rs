@@ -92,7 +92,7 @@ pub enum ActuatorStatus {
 pub enum ActuatorMessage {
     Load(f32),
     Keep(f32),
-    Move(u8),
+    Move(bool),
     Stop,
     Packet(Packet),
     Tune,
@@ -235,7 +235,7 @@ impl ActuatorState {
         debug!("Moving for: {} microseconds", pulse);
 
         mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
-            direction: if value_ms > 0.0 { 0 } else { 1 },
+            direction: value_ms < 0.0,
         }))?;
 
         Ok(mux.send_after(Duration::from_micros(pulse), || {

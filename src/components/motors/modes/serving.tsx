@@ -39,7 +39,7 @@ const speedItems = servingSpeeds.map((speed) => ({
 const schema = z.object({
   direction: z.enum(directions),
   speed: z.enum(servingSpeeds),
-  rotations: z.number().min(1),
+  rotations: z.number({ coerce: true }).min(1),
 });
 
 function valuesToPayload(

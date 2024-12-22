@@ -219,7 +219,7 @@ pub fn actuator_keep(_ctx: RouterContext, setpoint: f32) -> Result<(), rspc::Err
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
-pub fn actuator_move(_ctx: RouterContext, direction: u8) -> Result<(), rspc::Error> {
+pub fn actuator_move(_ctx: RouterContext, direction: bool) -> Result<(), rspc::Error> {
     let actuator = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
         rspc::ErrorCode::NotFound,
         "Actuator not found".to_owned(),

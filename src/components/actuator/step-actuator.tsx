@@ -12,7 +12,7 @@ export function StepActuator({
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
 
   const ref = useLongPress({
-    onStart: () => moveActuator(direction === "forward" ? 1 : 0),
+    onStart: () => moveActuator(direction === "forward"),
     onEnd: () => stopActuator(),
   });
 

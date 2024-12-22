@@ -25,7 +25,7 @@ pub struct Motor {
 #[derive(Debug, Clone, Type, Serialize, Deserialize)]
 pub struct MotorMovement {
     pub speed: u32,
-    pub direction: u8,
+    pub direction: bool,
     pub rotations: u16,
 }
 
@@ -88,7 +88,7 @@ impl MotorState {
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
             slave,
-            outputs: 0x01,
+            outputs: true,
         }))?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
@@ -120,12 +120,15 @@ impl MotorState {
         movement.clamp(&self.config.limits);
 
         // To be sure we make X rotations, we need to stop the motor first and reset the position
-        mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x00 }))?;
+        mux.send_message(MuxMessage::Write(Packet::MotorStop {
+            slave,
+            gentle: false,
+        }))?;
 
         // Enable the motor outputs
         mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
             slave,
-            outputs: 0x01,
+            outputs: true,
         }))?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
@@ -236,12 +239,15 @@ impl Actor for Motor {
                     }));
             }
             MotorMessage::GracefulStop => {
-                mux.send_message(MuxMessage::Write(Packet::MotorStop { slave, mode: 0x01 }))?;
+                mux.send_message(MuxMessage::Write(Packet::MotorStop {
+                    slave,
+                    gentle: true,
+                }))?;
             }
             MotorMessage::EmergencyStop => {
                 mux.send_message(MuxMessage::Write(Packet::MotorStop {
-                    slave: self.slave,
-                    mode: 0x00,
+                    slave,
+                    gentle: false,
                 }))?;
             }
             MotorMessage::Keep(mut movement) => {
@@ -257,7 +263,7 @@ impl Actor for Motor {
             MotorMessage::SetOutputs(outputs) => {
                 mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
                     slave: self.slave,
-                    outputs: if outputs { 0x01 } else { 0x00 },
+                    outputs,
                 }))?;
             }
             MotorMessage::GetMaxSpeed(reply) => {
@@ -276,12 +282,12 @@ impl Actor for Motor {
                     ..
                 } if slave == self.slave => {
                     state.status = match running {
-                        0 => MotorStatus::Idle,
-                        1 if stopping == 0 => MotorStatus::Spinning {
+                        false => MotorStatus::Idle,
+                        true if !stopping => MotorStatus::Spinning {
                             position,
                             remaining,
                         },
-                        1 if stopping == 1 => MotorStatus::Stopping,
+                        true if stopping => MotorStatus::Stopping,
                         _ => MotorStatus::Idle,
                     };
 

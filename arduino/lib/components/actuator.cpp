@@ -26,16 +26,13 @@ void Actuator::handleMove(const uint8_t *buffer, size_t size)
 
     const packet::MOVE_DATA data = *reinterpret_cast<const packet::MOVE_DATA *>(buffer);
 
-    if (data.direction != 0 && data.direction != 1)
-        return;
-
-    if (data.direction == 0)
+    if (data.direction)
     {
-        digitalWriteFast(pins::ACTUATOR_DIR, LOW);
+        digitalWriteFast(pins::ACTUATOR_DIR, HIGH);
     }
     else
     {
-        digitalWriteFast(pins::ACTUATOR_DIR, HIGH);
+        digitalWriteFast(pins::ACTUATOR_DIR, LOW);
     }
 
     digitalWriteFast(LED_BUILTIN, HIGH);

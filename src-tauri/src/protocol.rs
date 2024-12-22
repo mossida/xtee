@@ -3,97 +3,66 @@ use deku::prelude::*;
 use futures::{future, StreamExt};
 use ractor::ActorRef;
 use serde::Serialize;
-use tokio::io::{self};
 use tokio_serial::SerialStream;
 use tokio_util::{
-    bytes::BytesMut,
+    bytes::{BufMut, BytesMut},
     codec::{Decoder, Encoder},
 };
-use tracing::{debug, error, info, trace};
+use tracing::{error, info, trace};
 
 use crate::{
     components::mux::{MuxMessage, MuxSink, MuxStream},
     error::Error,
 };
 
-// control flow
-
-pub const READY_ID: u8 = 0x01;
-pub const DATA_ID: u8 = 0x02;
-
-pub const MOTOR_MOVE_ID: u8 = 0x03;
-pub const MOTOR_KEEP_ID: u8 = 0x04;
-
-pub const MOTOR_SET_SPEED_ID: u8 = 0x05;
-pub const MOTOR_SET_ACCELERATION_ID: u8 = 0x06;
-pub const MOTOR_SET_OUTPUTS_ID: u8 = 0x07;
-
-pub const MOTOR_RECOGNITION_ID: u8 = 0x08;
-pub const MOTOR_ASK_STATUS_ID: u8 = 0x09;
-pub const MOTOR_STATUS_ID: u8 = 0x0A;
-pub const MOTOR_STOP_ID: u8 = 0x0B;
-
-pub const ACTUATOR_MOVE_ID: u8 = 0x0C;
-pub const ACTUATOR_STOP_ID: u8 = 0x0D;
-
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "little")]
 pub enum Packet {
-    #[deku(id = "READY_ID")]
+    #[deku(id = 0x01)]
     Ready,
-    #[deku(id = "DATA_ID")]
+    #[deku(id = 0x02)]
     Data { value: i32 },
-    #[deku(id = "MOTOR_MOVE_ID")]
+    #[deku(id = 0x03)]
     MotorMove {
         slave: u8,
-        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
-        direction: u8,
+        direction: bool,
         rotations: u16,
     },
-    #[deku(id = "MOTOR_SET_SPEED_ID")]
+    #[deku(id = 0x05)]
     MotorSetSpeed { slave: u8, apply: u8, speed: u32 },
-    #[deku(id = "MOTOR_SET_ACCELERATION_ID")]
+    #[deku(id = 0x06)]
     MotorSetAcceleration { slave: u8, acceleration: u32 },
-    #[deku(id = "MOTOR_SET_OUTPUTS_ID")]
-    MotorSetOutputs { slave: u8, outputs: u8 },
-    #[deku(id = "MOTOR_ASK_STATUS_ID")]
+    #[deku(id = 0x07)]
+    MotorSetOutputs { slave: u8, outputs: bool },
+    #[deku(id = 0x09)]
     MotorAskStatus { slave: u8 },
-    #[deku(id = "MOTOR_STATUS_ID")]
+    #[deku(id = 0x0A)]
     MotorStatus {
         slave: u8,
-        running: u8,
-        stopping: u8,
+        running: bool,
+        stopping: bool,
         position: i32,
         remaining: u32,
     },
-    #[deku(id = "MOTOR_RECOGNITION_ID")]
+    #[deku(id = 0x08)]
     MotorRecognition { slave: u8, max_speed: u32 },
-    #[deku(id = "MOTOR_KEEP_ID")]
-    MotorKeep {
-        slave: u8,
-        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
-        direction: u8,
-    },
-    #[deku(id = "MOTOR_STOP_ID")]
-    MotorStop {
-        slave: u8,
-        #[deku(assert = "*mode == 0x01 || *mode == 0x00")]
-        mode: u8,
-    },
-    #[deku(id = "ACTUATOR_MOVE_ID")]
-    ActuatorMove {
-        #[deku(assert = "*direction == 0x01 || *direction == 0x00")]
-        direction: u8,
-    },
-    #[deku(id = "ACTUATOR_STOP_ID")]
+    #[deku(id = 0x04)]
+    MotorKeep { slave: u8, direction: bool },
+    #[deku(id = 0x0B)]
+    MotorStop { slave: u8, gentle: bool },
+    #[deku(id = 0x0C)]
+    ActuatorMove { direction: bool },
+    #[deku(id = 0x0D)]
     ActuatorStop,
 }
 
+// Optimized Protocol implementation
 pub struct Protocol {
     stream: SerialStream,
 }
 
 impl Protocol {
+    #[inline]
     fn transform(self, mux: ActorRef<MuxMessage>) -> (MuxSink, MuxStream) {
         let codec = Codec::new();
         let (framed_sink, framed_stream) = codec.framed(self.stream).split();
@@ -103,15 +72,14 @@ impl Protocol {
             .filter_map(|r| future::ready(r.ok()))
             .then(move |packet| {
                 trace!("Received packet: {:?}", packet);
-
                 let mux = mux.clone();
-
                 async move {
-                    if packet == Packet::Ready {
-                        info!("Sending acknolwedgement");
-                        mux.send_message(MuxMessage::Write(Packet::Ready)).unwrap()
+                    if matches!(packet, Packet::Ready) {
+                        info!("Sending acknowledgement");
+                        mux.send_message(MuxMessage::Write(Packet::Ready))
+                            .map_err(|e| error!("Failed to send acknowledgement: {:?}", e))
+                            .ok();
                     }
-
                     packet
                 }
             });
@@ -119,10 +87,12 @@ impl Protocol {
         (framed_sink, stream.boxed())
     }
 
+    #[inline]
     pub fn new(stream: SerialStream) -> Self {
         Self { stream }
     }
 
+    #[inline]
     pub fn framed(self, mux: ActorRef<MuxMessage>) -> (MuxSink, MuxStream) {
         Self::transform(self, mux)
     }
@@ -131,25 +101,33 @@ impl Protocol {
 pub struct Codec {
     cobs_codec: cobs_codec::Codec<0x00, 0x00, 256, 256>,
     crc: Crc<u8>,
+    buffer: BytesMut,
 }
 
 impl Codec {
+    #[inline]
     pub fn new() -> Self {
-        let crc = Crc::<u8>::new(&Algorithm {
-            width: 8,      // 8-bit CRC
-            poly: 0x9B,    // Polynomial used for CRC calculation
-            init: 0x00,    // Initial value for the CRC register
-            refin: false,  // Input data is not reflected
-            refout: false, // Output CRC is not reflected
-            xorout: 0x00,  // No XOR applied to the final CRC
-            check: 0xEA,   // Precomputed "check" value for "123456789"
-            residue: 0x00, // Residue for correct packets
-        });
+        const CRC_ALGORITHM: Algorithm<u8> = Algorithm {
+            width: 8,
+            poly: 0x9B,
+            init: 0x00,
+            refin: false,
+            refout: false,
+            xorout: 0x00,
+            check: 0xEA,
+            residue: 0x00,
+        };
 
         Self {
-            crc,
+            crc: Crc::<u8>::new(&CRC_ALGORITHM),
             cobs_codec: cobs_codec::Codec::new(),
+            buffer: BytesMut::with_capacity(256), // Pre-allocate with reasonable size
         }
+    }
+
+    #[inline]
+    fn validate_crc(&self, data: &[u8], received_crc: u8) -> bool {
+        self.crc.checksum(data) == received_crc
     }
 }
 
@@ -158,41 +136,29 @@ impl Decoder for Codec {
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        if let Some(decoded) = self
-            .cobs_codec
+        self.cobs_codec
             .decode(src)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
-        {
-            if decoded.len() < 2 {
-                return Ok(None);
-            }
+            .map_err(|_| Error::Packet)
+            .and_then(|decoded| match decoded {
+                Some(ref decoded_data) if decoded_data.len() >= 2 => {
+                    let size = decoded_data.len() - 1;
+                    let (data, crc_byte) = decoded_data.split_at(size);
 
-            let size = decoded.len() - 1;
-            let data = &decoded[..size];
+                    if !self.validate_crc(data, crc_byte[0]) {
+                        error!(
+                            "CRC mismatch, calculated: {}, received: {}",
+                            self.crc.checksum(data),
+                            crc_byte[0]
+                        );
+                        return Ok(None);
+                    }
 
-            let received_crc = u8::from_le(decoded[size]);
-            let calculated_crc = self.crc.checksum(data);
-
-            if calculated_crc != received_crc {
-                error!(
-                    "CRC mismatch, expected: {}, received: {}. Packet: {:?}",
-                    calculated_crc,
-                    received_crc,
-                    decoded.to_vec()
-                );
-                return Ok(None);
-            }
-
-            match Packet::from_bytes((data, 0)) {
-                Ok((_, packet)) => Ok(Some(packet)),
-                Err(err) => {
-                    error!("Packet error: {:?}", err);
-                    Ok(None)
+                    Packet::from_bytes((data, 0))
+                        .map(|(_, packet)| Some(packet))
+                        .map_err(|_| Error::Packet)
                 }
-            }
-        } else {
-            Ok(None)
-        }
+                _ => Ok(None),
+            })
     }
 }
 
@@ -200,32 +166,25 @@ impl Encoder<Packet> for Codec {
     type Error = Error;
 
     fn encode(&mut self, packet: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        // Serialize the packet
-        let packet_bytes = packet
+        self.buffer.clear();
+
+        // Serialize directly into our reusable buffer
+        packet
             .to_bytes()
             .map_err(|_| Error::Packet)
-            .inspect_err(|e| error!("Deku serialization error: {:?}", e))?;
+            .and_then(|packet_bytes| {
+                let crc = self.crc.checksum(&packet_bytes);
 
-        // Calculate CRC
-        let crc = self.crc.checksum(&packet_bytes);
+                self.buffer.extend_from_slice(&packet_bytes);
+                self.buffer.put_u8(crc);
 
-        // Create a buffer for the frame (packet + CRC)
-        let mut frame_buffer = Vec::with_capacity(packet_bytes.len() + 2);
-
-        frame_buffer.extend(packet_bytes);
-        frame_buffer.extend(crc.to_le_bytes());
-
-        self.cobs_codec
-            .encode(&frame_buffer, dst)
-            .map_err(|_| Error::Packet)
-            .inspect_err(|e| error!("COBS encoding error: {:?}", e))?;
-
-        debug!(
-            "Encoded packet: {:?}, framed: {:?}",
-            dst.to_vec(),
-            frame_buffer
-        );
-
-        Ok(())
+                self.cobs_codec
+                    .encode(&self.buffer, dst)
+                    .map_err(|_| Error::Packet)
+            })
+            .inspect_err(|e| error!("Encoding error: {:?}", e))
+            .map(|_| {
+                trace!("Encoded packet size: {}", dst.len());
+            })
     }
 }

@@ -38,7 +38,7 @@ void Engine::handleKeep(const uint8_t *buffer, size_t size)
     auto index = data.slave - 1;
     auto *stepper = steppers[index];
 
-    if (data.direction == 0x01)
+    if (data.direction)
         stepper->runForward();
     else
         stepper->runBackward();
@@ -54,7 +54,7 @@ void Engine::handleMove(const uint8_t *buffer, size_t size)
     const packet::MOVE_DATA data = *reinterpret_cast<const packet::MOVE_DATA *>(buffer);
 
     auto *stepper = steppers[data.slave - 1];
-    auto direction = data.direction == 0x01 ? 1 : -1;
+    auto direction = data.direction ? 1 : -1;
 
     if (data.rotations == 0)
         return;
@@ -95,7 +95,7 @@ void Engine::handleStop(const uint8_t *buffer, size_t size)
 
     auto *stepper = steppers[data.slave - 1];
 
-    if (data.gentle == 0x01)
+    if (data.gentle)
         return stepper->stopMove();
 
     stepper->forceStopAndNewPosition(0);
@@ -114,7 +114,7 @@ void Engine::handleSetSpeed(const uint8_t *buffer, size_t size)
 
     stepper->setSpeedInHz(data.speed);
 
-    if (data.apply == 0x01)
+    if (data.apply)
         stepper->applySpeedAcceleration();
 }
 
@@ -140,7 +140,7 @@ void Engine::handleSetOutputs(const uint8_t *buffer, size_t size)
 
     auto *stepper = steppers[data.slave - 1];
 
-    if (data.outputs == 0x01)
+    if (data.outputs)
         stepper->enableOutputs();
     else
         stepper->disableOutputs();
@@ -156,8 +156,8 @@ void Engine::sendStatus(uint8_t slave)
 
     const packet::STATUS_DATA data = {
         .slave = slave,
-        .running = stepper->isRunning() ? 1 : 0,
-        .stopping = stepper->isStopping() ? 1 : 0,
+        .running = stepper->isRunning(),
+        .stopping = stepper->isStopping(),
         .position = stepper->getCurrentPosition(),
         .remaining = stepper->stepsToStop()};
 

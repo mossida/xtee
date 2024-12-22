@@ -17,7 +17,7 @@ namespace components
 
             typedef struct __attribute__((packed))
             {
-                uint8_t direction;
+                bool direction;
             } MOVE_DATA;
         }
 

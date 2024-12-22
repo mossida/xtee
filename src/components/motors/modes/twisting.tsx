@@ -38,7 +38,7 @@ const speedItems = twistingSpeeds.map((speed) => ({
 const schema = z.object({
   mode: z.enum(modes),
   speed: z.enum(twistingSpeeds),
-  rotations: z.number().min(1),
+  rotations: z.number({ coerce: true }).min(1),
 });
 
 type Schema = z.infer<typeof schema>;
@@ -76,7 +76,7 @@ export function TwistingMode() {
   const start = () => {
     const values = form.getValues();
     const payload = {
-      direction: values.mode === "mode-1" ? 0x01 : 0x00,
+      direction: values.mode === "mode-1",
       speed: speedToValue(values.speed),
       rotations: values.rotations,
     };
@@ -89,7 +89,7 @@ export function TwistingMode() {
     onStart: () => {
       const values = form.getValues();
       const payload = {
-        direction: values.mode === "mode-1" ? 0x01 : 0x00,
+        direction: values.mode === "mode-1",
         speed: speedToValue(values.speed),
         rotations: values.rotations,
       };

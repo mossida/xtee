@@ -30,26 +30,26 @@ namespace components
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
-                uint8_t direction;
+                bool direction;
             } KEEP_DATA;
 
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
-                uint8_t direction;
+                bool direction;
                 uint16_t rotations;
             } MOVE_DATA;
 
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
-                uint8_t gentle;
+                bool gentle;
             } STOP_DATA;
 
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
-                uint8_t apply;
+                bool apply;
                 uint32_t speed;
             } SET_SPEED_DATA;
 
@@ -62,7 +62,7 @@ namespace components
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
-                uint8_t outputs;
+                bool outputs;
             } SET_OUTPUTS_DATA;
 
             typedef struct __attribute__((packed))
@@ -74,8 +74,8 @@ namespace components
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
-                uint8_t running;
-                uint8_t stopping;
+                bool running;
+                bool stopping;
                 int32_t position;
                 uint32_t remaining;
             } STATUS_DATA;

@@ -10,7 +10,7 @@ export type Procedures = {
     mutations: 
         { key: "actuator/keep", input: number, result: null } | 
         { key: "actuator/load", input: number, result: null } | 
-        { key: "actuator/move", input: number, result: null } | 
+        { key: "actuator/move", input: boolean, result: null } | 
         { key: "actuator/reload/settings", input: never, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
         { key: "actuator/tune", input: never, result: null } | 
@@ -34,7 +34,7 @@ export type ControllerStatus = { type: "connected" } | { type: "disconnected" } 
 
 export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: [number, MotorStatus] } | { type: "actuator-status"; data: ActuatorStatus } | { type: "controller-status"; data: { controller: Controller; status: ControllerStatus } }
 
-export type MotorMovement = { speed: number; direction: number; rotations: number }
+export type MotorMovement = { speed: number; direction: boolean; rotations: number }
 
 export type MotorStatus = { status: "idle" } | { status: "stopping" } | { status: "spinning"; data: { position: number; remaining: number } }
 

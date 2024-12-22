@@ -51,7 +51,7 @@ function valuesToPayload(values: z.infer<typeof schema>) {
     const value = values[`motor${motor}`];
 
     payload.push({
-      direction: value.direction === "clockwise" ? 0x01 : 0x00,
+      direction: value.direction === "clockwise",
       speed: Math.round(rpmToSpeed(Number(value.speed))),
       rotations: Number(value.rotations),
     });
