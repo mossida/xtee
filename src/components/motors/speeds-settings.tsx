@@ -40,18 +40,12 @@ export type TwistingSpeed = (typeof twistingSpeeds)[number];
 const speedSchema = z.object({
   twisting: z.object(
     Object.fromEntries(
-      twistingSpeeds.map((speed) => [
-        speed,
-        z.number({ coerce: true }).min(1).max(1000),
-      ]),
+      twistingSpeeds.map((speed) => [speed, z.number().min(1).max(1000)]),
     ) as Record<TwistingSpeed, z.ZodNumber>,
   ),
   serving: z.object(
     Object.fromEntries(
-      servingSpeeds.map((speed) => [
-        speed,
-        z.number({ coerce: true }).min(1).max(1000),
-      ]),
+      servingSpeeds.map((speed) => [speed, z.number().min(1).max(1000)]),
     ) as Record<ServingSpeed, z.ZodNumber>,
   ),
 });
@@ -84,10 +78,7 @@ export function SpeedsSettings() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: SpeedSettings) => {
-      const twisting = mapValues(data.twisting, (value) => Number(value));
-      const serving = mapValues(data.serving, (value) => Number(value));
-
-      await save([["motors.speeds", { twisting, serving }]]);
+      await save([["motors.speeds", data]]);
     },
   });
 
@@ -119,7 +110,7 @@ export function SpeedsSettings() {
                       key={speed}
                       control={form.control}
                       name={`twisting.${speed}`}
-                      render={({ field: { value, ...field } }) => (
+                      render={({ field }) => (
                         <FormItem>
                           <FormLabel className="capitalize">{speed}</FormLabel>
                           <FormControl>
@@ -129,7 +120,6 @@ export function SpeedsSettings() {
                                 max={speedToRpm(motorsLimits?.maxSpeed ?? 1)}
                                 allowFloat={false}
                                 allowNegative={false}
-                                value={value.toString()}
                                 {...field}
                               />
                               <span className="text-sm text-muted-foreground">
@@ -156,7 +146,7 @@ export function SpeedsSettings() {
                       key={speed}
                       control={form.control}
                       name={`serving.${speed}`}
-                      render={({ field: { value, ...field } }) => (
+                      render={({ field }) => (
                         <FormItem>
                           <FormLabel className="capitalize">{speed}</FormLabel>
                           <FormControl>
@@ -166,7 +156,6 @@ export function SpeedsSettings() {
                                 max={speedToRpm(motorsLimits?.maxSpeed ?? 1)}
                                 allowFloat={false}
                                 allowNegative={false}
-                                value={value.toString()}
                                 {...field}
                               />
                               <span className="text-sm text-muted-foreground">

@@ -35,9 +35,9 @@ const u16 = 65535;
 const u32 = 4294967295;
 
 const schema = z.object({
-  maxSpeed: z.number({ coerce: true }).min(1).max(speedToRpm(u32)),
-  maxRotations: z.number({ coerce: true }).min(1).max(u16),
-  acceleration: z.number({ coerce: true }).min(1).max(speedToRpm(u32)),
+  maxSpeed: z.number().min(1).max(speedToRpm(u32)),
+  maxRotations: z.number().min(1).max(u16),
+  acceleration: z.number().min(1).max(speedToRpm(u32)),
 });
 
 type LimitSettings = z.infer<typeof schema>;
@@ -75,15 +75,13 @@ export function LimitsSettings() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: LimitSettings) => {
-      const payload = mapValues(data, (value) => Number(value));
-
       await save([
         [
           "motors.limits",
           {
-            maxSpeed: rpmToSpeed(payload.maxSpeed),
-            maxRotations: payload.maxRotations,
-            acceleration: rpmToSpeed(payload.acceleration),
+            maxSpeed: rpmToSpeed(data.maxSpeed),
+            maxRotations: data.maxRotations,
+            acceleration: rpmToSpeed(data.acceleration),
           },
         ],
       ]);
@@ -120,7 +118,7 @@ export function LimitsSettings() {
                 <FormField
                   control={form.control}
                   name={"acceleration"}
-                  render={({ field: { value, ...field } }) => (
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Acceleration</FormLabel>
                       <FormDescription>
@@ -132,7 +130,6 @@ export function LimitsSettings() {
                           <DialogNumberInput
                             min={1}
                             max={speedToRpm(u32)}
-                            value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}
                             {...field}
@@ -150,7 +147,7 @@ export function LimitsSettings() {
                   <FormField
                     control={form.control}
                     name={"maxSpeed"}
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Maximum Speed</FormLabel>
                         <FormDescription>
@@ -163,7 +160,6 @@ export function LimitsSettings() {
                             <DialogNumberInput
                               min={1}
                               max={speedToRpm(hardwareMaxSpeed ?? u32)}
-                              value={value.toString()}
                               allowFloat={false}
                               allowNegative={false}
                               {...field}
@@ -186,7 +182,7 @@ export function LimitsSettings() {
                   <FormField
                     control={form.control}
                     name={"maxRotations"}
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Maximum Rotations</FormLabel>
                         <FormDescription>
@@ -196,7 +192,6 @@ export function LimitsSettings() {
                           <DialogNumberInput
                             min={1}
                             max={u16}
-                            value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}
                             {...field}

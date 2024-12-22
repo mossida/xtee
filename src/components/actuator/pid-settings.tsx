@@ -4,7 +4,6 @@ import { store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { mapValues } from "remeda";
 import { z } from "zod";
 import { DialogNumberInput } from "../dialog-number-input";
 import { Button } from "../ui/button";
@@ -28,9 +27,9 @@ import { Input } from "../ui/input";
 import { Spinner } from "../ui/spinner";
 
 const schema = z.object({
-  proportional: z.number({ coerce: true }).min(0).max(10),
-  integral: z.number({ coerce: true }).min(0).max(10),
-  derivative: z.number({ coerce: true }).min(0).max(10),
+  proportional: z.number().min(0).max(10),
+  integral: z.number().min(0).max(10),
+  derivative: z.number().min(0).max(10),
 });
 
 export function PidSettings({ onOpen }: { onOpen?: () => void }) {
@@ -85,7 +84,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                   <FormField
                     control={form.control}
                     name="proportional"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Proportional</FormLabel>
                         <FormDescription>
@@ -93,12 +92,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                           stronger immediate responses to deviations.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput
-                            min={-10}
-                            max={10}
-                            value={value.toString()}
-                            {...field}
-                          />
+                          <DialogNumberInput min={-10} max={10} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -109,7 +103,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                   <FormField
                     control={form.control}
                     name="integral"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Integral</FormLabel>
                         <FormDescription>
@@ -117,12 +111,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                           error but can cause oscillation if too high.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput
-                            min={-10}
-                            max={10}
-                            value={value.toString()}
-                            {...field}
-                          />
+                          <DialogNumberInput min={-10} max={10} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -133,7 +122,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                   <FormField
                     control={form.control}
                     name="derivative"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Derivative</FormLabel>
                         <FormDescription>
@@ -141,12 +130,7 @@ export function PidSettings({ onOpen }: { onOpen?: () => void }) {
                           amplify noise if set too high.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput
-                            min={-10}
-                            max={10}
-                            value={value.toString()}
-                            {...field}
-                          />
+                          <DialogNumberInput min={-10} max={10} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

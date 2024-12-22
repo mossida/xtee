@@ -34,13 +34,13 @@ const directionItems = directions.map((direction) => ({
 const schema = z.object({
   motor1: z.object({
     direction: z.enum(directions),
-    speed: z.number({ coerce: true }).min(1),
-    rotations: z.number({ coerce: true }).min(1),
+    speed: z.number().min(1),
+    rotations: z.number().min(1),
   }),
   motor2: z.object({
     direction: z.enum(directions),
-    speed: z.number({ coerce: true }).min(1),
-    rotations: z.number({ coerce: true }).min(1),
+    speed: z.number().min(1),
+    rotations: z.number().min(1),
   }),
 });
 
@@ -52,8 +52,8 @@ function valuesToPayload(values: z.infer<typeof schema>) {
 
     payload.push({
       direction: value.direction === "clockwise",
-      speed: Math.round(rpmToSpeed(Number(value.speed))),
-      rotations: Number(value.rotations),
+      speed: Math.round(rpmToSpeed(value.speed)),
+      rotations: value.rotations,
     });
   }
 
@@ -140,12 +140,11 @@ export function ManualMode() {
               <FormField
                 name="motor1.speed"
                 control={form.control}
-                render={({ field: { value, ...field } }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Speed</FormLabel>
                     <FormControl>
                       <DialogNumberInput
-                        value={value.toString()}
                         min={1}
                         max={limits?.maxSpeed ?? 1}
                         allowFloat={false}
@@ -163,12 +162,11 @@ export function ManualMode() {
               <FormField
                 name="motor1.rotations"
                 control={form.control}
-                render={({ field: { value, ...field } }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Rotations</FormLabel>
                     <FormControl>
                       <DialogNumberInput
-                        value={value.toString()}
                         min={1}
                         max={limits?.maxRotations ?? 1000}
                         allowFloat={false}
@@ -207,7 +205,7 @@ export function ManualMode() {
               <FormField
                 name="motor2.speed"
                 control={form.control}
-                render={({ field: { value, ...field } }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Speed</FormLabel>
                     <FormControl>
@@ -216,7 +214,6 @@ export function ManualMode() {
                         max={limits?.maxSpeed ?? 1}
                         allowFloat={false}
                         allowNegative={false}
-                        value={value.toString()}
                         {...field}
                       />
                     </FormControl>
@@ -230,7 +227,7 @@ export function ManualMode() {
               <FormField
                 name="motor2.rotations"
                 control={form.control}
-                render={({ field: { value, ...field } }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Rotations</FormLabel>
                     <FormControl>
@@ -239,7 +236,6 @@ export function ManualMode() {
                         max={limits?.maxRotations ?? 1}
                         allowFloat={false}
                         allowNegative={false}
-                        value={value.toString()}
                         {...field}
                       />
                     </FormControl>

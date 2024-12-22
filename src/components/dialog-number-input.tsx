@@ -15,9 +15,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface DialogNumberInputProps {
   ref?: React.Ref<HTMLInputElement>;
   name: string;
-  value: string;
+  value: number;
   disabled?: boolean;
-  onChange: (value: string) => void;
+  onChange: (value: number) => void;
   onBlur: () => void;
   min?: number;
   max?: number;
@@ -38,10 +38,10 @@ export function DialogNumberInput({
   allowNegative = true,
 }: DialogNumberInputProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [tempValue, setTempValue] = useState(value);
+  const [tempValue, setTempValue] = useState(value.toString());
 
   useEffect(() => {
-    setTempValue(value);
+    setTempValue(value.toString());
   }, [value]);
 
   const validateAndSetValue = useCallback(
@@ -92,7 +92,8 @@ export function DialogNumberInput({
   );
 
   const handleEnter = useCallback(() => {
-    onChange(tempValue || "0");
+    const numValue = Number.parseFloat(tempValue || "0");
+    onChange(numValue);
     setIsOpen(false);
   }, [tempValue, onChange]);
 
@@ -105,7 +106,7 @@ export function DialogNumberInput({
             type="text"
             id={name}
             name={name}
-            value={value}
+            value={value.toString()}
             disabled={disabled}
             onBlur={onBlur}
             readOnly

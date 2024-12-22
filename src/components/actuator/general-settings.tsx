@@ -3,7 +3,6 @@ import { store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { mapValues } from "remeda";
 import { z } from "zod";
 import { DialogNumberInput } from "../dialog-number-input";
 import { Button } from "../ui/button";
@@ -26,11 +25,11 @@ import {
 import { Spinner } from "../ui/spinner";
 
 const schema = z.object({
-  scaleGain: z.number({ coerce: true }).min(-100).max(100),
-  scaleOffset: z.number({ coerce: true }).min(-100).max(100),
-  maxLoad: z.number({ coerce: true }).min(0).max(500),
-  minLoad: z.number({ coerce: true }).min(0).max(500),
-  precision: z.number({ coerce: true }).min(0).max(10),
+  scaleGain: z.number().min(-100).max(100),
+  scaleOffset: z.number().min(-100).max(100),
+  maxLoad: z.number().min(0).max(500),
+  minLoad: z.number().min(0).max(500),
+  precision: z.number().min(0).max(10),
 });
 
 export function GeneralSettings() {
@@ -59,14 +58,12 @@ export function GeneralSettings() {
   const { mutateAsync: save } = store.useMutation();
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
-      const payload = mapValues(data, (value) => Number(value));
-
       await save([
-        ["scale.gain", payload.scaleGain],
-        ["scale.offset", payload.scaleOffset],
-        ["actuator.maxLoad", payload.maxLoad],
-        ["actuator.minLoad", payload.minLoad],
-        ["actuator.precision", payload.precision],
+        ["scale.gain", data.scaleGain],
+        ["scale.offset", data.scaleOffset],
+        ["actuator.maxLoad", data.maxLoad],
+        ["actuator.minLoad", data.minLoad],
+        ["actuator.precision", data.precision],
       ]);
     },
   });
@@ -98,7 +95,7 @@ export function GeneralSettings() {
                   <FormField
                     control={form.control}
                     name="scaleGain"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem className="flex-grow">
                         <FormLabel>Scale gain</FormLabel>
                         <FormDescription>
@@ -106,12 +103,7 @@ export function GeneralSettings() {
                           measurement sensitivity.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput
-                            min={-10}
-                            max={10}
-                            value={value.toString()}
-                            {...field}
-                          />
+                          <DialogNumberInput min={-10} max={10} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -120,7 +112,7 @@ export function GeneralSettings() {
                   <FormField
                     control={form.control}
                     name="scaleOffset"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem className="flex-grow">
                         <FormLabel>Scale offset</FormLabel>
                         <FormDescription>
@@ -128,12 +120,7 @@ export function GeneralSettings() {
                           zero calibration.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput
-                            min={-100}
-                            max={100}
-                            value={value.toString()}
-                            {...field}
-                          />
+                          <DialogNumberInput min={-100} max={100} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -144,7 +131,7 @@ export function GeneralSettings() {
                   <FormField
                     control={form.control}
                     name="precision"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Delta</FormLabel>
                         <FormDescription>
@@ -152,12 +139,7 @@ export function GeneralSettings() {
                           if the actuator has reached setpoint.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput
-                            min={0}
-                            max={10}
-                            value={value.toString()}
-                            {...field}
-                          />
+                          <DialogNumberInput min={0} max={10} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -168,7 +150,7 @@ export function GeneralSettings() {
                   <FormField
                     control={form.control}
                     name="maxLoad"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem className="flex-grow">
                         <FormLabel>Max Load</FormLabel>
                         <FormDescription>
@@ -179,7 +161,6 @@ export function GeneralSettings() {
                           <DialogNumberInput
                             min={0}
                             max={500}
-                            value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}
                             {...field}
@@ -192,7 +173,7 @@ export function GeneralSettings() {
                   <FormField
                     control={form.control}
                     name="minLoad"
-                    render={({ field: { value, ...field } }) => (
+                    render={({ field }) => (
                       <FormItem className="flex-grow">
                         <FormLabel>Min Load</FormLabel>
                         <FormDescription>
@@ -203,7 +184,6 @@ export function GeneralSettings() {
                           <DialogNumberInput
                             min={0}
                             max={500}
-                            value={value.toString()}
                             allowFloat={false}
                             allowNegative={false}
                             {...field}

@@ -39,7 +39,7 @@ const speedItems = servingSpeeds.map((speed) => ({
 const schema = z.object({
   direction: z.enum(directions),
   speed: z.enum(servingSpeeds),
-  rotations: z.number({ coerce: true }).min(1),
+  rotations: z.number().min(1),
 });
 
 function valuesToPayload(
@@ -50,7 +50,7 @@ function valuesToPayload(
   const speed = speeds?.serving[values.speed] ?? 1;
 
   const directions =
-    motor === 1 ? ([0x01, 0x00] as const) : ([0x00, 0x01] as const);
+    motor === 1 ? ([true, false] as const) : ([false, true] as const);
   const direction =
     values.direction === "clockwise" ? directions[0] : directions[1];
 
@@ -155,7 +155,7 @@ export function ServingMode() {
           <FormField
             name="rotations"
             control={form.control}
-            render={({ field: { value, ...field } }) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Rotations</FormLabel>
                 <FormControl>
@@ -164,7 +164,6 @@ export function ServingMode() {
                     max={limits?.maxRotations ?? 1}
                     allowFloat={false}
                     allowNegative={false}
-                    value={value.toString()}
                     {...field}
                   />
                 </FormControl>

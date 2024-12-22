@@ -38,7 +38,7 @@ const speedItems = twistingSpeeds.map((speed) => ({
 const schema = z.object({
   mode: z.enum(modes),
   speed: z.enum(twistingSpeeds),
-  rotations: z.number({ coerce: true }).min(1),
+  rotations: z.number().min(1),
 });
 
 type Schema = z.infer<typeof schema>;
@@ -153,12 +153,11 @@ export function TwistingMode() {
           <FormField
             name="rotations"
             control={form.control}
-            render={({ field: { value, ...field } }) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Rotations</FormLabel>
                 <FormControl>
                   <DialogNumberInput
-                    value={value.toString()}
                     min={1}
                     max={limits?.maxRotations}
                     allowFloat={false}
