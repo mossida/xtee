@@ -45,33 +45,29 @@ void Protocol::update()
     serial.update();
 }
 
-void Protocol::buildPacket(uint8_t *buffer, uint8_t id, const uint8_t *data, size_t size)
-{
-    buffer[0] = id;
-
-    if (data && size > 0)
-        memcpy(&buffer[1], data, size);
-
-    auto packetCRC = crc::calculate(buffer, size + 1);
-    buffer[size + 1] = packetCRC;
-}
-
 void Protocol::sendPacket(uint8_t id, const uint8_t *data, size_t size)
 {
     if (!ack && id != packet::READY)
         return;
 
     uint8_t buffer[size + 2];
-    buildPacket(buffer, id, data, size);
+
+    buffer[0] = id;
+
+    if (data && size > 0)
+        memcpy(&buffer[1], data, size);
+
+    buffer[size + 1] = crc::calculate(buffer, size + 1);
+
     serial.send(buffer, size + 2);
 }
 
-void Protocol::handleAck()
+inline void Protocol::handleAck()
 {
     ack = true;
 }
 
-bool Protocol::hasAcknowledged()
+inline bool Protocol::hasAcknowledged()
 {
     return ack;
 }

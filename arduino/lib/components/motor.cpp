@@ -140,8 +140,6 @@ void Engine::handleSetAcceleration(const uint8_t *data, size_t size)
     auto acceleration = (uint32_t)data[4] << 24 | (uint32_t)data[3] << 16 | (uint32_t)data[2] << 8 | data[1];
 
     stepper->setAcceleration(acceleration);
-
-    // TODO: understand if this can be set with a flag
     stepper->applySpeedAcceleration();
 }
 

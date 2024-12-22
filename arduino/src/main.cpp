@@ -5,9 +5,9 @@
 #include "protocol.hpp"
 #include "components.hpp"
 
-#define ENABLE_SCALE 1
-#define ENABLE_MOTORS 0
-#define ENABLE_ACTUATOR 1
+#define ENABLE_SCALE 0
+#define ENABLE_MOTORS 1
+#define ENABLE_ACTUATOR 0
 
 #define SERIAL_SPEED 115200
 
@@ -27,7 +27,7 @@ components::motor::Engine mt(&pt);
 
 void setup()
 {
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinModeFast(LED_BUILTIN, OUTPUT);
 
   // Initialize serial communication
   pt.begin(SERIAL_SPEED);

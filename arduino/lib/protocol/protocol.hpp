@@ -48,9 +48,7 @@ namespace protocol
         void handler(const uint8_t *data, size_t size);
         void handleAck();
 
-        static void buildPacket(uint8_t *buffer, uint8_t id, const uint8_t *data, size_t size);
-
-    public:
+        public:
         ~Protocol()
         {
             for (int i = 0; i < 256; i++)

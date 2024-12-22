@@ -8,7 +8,7 @@ namespace crc
 
         for (size_t i = 0; i < len; i++)
         {
-            crc = table[crc ^ arr[i]];
+            crc = pgm_read_byte(&table[crc ^ arr[i]]);
         }
 
         return crc;

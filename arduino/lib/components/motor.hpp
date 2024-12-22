@@ -31,7 +31,7 @@ namespace components
         class Engine
         {
         public:
-            explicit Engine(protocol::Protocol *protocol) : protocol(protocol) {}
+            explicit Engine(protocol::Protocol *protocol) : protocol(protocol), engine() {}
 
             void begin();
 

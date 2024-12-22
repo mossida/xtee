@@ -94,7 +94,7 @@ impl MotorState {
         mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
             slave,
             speed: movement.speed,
-            apply: 0x01,
+            apply: 0x00,
         }))?;
 
         mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
@@ -131,7 +131,7 @@ impl MotorState {
         mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
             slave,
             speed: movement.speed,
-            apply: 0x01,
+            apply: 0x00,
         }))?;
 
         // TODO: Understand why we need to set the acceleration here
