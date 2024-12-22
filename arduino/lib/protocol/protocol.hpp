@@ -49,7 +49,7 @@ namespace protocol
         volatile bool ack = false;
 
         void handler(const uint8_t *data, size_t size);
-        void handleAck();
+        inline void handleAck() { ack = true; }
 
     public:
         ~Protocol()
@@ -62,7 +62,7 @@ namespace protocol
 
         void begin(uint32_t speed);
         void update();
-        bool hasAcknowledged();
+        inline bool hasAcknowledged() { return ack; }
 
         template <typename T>
         void registerHandler(uint8_t packetId, T *instance, void (T::*handlerPtr)(const uint8_t *, size_t))

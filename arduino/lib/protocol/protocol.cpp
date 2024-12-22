@@ -61,13 +61,3 @@ void Protocol::sendPacket(uint8_t id, const uint8_t *data, size_t size)
 
     serial.send(buffer, size + 2);
 }
-
-inline void Protocol::handleAck()
-{
-    ack = true;
-}
-
-inline bool Protocol::hasAcknowledged()
-{
-    return ack;
-}
