@@ -26,6 +26,64 @@ namespace components
             const uint8_t REPORT_STATUS = 0x09;
             const uint8_t STATUS = 0x0A;
             const uint8_t STOP = 0x0B;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint8_t direction;
+            } KEEP_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint8_t direction;
+                uint16_t rotations;
+            } MOVE_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint8_t gentle;
+            } STOP_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint8_t apply;
+                uint32_t speed;
+            } SET_SPEED_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint32_t acceleration;
+            } SET_ACCELERATION_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint8_t outputs;
+            } SET_OUTPUTS_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint32_t max_speed;
+            } RECOGNITION_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+                uint8_t running;
+                uint8_t stopping;
+                int32_t position;
+                uint32_t remaining;
+            } STATUS_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t slave;
+            } REPORT_STATUS_DATA;
         }
 
         class Engine

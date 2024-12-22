@@ -28,54 +28,51 @@ void Engine::begin()
     digitalWriteFast(LED_BUILTIN, LOW);
 }
 
-void Engine::handleKeep(const uint8_t *data, size_t size)
+void Engine::handleKeep(const uint8_t *buffer, size_t size)
 {
-    if (size < 2 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::KEEP_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
 
-    if (data[1] != 0x01 && data[1] != 0x00)
-        return;
+    const packet::KEEP_DATA data = *reinterpret_cast<const packet::KEEP_DATA *>(buffer);
 
-    auto index = data[0] - 1;
-    auto direction = data[1];
+    auto index = data.slave - 1;
     auto *stepper = steppers[index];
 
-    if (direction == 0x01)
+    if (data.direction == 0x01)
         stepper->runForward();
     else
         stepper->runBackward();
 
-    sendStatus(data[0]);
+    sendStatus(data.slave);
 }
 
-void Engine::handleMove(const uint8_t *data, size_t size)
+void Engine::handleMove(const uint8_t *buffer, size_t size)
 {
-    if (size < 4 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::MOVE_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
 
-    if (data[1] != 0x00 && data[1] != 0x01)
-        return;
+    const packet::MOVE_DATA data = *reinterpret_cast<const packet::MOVE_DATA *>(buffer);
 
-    auto index = data[0] - 1;
-    auto direction = (2 * data[1]) - 1;
-    auto *stepper = steppers[index];
-    auto rotations = (uint16_t)data[3] << 8 | data[2];
+    auto *stepper = steppers[data.slave - 1];
+    auto direction = data.direction == 0x01 ? 1 : -1;
 
-    if (rotations == 0)
+    if (data.rotations == 0)
         return;
 
     // NOTE: multiplication overflow if rotations is uint16_t
-    auto steps = settings::MOTOR_STEPS * rotations * direction;
+    auto steps = settings::MOTOR_STEPS * data.rotations * direction;
 
     stepper->move(static_cast<int32_t>(steps));
 
-    sendStatus(data[0]);
+    sendStatus(data.slave);
 }
 
-void Engine::handleReportStatus(const uint8_t *data, size_t size)
+void Engine::handleReportStatus(const uint8_t *buffer, size_t size)
 {
-    if (size < 1 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::REPORT_STATUS_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
+
+    const packet::REPORT_STATUS_DATA data = *reinterpret_cast<const packet::REPORT_STATUS_DATA *>(buffer);
 
     if (!is_initialized)
     {
@@ -86,76 +83,64 @@ void Engine::handleReportStatus(const uint8_t *data, size_t size)
         is_initialized = true;
     }
 
-    sendStatus(data[0]);
+    sendStatus(data.slave);
 }
 
-void Engine::handleStop(const uint8_t *data, size_t size)
+void Engine::handleStop(const uint8_t *buffer, size_t size)
 {
-    if (size < 1 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::STOP_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
 
-    if (data[1] != 0x00 && data[1] != 0x01)
-        return;
+    const packet::STOP_DATA data = *reinterpret_cast<const packet::STOP_DATA *>(buffer);
 
-    auto index = data[0] - 1;
-    auto mode = data[1];
-    auto *stepper = steppers[index];
+    auto *stepper = steppers[data.slave - 1];
 
-    if (mode == 0x01)
+    if (data.gentle == 0x01)
         return stepper->stopMove();
 
     stepper->forceStopAndNewPosition(0);
 
-    sendStatus(data[0]);
+    sendStatus(data.slave);
 }
 
-void Engine::handleSetSpeed(const uint8_t *data, size_t size)
+void Engine::handleSetSpeed(const uint8_t *buffer, size_t size)
 {
-    if (size < 6 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::SET_SPEED_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
 
-    if (data[5] != 0x00 && data[5] != 0x01)
-        return;
+    const packet::SET_SPEED_DATA data = *reinterpret_cast<const packet::SET_SPEED_DATA *>(buffer);
 
-    auto index = data[0] - 1;
-    auto *stepper = steppers[index];
+    auto *stepper = steppers[data.slave - 1];
 
-    auto speed = (uint32_t)data[4] << 24 | (uint32_t)data[3] << 16 | (uint32_t)data[2] << 8 | data[1];
-    auto apply = data[5];
+    stepper->setSpeedInHz(data.speed);
 
-    stepper->setSpeedInHz(speed);
-
-    if (apply == 0x01)
+    if (data.apply == 0x01)
         stepper->applySpeedAcceleration();
 }
 
-void Engine::handleSetAcceleration(const uint8_t *data, size_t size)
+void Engine::handleSetAcceleration(const uint8_t *buffer, size_t size)
 {
-    if (size < 5 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::SET_ACCELERATION_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
 
-    auto index = data[0] - 1;
-    auto *stepper = steppers[index];
+    const packet::SET_ACCELERATION_DATA data = *reinterpret_cast<const packet::SET_ACCELERATION_DATA *>(buffer);
 
-    auto acceleration = (uint32_t)data[4] << 24 | (uint32_t)data[3] << 16 | (uint32_t)data[2] << 8 | data[1];
+    auto *stepper = steppers[data.slave - 1];
 
-    stepper->setAcceleration(acceleration);
+    stepper->setAcceleration(data.acceleration);
     stepper->applySpeedAcceleration();
 }
 
-void Engine::handleSetOutputs(const uint8_t *data, size_t size)
+void Engine::handleSetOutputs(const uint8_t *buffer, size_t size)
 {
-    if (size < 2 || data[0] < 1 || data[0] > pins::MOTORS_COUNT)
+    if (size != sizeof(packet::SET_OUTPUTS_DATA) || buffer[0] < 1 || buffer[0] > pins::MOTORS_COUNT)
         return;
 
-    if (data[1] != 0x00 && data[1] != 0x01)
-        return;
+    const packet::SET_OUTPUTS_DATA data = *reinterpret_cast<const packet::SET_OUTPUTS_DATA *>(buffer);
 
-    auto index = data[0] - 1;
-    auto outputs = data[1];
-    auto *stepper = steppers[index];
+    auto *stepper = steppers[data.slave - 1];
 
-    if (outputs == 0x01)
+    if (data.outputs == 0x01)
         stepper->enableOutputs();
     else
         stepper->disableOutputs();
@@ -169,27 +154,14 @@ void Engine::sendStatus(uint8_t slave)
     auto index = slave - 1;
     auto *stepper = steppers[index];
 
-    uint8_t buffer[11];
-    int32_t position = stepper->getCurrentPosition();
-    uint32_t remaining = stepper->stepsToStop();
+    const packet::STATUS_DATA data = {
+        .slave = slave,
+        .running = stepper->isRunning() ? 1 : 0,
+        .stopping = stepper->isStopping() ? 1 : 0,
+        .position = stepper->getCurrentPosition(),
+        .remaining = stepper->stepsToStop()};
 
-    buffer[0] = slave;
-    buffer[1] = stepper->isRunning() ? 1 : 0;
-    buffer[2] = stepper->isStopping() ? 1 : 0;
-
-    // Write position bytes (32-bit integer) in little-endian
-    buffer[3] = position & 0xFF; // Least significant byte first
-    buffer[4] = (position >> 8) & 0xFF;
-    buffer[5] = (position >> 16) & 0xFF;
-    buffer[6] = (position >> 24) & 0xFF; // Most significant byte last
-
-    // Write remaining steps (32-bit integer) in little-endian
-    buffer[7] = remaining & 0xFF;
-    buffer[8] = (remaining >> 8) & 0xFF;
-    buffer[9] = (remaining >> 16) & 0xFF;
-    buffer[10] = (remaining >> 24) & 0xFF;
-
-    protocol->sendPacket(packet::STATUS, buffer, 11);
+    protocol->sendPacket(packet::STATUS, reinterpret_cast<const uint8_t *>(&data), sizeof(data));
 }
 
 void Engine::sendRecognition(uint8_t slave)
@@ -199,15 +171,10 @@ void Engine::sendRecognition(uint8_t slave)
 
     auto index = slave - 1;
     auto *stepper = steppers[index];
-    auto max_speed = stepper->getMaxSpeedInHz();
 
-    uint8_t buffer[5];
+    const packet::RECOGNITION_DATA data = {
+        .slave = slave,
+        .max_speed = stepper->getMaxSpeedInHz()};
 
-    buffer[0] = slave;
-    buffer[1] = max_speed & 0xFF;
-    buffer[2] = (max_speed >> 8) & 0xFF;
-    buffer[3] = (max_speed >> 16) & 0xFF;
-    buffer[4] = (max_speed >> 24) & 0xFF;
-
-    protocol->sendPacket(packet::RECOGNITION, buffer, 5);
+    protocol->sendPacket(packet::RECOGNITION, reinterpret_cast<const uint8_t *>(&data), sizeof(data));
 }

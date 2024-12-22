@@ -14,6 +14,11 @@ namespace components
         {
             const uint8_t MOVE = 0x0C;
             const uint8_t STOP = 0x0D;
+
+            typedef struct __attribute__((packed))
+            {
+                uint8_t direction;
+            } MOVE_DATA;
         }
 
         class Actuator

@@ -19,17 +19,17 @@ void Actuator::begin()
     protocol->registerHandler(packet::STOP, this, &Actuator::handleStop);
 }
 
-void Actuator::handleMove(const uint8_t *data, size_t size)
+void Actuator::handleMove(const uint8_t *buffer, size_t size)
 {
-    if (size < 1)
+    if (size != sizeof(packet::MOVE_DATA))
         return;
 
-    uint8_t direction = data[0];
+    const packet::MOVE_DATA data = *reinterpret_cast<const packet::MOVE_DATA *>(buffer);
 
-    if (direction != 0 && direction != 1)
+    if (data.direction != 0 && data.direction != 1)
         return;
 
-    if (direction == 0)
+    if (data.direction == 0)
     {
         digitalWriteFast(pins::ACTUATOR_DIR, LOW);
     }
