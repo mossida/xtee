@@ -15,7 +15,7 @@ import {
 import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
-import { rpmToSpeed } from "@/lib/constants";
+import { rpmToSpeed, speedToRpm } from "@/lib/constants";
 import { store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import type { MotorMovement } from "@/types/bindings";
@@ -153,7 +153,7 @@ export function ManualMode() {
                     <FormControl>
                       <DialogNumberInput
                         min={1}
-                        max={limits?.maxSpeed ?? 1}
+                        max={speedToRpm(limits?.maxSpeed ?? 1)}
                         allowFloat={false}
                         allowNegative={false}
                         {...field}
@@ -218,7 +218,7 @@ export function ManualMode() {
                     <FormControl>
                       <DialogNumberInput
                         min={1}
-                        max={limits?.maxSpeed ?? 1}
+                        max={speedToRpm(limits?.maxSpeed ?? 1)}
                         allowFloat={false}
                         allowNegative={false}
                         {...field}
