@@ -15,7 +15,7 @@ import {
 } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
-export type ComboboxItem = {
+type ComboboxItem = {
   id: string;
   label: string;
   disabled?: boolean;

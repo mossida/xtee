@@ -34,8 +34,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 export const servingSpeeds = ["slow", "medium", "fast"] as const;
 export const twistingSpeeds = ["slow", "fast"] as const;
 
-export type ServingSpeed = (typeof servingSpeeds)[number];
-export type TwistingSpeed = (typeof twistingSpeeds)[number];
+type ServingSpeed = (typeof servingSpeeds)[number];
+type TwistingSpeed = (typeof twistingSpeeds)[number];
 
 const speedSchema = z.object({
   twisting: z.object(

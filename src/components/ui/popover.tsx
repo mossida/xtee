@@ -43,4 +43,4 @@ const PopoverContentWithoutPortal = React.forwardRef<
   />
 ));
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverContentWithoutPortal };
+export { Popover, PopoverTrigger, PopoverContent,  };

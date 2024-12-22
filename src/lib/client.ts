@@ -9,16 +9,13 @@ import type {
 import { NoOpTransport, type RSPCError, createClient } from "@rspc/client";
 import { TauriTransport } from "@rspc/tauri";
 import {
-  type DefaultError,
   useQueries as useQueriesTanstack,
-  useQueryClient,
   useMutation as useQueryMutation,
   useQuery as useQueryTanstack,
 } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { isTauri } from "./constants";
 
-export const client = createClient<Procedures>({
+const client = createClient<Procedures>({
   transport: isTauri ? new TauriTransport() : new NoOpTransport(),
 });
 
