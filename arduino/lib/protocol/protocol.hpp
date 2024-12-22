@@ -14,6 +14,9 @@ namespace protocol
         const uint8_t DATA = 0x02;
     }
 
+    // Number of packet types we can handle
+    const uint8_t PACKET_TYPES = 14;
+
     class HandlerBase
     {
     public:
@@ -41,17 +44,17 @@ namespace protocol
     {
     private:
         PacketSerial serial;
-        HandlerBase *handlers[256] = {nullptr};
+        HandlerBase *handlers[PACKET_TYPES] = {nullptr};
 
         volatile bool ack = false;
 
         void handler(const uint8_t *data, size_t size);
         void handleAck();
 
-        public:
+    public:
         ~Protocol()
         {
-            for (int i = 0; i < 256; i++)
+            for (int i = 0; i < PACKET_TYPES; i++)
             {
                 delete handlers[i];
             }
