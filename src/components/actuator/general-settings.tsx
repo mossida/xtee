@@ -1,3 +1,4 @@
+import { api } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,6 +57,7 @@ export function GeneralSettings() {
   });
 
   const { mutateAsync: save } = store.useMutation();
+  const { mutateAsync: reload } = api.useMutation("actuator/reload/settings");
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
       await save([
@@ -65,6 +67,7 @@ export function GeneralSettings() {
         ["actuator.minLoad", data.minLoad],
         ["actuator.precision", data.precision],
       ]);
+      await reload();
     },
   });
 

@@ -2,9 +2,8 @@
 
 import { api } from "@/lib/client";
 import { store } from "@/lib/store";
-import { actuatorStatusAtom } from "@/state";
-import { useAtomValue } from "jotai";
-import { useState } from "react";
+import { actuatorStatusAtom, actuatorTargetAtom } from "@/state";
+import { useAtom, useAtomValue } from "jotai";
 import { clamp } from "remeda";
 import { TouchNumberInput } from "../touch-number-input";
 import { Button } from "../ui/button";
@@ -13,7 +12,7 @@ export function AutoActuator() {
   const status = useAtomValue(actuatorStatusAtom);
   const type = status?.status;
 
-  const [setpoint, setSetpoint] = useState(0);
+  const [setpoint, setSetpoint] = useAtom(actuatorTargetAtom);
 
   const { mutate: loadActuator } = api.useMutation("actuator/load");
   const { mutate: keepActuator } = api.useMutation("actuator/keep");

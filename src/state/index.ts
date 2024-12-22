@@ -5,6 +5,8 @@ import { atom } from "jotai";
 import { withAtomEffect } from "jotai-effect";
 import { atomFamily } from "jotai/utils";
 
+export const actuatorTargetAtom = atom<number>(0);
+
 export const actuatorStatusAtom = withAtomEffect(
   atom<ActuatorStatus | null>(null),
   (_, set) => {
@@ -15,6 +17,12 @@ export const actuatorStatusAtom = withAtomEffect(
     return () => promise.then((unsubscribe) => unsubscribe());
   },
 );
+
+export const motorModeAtom = atom<"twisting" | "serving" | "manual">(
+  "twisting",
+);
+
+export const motorStatusViewAtom = atom<"1" | "2">("1");
 
 export const motorStatusFamily = atomFamily((motor: 1 | 2) =>
   withAtomEffect(atom<MotorStatus | null>(null), (_, set) => {

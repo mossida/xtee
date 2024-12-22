@@ -145,7 +145,7 @@ impl ActuatorState {
         let target = self.pid.target();
         let is_setpoint = (value - target).abs() < self.config.precision;
 
-        if value < self.config.min_load || value > self.config.max_load {
+        if value > self.config.max_load {
             return self.stop();
         }
 
@@ -230,7 +230,7 @@ impl ActuatorState {
         value_ms: f64,
     ) -> Result<JoinHandle<Result<(), MessagingErr<MuxMessage>>>, ActorProcessingErr> {
         let mux = self.mux.clone().ok_or(Error::MissingMux)?;
-        let pulse = ((value_ms.abs()).clamp(10.0, 200.0) * 1000.0) as u64;
+        let pulse = ((value_ms.abs()).clamp(8.0, 200.0) * 1000.0) as u64;
 
         debug!("Moving for: {} microseconds", pulse);
 
@@ -358,6 +358,8 @@ impl Actor for Actuator {
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
             ActuatorMessage::ReloadSettings => {
+                debug!("Reloading settings");
+
                 state.config.reload()?;
                 state.apply_config();
             }
