@@ -1,16 +1,23 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import * as R from "remeda";
+import { z } from "zod";
+
+const KEYPAD_NUMBERS = ["7", "8", "9", "4", "5", "6", "1", "2", "3"] as const;
+
+type KeypadKey =
+  | "0"
+  | (typeof KEYPAD_NUMBERS)[number]
+  | "."
+  | "backspace"
+  | "clear"
+  | "negate";
 
 interface DialogNumberInputProps {
   ref?: React.Ref<HTMLInputElement>;
@@ -24,6 +31,78 @@ interface DialogNumberInputProps {
   allowFloat?: boolean;
   allowNegative?: boolean;
 }
+
+const createNumberSchema = ({
+  min,
+  max,
+  allowNegative,
+}: Pick<DialogNumberInputProps, "min" | "max" | "allowNegative">) => {
+  let schema = z.number({
+    required_error: "Please enter a value",
+    invalid_type_error: "Please enter a valid number",
+  });
+
+  if (!allowNegative) {
+    schema = schema.nonnegative({ message: "Negative values are not allowed" });
+  }
+
+  if (min !== undefined) {
+    schema = schema.min(min, { message: `Value must be at least ${min}` });
+  }
+
+  if (max !== undefined) {
+    schema = schema.max(max, { message: `Value must be at most ${max}` });
+  }
+
+  return schema;
+};
+
+const formatDisplayValue = (value: string): string => {
+  return R.pipe(
+    value,
+    (v) => v || "0",
+    (v) => (v === "-" ? "0" : v),
+    (v) => {
+      const num = Number.parseFloat(v);
+      return Number.isNaN(num) ? "0" : v;
+    },
+  );
+};
+
+const validateNumber = (
+  value: string,
+  {
+    min,
+    max,
+    allowFloat,
+    allowNegative,
+  }: Pick<
+    DialogNumberInputProps,
+    "min" | "max" | "allowFloat" | "allowNegative"
+  >,
+): string => {
+  if (!value || value === "-") return value;
+  if (allowFloat && value === ".") return "0.";
+
+  return R.pipe(
+    value,
+    (v) => (allowFloat ? v : v.replace(/\./g, "")),
+    (v) => (allowNegative ? v : v.replace(/^-/, "")),
+    (v) => {
+      if (allowFloat && v.endsWith(".")) return v;
+
+      const num = Number.parseFloat(v);
+      if (Number.isNaN(num)) return v;
+
+      return R.pipe(
+        num,
+        (n) => (min !== undefined ? Math.max(n, min) : n),
+        (n) => (max !== undefined ? Math.min(n, max) : n),
+        String,
+      );
+    },
+  );
+};
 
 export function DialogNumberInput({
   ref,
@@ -39,63 +118,77 @@ export function DialogNumberInput({
 }: DialogNumberInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tempValue, setTempValue] = useState(value.toString());
+  const [error, setError] = useState<string | null>(null);
+
+  const schema = createNumberSchema({ min, max, allowNegative });
 
   useEffect(() => {
     setTempValue(value.toString());
+    setError(null);
   }, [value]);
 
   const validateAndSetValue = useCallback(
     (newValue: string) => {
-      let validatedValue = newValue;
-
-      if (!allowFloat) {
-        validatedValue = validatedValue.replace(/\./g, "");
-      }
-
-      if (!allowNegative) {
-        validatedValue = validatedValue.replace(/^-/, "");
-      }
-
-      const numValue = Number.parseFloat(validatedValue);
-
-      if (!Number.isNaN(numValue)) {
-        if (min !== undefined && numValue < min) {
-          validatedValue = min.toString();
-        }
-        if (max !== undefined && numValue > max) {
-          validatedValue = max.toString();
-        }
-      }
+      const validatedValue = validateNumber(newValue, {
+        min,
+        max,
+        allowFloat,
+        allowNegative,
+      });
 
       setTempValue(validatedValue);
+      setError(null);
     },
     [allowFloat, allowNegative, min, max],
   );
 
   const handleKeyPress = useCallback(
-    (key: string) => {
-      if (key === "backspace") {
-        validateAndSetValue(tempValue.slice(0, -1));
-      } else if (key === "clear") {
-        validateAndSetValue("");
-      } else if (key === "negate" && allowNegative) {
-        validateAndSetValue(
-          tempValue.startsWith("-") ? tempValue.slice(1) : `-${tempValue}`,
-        );
-      } else if (key === "." && allowFloat && !tempValue.includes(".")) {
-        validateAndSetValue(`${tempValue}${key}`);
-      } else if (key !== "." && key !== "negate") {
-        validateAndSetValue(`${tempValue}${key}`);
-      }
+    (key: KeypadKey) => {
+      const keyActions: Record<KeypadKey, () => void> = {
+        backspace: () => validateAndSetValue(tempValue.slice(0, -1)),
+        clear: () => validateAndSetValue(""),
+        negate: () =>
+          allowNegative &&
+          validateAndSetValue(
+            tempValue.startsWith("-") ? tempValue.slice(1) : `-${tempValue}`,
+          ),
+        ".": () => {
+          if (allowFloat && !tempValue.includes(".")) {
+            validateAndSetValue(tempValue === "" ? "0." : `${tempValue}.`);
+          }
+        },
+        "0": () => validateAndSetValue(`${tempValue}${key}`),
+        "1": () => validateAndSetValue(`${tempValue}${key}`),
+        "2": () => validateAndSetValue(`${tempValue}${key}`),
+        "3": () => validateAndSetValue(`${tempValue}${key}`),
+        "4": () => validateAndSetValue(`${tempValue}${key}`),
+        "5": () => validateAndSetValue(`${tempValue}${key}`),
+        "6": () => validateAndSetValue(`${tempValue}${key}`),
+        "7": () => validateAndSetValue(`${tempValue}${key}`),
+        "8": () => validateAndSetValue(`${tempValue}${key}`),
+        "9": () => validateAndSetValue(`${tempValue}${key}`),
+      };
+
+      keyActions[key]?.();
     },
     [tempValue, allowFloat, allowNegative, validateAndSetValue],
   );
 
   const handleEnter = useCallback(() => {
     const numValue = Number.parseFloat(tempValue || "0");
-    onChange(numValue);
+    const result = schema.safeParse(numValue);
+
+    if (!result.success) {
+      setError(result.error.errors[0]?.message || "Invalid value");
+      return;
+    }
+
+    onChange(result.data);
     setIsOpen(false);
-  }, [tempValue, onChange]);
+    setError(null);
+  }, [tempValue, onChange, schema]);
+
+  const displayValue = formatDisplayValue(tempValue);
 
   return (
     <div className="space-y-2 flex-grow">
@@ -120,16 +213,26 @@ export function DialogNumberInput({
 
         <DialogContent className="sm:max-w-[425px] !p-7">
           <div className="grid gap-4">
-            <div
-              className="text-2xl font-bold text-center font-mono"
-              aria-live="polite"
-            >
-              {tempValue || "0"}
+            <div className="space-y-1">
+              <div
+                className="text-2xl font-bold text-center font-mono"
+                aria-live="polite"
+              >
+                {displayValue}
+              </div>
+              {error && (
+                <p
+                  className="text-sm text-center text-destructive"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((num) => (
+              {KEYPAD_NUMBERS.map((num) => (
                 <Button
-                  size={"lg"}
+                  size="lg"
                   key={num}
                   onClick={() => handleKeyPress(num)}
                   disabled={disabled}
@@ -172,7 +275,7 @@ export function DialogNumberInput({
             <Button
               onClick={handleEnter}
               className="w-full"
-              size={"lg"}
+              size="lg"
               disabled={disabled}
             >
               Enter
