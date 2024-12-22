@@ -23,7 +23,13 @@ export function LoadVisualizer({
   return (
     <div className="flex items-end gap-[8px]">
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={`load-bar-${i}`} className="relative">
+        <div
+          key={`load-bar-${
+            // biome-ignore lint/suspicious/noArrayIndexKey: safe since array is static
+            i
+          }`}
+          className="relative"
+        >
           <div
             className={cn(
               "w-[8px] h-[50px] transition-colors duration-200",
