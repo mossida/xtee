@@ -147,7 +147,7 @@ impl Actor for Mux {
             StreamMuxConfiguration {
                 stream: state.reader.take().expect("Reader already taken"),
                 targets,
-                callback: MuxCallback::default(),
+                callback: MuxCallback,
                 stop_processing_target_on_failure: false,
             },
             Some(myself.get_cell()),
