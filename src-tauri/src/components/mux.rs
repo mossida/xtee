@@ -80,7 +80,7 @@ impl Actor for Mux {
 
         mux_stream(
             StreamMuxConfiguration {
-                stream: stream,
+                stream,
                 targets: args.targets,
                 callback: MuxCallback,
                 stop_processing_target_on_failure: false,
