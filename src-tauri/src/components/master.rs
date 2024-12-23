@@ -60,6 +60,7 @@ impl Actor for Master {
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let store = store(&args)?;
+
         let controllers = store
             .get(StoreKey::Controllers)
             .unwrap_or(serde_json::Value::Array(vec![]));

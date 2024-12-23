@@ -1,15 +1,18 @@
+use ractor::ActorRef;
 use rspc::{Config, Router};
-use tauri::AppHandle;
 
-use crate::cmd::{
-    actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop, events,
-    get_controllers, get_groups, get_ports, kill_controller, motor_get_max_speed, motor_keep,
-    motor_reload_settings, motor_set_outputs, motor_spin, motor_stop, spawn_controller,
+use crate::{
+    cmd::{
+        actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
+        events, get_controllers, get_groups, get_ports, kill_controller, motor_get_max_speed,
+        motor_keep, motor_reload_settings, motor_set_outputs, motor_spin, motor_stop,
+        spawn_controller,
+    },
+    components::master::MasterMessage,
 };
 
 pub struct RouterContext {
-    #[allow(unused)]
-    pub handle: AppHandle,
+    pub master: ActorRef<MasterMessage>,
 }
 
 pub fn router() -> Router<RouterContext> {

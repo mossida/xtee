@@ -13,7 +13,6 @@ export type Procedures = {
         { key: "actuator/move", input: boolean, result: null } | 
         { key: "actuator/reload/settings", input: never, result: null } | 
         { key: "actuator/stop", input: never, result: null } | 
-        { key: "actuator/tune", input: never, result: null } | 
         { key: "master/kill", input: string, result: null } | 
         { key: "master/spawn", input: Controller, result: null } | 
         { key: "motor/keep", input: [number, MotorMovement], result: null } | 
@@ -24,7 +23,7 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type ActuatorStatus = { status: "loading"; data: { target: number } } | { status: "keeping"; data: { target: number } } | { status: "tuning" } | { status: "idle" }
+export type ActuatorStatus = { status: "loading"; data: { target: number } } | { status: "keeping"; data: { target: number } } | { status: "idle" }
 
 export type Controller = { id: string; group: ControllerGroup; serial_port: string; baud_rate: number }
 

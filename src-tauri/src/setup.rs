@@ -1,6 +1,9 @@
 use ractor::Actor;
 
-use crate::components::master::Master;
+use crate::{
+    components::master::Master,
+    router::{router, RouterContext},
+};
 
 #[cfg(not(debug_assertions))]
 pub fn setup_logging() {
@@ -14,12 +17,21 @@ pub fn setup_logging() {
 }
 
 pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let handle = app.handle().to_owned();
+    let app_handle = app.handle().to_owned();
 
     tauri::async_runtime::spawn(async move {
-        let (_, handle) = Actor::spawn(Some("master".to_owned()), Master, handle)
+        let (actor, handle) = Actor::spawn(Some("master".to_owned()), Master, app_handle.clone())
             .await
             .expect("Failed to spawn master");
+
+        // Inject the master actor into the router
+        app_handle
+            .plugin(rspc_tauri::plugin(router().arced(), move |_| {
+                RouterContext {
+                    master: actor.clone(),
+                }
+            }))
+            .expect("Failed to plugin rspc");
 
         handle.await.expect("Master failed");
     });

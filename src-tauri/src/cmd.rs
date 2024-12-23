@@ -46,39 +46,24 @@ pub fn get_groups(_ctx: RouterContext, _: ()) -> Result<Vec<ControllerGroup>, rs
     Ok(vec![ControllerGroup::Default, ControllerGroup::Motors])
 }
 
-pub fn spawn_controller(_ctx: RouterContext, input: Controller) -> Result<(), rspc::Error> {
-    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
-        rspc::ErrorCode::NotFound,
-        "Master not found".to_owned(),
-    ))?;
-
-    master
+pub fn spawn_controller(ctx: RouterContext, input: Controller) -> Result<(), rspc::Error> {
+    ctx.master
         .send_message(MasterMessage::Spawn(input))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
 
     Ok(())
 }
 
-pub fn kill_controller(_ctx: RouterContext, id: String) -> Result<(), rspc::Error> {
-    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
-        rspc::ErrorCode::NotFound,
-        "Master not found".to_owned(),
-    ))?;
-
-    master
+pub fn kill_controller(ctx: RouterContext, id: String) -> Result<(), rspc::Error> {
+    ctx.master
         .send_message(MasterMessage::Kill(id))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
 
     Ok(())
 }
 
-pub async fn get_controllers(_ctx: RouterContext, _: ()) -> Result<Vec<Controller>, rspc::Error> {
-    let master = registry::where_is("master".to_string()).ok_or(rspc::Error::new(
-        rspc::ErrorCode::NotFound,
-        "Master not found".to_owned(),
-    ))?;
-
-    let controllers = rpc::call(&master, MasterMessage::FetchControllers, None)
+pub async fn get_controllers(ctx: RouterContext, _: ()) -> Result<Vec<Controller>, rspc::Error> {
+    let controllers = rpc::call(&ctx.master, MasterMessage::FetchControllers, None)
         .await
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
         .success_or(rspc::Error::new(

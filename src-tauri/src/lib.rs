@@ -1,4 +1,3 @@
-use router::{router, RouterContext};
 use setup::setup_app;
 
 mod cmd;
@@ -26,9 +25,6 @@ pub fn run() {
     }
 
     builder
-        .plugin(rspc_tauri::plugin(router().arced(), |handle| {
-            RouterContext { handle }
-        }))
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(setup_app)
         .run(tauri::generate_context!())
