@@ -16,8 +16,6 @@ use super::{
     motor::MotorStatus,
 };
 
-pub const SCOPE: &str = "components";
-
 pub struct Master;
 
 #[derive(Clone, Type, Serialize)]
@@ -104,7 +102,7 @@ impl Actor for Master {
                 let result = Actor::spawn_linked(
                     Some(id.clone()),
                     controller.clone(),
-                    (state.store.clone(), state.app.clone()),
+                    state.store.clone(),
                     myself.get_cell(),
                 )
                 .await;

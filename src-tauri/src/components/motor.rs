@@ -16,7 +16,7 @@ use crate::{
     store::{MotorsLimits, Store, StoreKey},
 };
 
-use super::master::MasterMessage;
+use super::{master::MasterMessage, Component, Handler};
 
 pub struct Motor {
     pub slave: u8,
@@ -179,6 +179,26 @@ impl TryFrom<Arc<Store>> for MotorArguments {
         let limits: MotorsLimits = serde_json::from_value(limits_value)?;
 
         Ok(Self { limits, store })
+    }
+}
+
+impl Component for Motor {
+    async fn spawn(
+        self,
+        controller: &ActorRef<ControllerMessage>,
+        args: Arc<Store>,
+    ) -> Result<Handler<MotorMessage>, ActorProcessingErr> {
+        let name = format!("motor-{}", self.slave);
+
+        let (cell, _) = Motor::spawn_linked(
+            Some(name),
+            self,
+            MotorArguments::try_from(args)?,
+            controller.get_cell(),
+        )
+        .await?;
+
+        Ok(Handler { cell })
     }
 }
 

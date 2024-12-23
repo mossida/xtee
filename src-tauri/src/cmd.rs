@@ -163,11 +163,11 @@ pub fn motor_reload_settings(_ctx: RouterContext, _: ()) -> Result<(), rspc::Err
     let children: Vec<ControllerChild> = ControllerGroup::Motors.into();
 
     for child in children {
-        if let ControllerChild::Motor(slave) = child {
+        if let ControllerChild::Motor(motor) = child {
             let actor =
-                registry::where_is(format!("motor-{}", slave)).ok_or(rspc::Error::new(
+                registry::where_is(format!("motor-{}", motor.slave)).ok_or(rspc::Error::new(
                     rspc::ErrorCode::NotFound,
-                    format!("Motor {} not found", slave),
+                    format!("Motor {} not found", motor.slave),
                 ))?;
 
             actor

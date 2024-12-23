@@ -2,6 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use pid_lite::Controller as Pid;
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, MessagingErr};
+
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tokio::task::JoinHandle;
@@ -14,7 +15,7 @@ use crate::{
     store::{PIDSettings, Store, StoreKey},
 };
 
-use super::{controller::ControllerMessage, master::MasterMessage};
+use super::{controller::ControllerMessage, master::MasterMessage, Component, Handler};
 
 pub struct Actuator;
 
@@ -210,6 +211,24 @@ impl ActuatorState {
         self.send_status()?;
 
         Ok(())
+    }
+}
+
+impl Component for Actuator {
+    async fn spawn(
+        self,
+        controller: &ActorRef<ControllerMessage>,
+        args: Arc<Store>,
+    ) -> Result<Handler<ActuatorMessage>, ActorProcessingErr> {
+        let (actuator, _) = Actuator::spawn_linked(
+            Some("actuator".to_owned()),
+            self,
+            ActuatorArguments::try_from(args)?,
+            controller.get_cell(),
+        )
+        .await?;
+
+        Ok(Handler { cell: actuator })
     }
 }
 

@@ -1,23 +1,17 @@
 use std::sync::Arc;
 
-use nanoid::nanoid;
-use ractor::{async_trait, pg, Actor, ActorCell, ActorProcessingErr, ActorRef, SupervisionEvent};
+use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, SupervisionEvent};
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri::AppHandle;
 use tracing::{error, warn};
 
-use crate::{
-    components::motor::{Motor, MotorArguments},
-    error::Error,
-    protocol::Packet,
-    store::Store,
-};
+use crate::{components::motor::Motor, error::Error, protocol::Packet, store::Store};
 
 use super::{
-    actuator::{Actuator, ActuatorArguments},
-    master::{Event, MasterMessage, SCOPE},
-    mux::{Mux, MuxArguments, MuxMessage},
+    actuator::Actuator,
+    master::{Event, MasterMessage},
+    mux::{Mux, MuxArguments, MuxMessage, MuxTarget},
+    Component,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -56,113 +50,73 @@ impl From<ControllerGroup> for String {
 impl From<ControllerGroup> for Vec<ControllerChild> {
     fn from(val: ControllerGroup) -> Self {
         match val {
-            ControllerGroup::Default => vec![ControllerChild::Actuator],
-            ControllerGroup::Motors => vec![ControllerChild::Motor(1), ControllerChild::Motor(2)],
+            ControllerGroup::Default => vec![ControllerChild::Actuator(Actuator)],
+            ControllerGroup::Motors => vec![
+                ControllerChild::Motor(Motor { slave: 1 }),
+                ControllerChild::Motor(Motor { slave: 2 }),
+            ],
         }
     }
 }
 
-#[derive(PartialEq, Eq)]
 pub enum ControllerChild {
-    Mux,
-    Actuator,
-    Motor(u8),
+    Motor(Motor),
+    Actuator(Actuator),
 }
 
 impl ControllerChild {
-    fn name(&self) -> String {
-        match self {
-            ControllerChild::Mux => format!("mux-{}", nanoid!(4)),
-            ControllerChild::Actuator => "actuator".to_owned(),
-            ControllerChild::Motor(slave) => format!("motor-{}", slave),
-        }
-    }
-
     async fn spawn(
-        &self,
-        myself: ActorRef<ControllerMessage>,
-        controller: Controller,
-        args: (Arc<Store>, AppHandle),
-    ) -> Result<ActorCell, ActorProcessingErr> {
-        let name = self.name();
-
-        match self {
-            ControllerChild::Actuator => {
-                let (actuator, _) = Actuator::spawn_linked(
-                    Some(name),
-                    Actuator,
-                    ActuatorArguments::try_from(args.0)?,
-                    myself.get_cell(),
-                )
-                .await?;
-
-                pg::join_scoped(
-                    SCOPE.to_owned(),
-                    controller.group.into(),
-                    vec![actuator.get_cell()],
-                );
-
-                Ok(actuator.get_cell())
+        self,
+        controller: &ActorRef<ControllerMessage>,
+        args: Arc<Store>,
+    ) -> Result<MuxTarget, ActorProcessingErr> {
+        let handler = match self {
+            ControllerChild::Motor(component) => {
+                Box::new(component.spawn(controller, args).await?) as MuxTarget
             }
-            ControllerChild::Mux => {
-                let group = controller.group.clone();
-                let config = MuxArguments::try_from(controller)?;
-
-                let (mux, _) =
-                    Mux::spawn_linked(Some(name), Mux, config, myself.get_cell()).await?;
-
-                pg::join_scoped(SCOPE.to_owned(), group.into(), vec![mux.get_cell()]);
-
-                Ok(mux.get_cell())
+            ControllerChild::Actuator(component) => {
+                Box::new(component.spawn(controller, args).await?) as MuxTarget
             }
-            ControllerChild::Motor(slave) => {
-                let (motor, _) = Motor::spawn_linked(
-                    Some(name),
-                    Motor { slave: *slave },
-                    MotorArguments::try_from(args.0)?,
-                    myself.get_cell(),
-                )
-                .await?;
+        };
 
-                pg::join_scoped(
-                    SCOPE.to_owned(),
-                    controller.group.into(),
-                    vec![motor.get_cell()],
-                );
-
-                Ok(motor.get_cell())
-            }
-        }
+        Ok(handler)
     }
 }
 
 pub enum ControllerMessage {
-    Start,
-    Spawn(ControllerChild),
+    Connect,
     Forward(Packet),
 }
 
 pub struct ControllerState {
-    app: AppHandle,
     mux: Option<ActorRef<MuxMessage>>,
     store: Arc<Store>,
     restart_count: u32,
 }
 
-impl Controller {
+impl ControllerState {
     pub async fn spawn_children(
         &self,
-        controller: &ActorRef<ControllerMessage>,
-    ) -> Result<(), ActorProcessingErr> {
-        let children: Vec<ControllerChild> = self.group.clone().into();
+        controller: &Controller,
+        reference: &ActorRef<ControllerMessage>,
+    ) -> Result<ActorRef<MuxMessage>, ActorProcessingErr> {
+        let children = futures::future::try_join_all(
+            Vec::<ControllerChild>::from(controller.group.clone())
+                .into_iter()
+                .map(|child| child.spawn(reference, self.store.clone())),
+        )
+        .await?;
 
-        for child in children {
-            controller.send_message(ControllerMessage::Spawn(child))?;
-        }
+        let name = format!("mux-{}", controller.id);
+        let (mux, _) = Actor::spawn_linked(
+            Some(name),
+            Mux,
+            MuxArguments::try_from((controller.clone(), children))?,
+            reference.get_cell(),
+        )
+        .await?;
 
-        controller.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
-
-        Ok(())
+        Ok(mux)
     }
 }
 
@@ -170,19 +124,18 @@ impl Controller {
 impl Actor for Controller {
     type Msg = ControllerMessage;
     type State = ControllerState;
-    type Arguments = (Arc<Store>, AppHandle);
+    type Arguments = Arc<Store>;
 
     async fn pre_start(
         &self,
         myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        myself.send_message(ControllerMessage::Start)?;
+        myself.send_message(ControllerMessage::Connect)?;
 
         Ok(ControllerState {
             restart_count: 0,
-            store: args.0,
-            app: args.1,
+            store: args,
             mux: None,
         })
     }
@@ -201,29 +154,18 @@ impl Actor for Controller {
                     .ok_or(Error::MissingMux)?
                     .send_message(MuxMessage::Write(message))?;
             }
-            ControllerMessage::Spawn(child) => {
-                let cell = child
-                    .spawn(
-                        myself,
-                        self.clone(),
-                        (state.store.clone(), state.app.clone()),
-                    )
-                    .await?;
-
-                if child == ControllerChild::Mux {
-                    state.mux = Some(cell.into())
-                }
-            }
-            ControllerMessage::Start => {
+            ControllerMessage::Connect => {
                 myself.stop_children(None);
-                self.spawn_children(&myself).await?;
 
+                let mux = state.spawn_children(self, &myself).await?;
                 let master = myself.try_get_supervisor().ok_or(Error::Config)?;
 
                 master.send_message(MasterMessage::Event(Event::ControllerStatus {
                     controller: self.clone(),
                     status: ControllerStatus::Connected,
                 }))?;
+
+                state.mux = Some(mux);
             }
         }
 
@@ -232,7 +174,7 @@ impl Actor for Controller {
 
     async fn handle_supervisor_evt(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         message: SupervisionEvent,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
@@ -250,7 +192,7 @@ impl Actor for Controller {
                         }
 
                         warn!("Mux terminated - attempting restart");
-                        myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
+                        //myself.send_message(ControllerMessage::Spawn(ControllerChild::Mux))?;
 
                         state.restart_count += 1;
                     }
