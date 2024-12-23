@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use nanoid::nanoid;
-use ractor::{
-    async_trait, pg, Actor, ActorCell, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent,
-};
+use ractor::{async_trait, pg, Actor, ActorCell, ActorProcessingErr, ActorRef, SupervisionEvent};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::AppHandle;
@@ -12,6 +10,7 @@ use tracing::{error, warn};
 use crate::{
     components::motor::{Motor, MotorArguments},
     error::Error,
+    protocol::Packet,
     store::Store,
 };
 
@@ -140,7 +139,7 @@ impl ControllerChild {
 pub enum ControllerMessage {
     Start,
     Spawn(ControllerChild),
-    FetchMux(RpcReplyPort<ActorRef<MuxMessage>>),
+    Forward(Packet),
 }
 
 pub struct ControllerState {
@@ -195,8 +194,12 @@ impl Actor for Controller {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
-            ControllerMessage::FetchMux(reply) => {
-                reply.send(state.mux.clone().ok_or(Error::MissingMux)?)?;
+            ControllerMessage::Forward(message) => {
+                state
+                    .mux
+                    .as_ref()
+                    .ok_or(Error::MissingMux)?
+                    .send_message(MuxMessage::Write(message))?;
             }
             ControllerMessage::Spawn(child) => {
                 let cell = child

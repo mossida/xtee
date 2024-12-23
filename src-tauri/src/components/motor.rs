@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ractor::{
     async_trait,
     concurrency::{Duration, JoinHandle},
-    registry, rpc, Actor, ActorProcessingErr, ActorRef, RpcReplyPort,
+    Actor, ActorProcessingErr, ActorRef, RpcReplyPort,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -16,7 +16,7 @@ use crate::{
     store::{MotorsLimits, Store, StoreKey},
 };
 
-use super::{master::MasterMessage, mux::MuxMessage};
+use super::master::MasterMessage;
 
 pub struct Motor {
     pub slave: u8,
@@ -72,8 +72,8 @@ pub struct MotorState {
     max_speed: u32,
     config: MotorArguments,
     updates_handle: Option<JoinHandle<()>>,
-    mux: Option<ActorRef<MuxMessage>>,
-    master: Arc<ActorRef<MasterMessage>>,
+    master: ActorRef<MasterMessage>,
+    controller: ActorRef<ControllerMessage>,
 }
 
 impl MotorState {
@@ -82,30 +82,32 @@ impl MotorState {
         slave: u8,
         movement: &mut MotorMovement,
     ) -> Result<(), ActorProcessingErr> {
-        let mux = self.mux.as_ref().ok_or(Error::MissingMux)?;
-
         movement.clamp(&self.config.limits);
 
-        mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
-            slave,
-            outputs: true,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorSetOutputs {
+                slave,
+                outputs: true,
+            }))?;
 
-        mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
-            slave,
-            speed: movement.speed,
-            apply: 0x00,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorSetSpeed {
+                slave,
+                speed: movement.speed,
+                apply: 0x00,
+            }))?;
 
-        mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
-            slave,
-            acceleration: self.config.limits.acceleration,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorSetAcceleration {
+                slave,
+                acceleration: self.config.limits.acceleration,
+            }))?;
 
-        mux.send_message(MuxMessage::Write(Packet::MotorKeep {
-            slave,
-            direction: movement.direction,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorKeep {
+                slave,
+                direction: movement.direction,
+            }))?;
 
         Ok(())
     }
@@ -115,39 +117,42 @@ impl MotorState {
         slave: u8,
         movement: &mut MotorMovement,
     ) -> Result<(), ActorProcessingErr> {
-        let mux = self.mux.as_ref().ok_or(Error::MissingMux)?;
-
         movement.clamp(&self.config.limits);
 
         // To be sure we make X rotations, we need to stop the motor first and reset the position
-        mux.send_message(MuxMessage::Write(Packet::MotorStop {
-            slave,
-            gentle: false,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorStop {
+                slave,
+                gentle: false,
+            }))?;
 
         // Enable the motor outputs
-        mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
-            slave,
-            outputs: true,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorSetOutputs {
+                slave,
+                outputs: true,
+            }))?;
 
-        mux.send_message(MuxMessage::Write(Packet::MotorSetSpeed {
-            slave,
-            speed: movement.speed,
-            apply: 0x00,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorSetSpeed {
+                slave,
+                speed: movement.speed,
+                apply: 0x00,
+            }))?;
 
         // TODO: Understand why we need to set the acceleration here
-        mux.send_message(MuxMessage::Write(Packet::MotorSetAcceleration {
-            slave,
-            acceleration: self.config.limits.acceleration,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorSetAcceleration {
+                slave,
+                acceleration: self.config.limits.acceleration,
+            }))?;
 
-        mux.send_message(MuxMessage::Write(Packet::MotorMove {
-            slave,
-            direction: movement.direction,
-            rotations: movement.rotations,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::MotorMove {
+                slave,
+                direction: movement.direction,
+                rotations: movement.rotations,
+            }))?;
 
         Ok(())
     }
@@ -185,18 +190,19 @@ impl Actor for Motor {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let master = registry::where_is("master".to_string()).ok_or(Error::Packet)?;
+        let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
+        let master = controller.try_get_supervisor().ok_or(Error::Config)?;
 
         Ok(MotorState {
             status: MotorStatus::Idle,
             max_speed: 0,
             config,
             updates_handle: None,
-            mux: None,
-            master: Arc::new(master.into()),
+            controller: controller.into(),
+            master: master.into(),
         })
     }
 
@@ -212,43 +218,37 @@ impl Actor for Motor {
 
     async fn handle(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        if state.mux.is_none() {
-            let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
-
-            let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
-                .await?
-                .success_or(Error::MissingMux)?;
-
-            debug!("Motor got mux: {:?}", mux.get_name());
-
-            state.mux = Some(mux);
-        }
-
         let slave = self.slave;
-        let mux = state.mux.as_ref().ok_or(Error::MissingMux)?;
 
         match msg {
             MotorMessage::StartUpdates => {
-                state.updates_handle =
-                    Some(mux.send_interval(Duration::from_millis(500), move || {
-                        MuxMessage::Write(Packet::MotorAskStatus { slave })
-                    }));
+                state.updates_handle = Some(
+                    state
+                        .controller
+                        .send_interval(Duration::from_millis(500), move || {
+                            ControllerMessage::Forward(Packet::MotorAskStatus { slave })
+                        }),
+                );
             }
             MotorMessage::GracefulStop => {
-                mux.send_message(MuxMessage::Write(Packet::MotorStop {
-                    slave,
-                    gentle: true,
-                }))?;
+                state
+                    .controller
+                    .send_message(ControllerMessage::Forward(Packet::MotorStop {
+                        slave,
+                        gentle: true,
+                    }))?;
             }
             MotorMessage::EmergencyStop => {
-                mux.send_message(MuxMessage::Write(Packet::MotorStop {
-                    slave,
-                    gentle: false,
-                }))?;
+                state
+                    .controller
+                    .send_message(ControllerMessage::Forward(Packet::MotorStop {
+                        slave,
+                        gentle: false,
+                    }))?;
             }
             MotorMessage::Keep(mut movement) => {
                 debug!("Keeping motor {} with {:?}", self.slave, movement);
@@ -261,10 +261,12 @@ impl Actor for Motor {
                 state.spin(self.slave, &mut movement)?;
             }
             MotorMessage::SetOutputs(outputs) => {
-                mux.send_message(MuxMessage::Write(Packet::MotorSetOutputs {
-                    slave: self.slave,
-                    outputs,
-                }))?;
+                state.controller.send_message(ControllerMessage::Forward(
+                    Packet::MotorSetOutputs {
+                        slave: self.slave,
+                        outputs,
+                    },
+                ))?;
             }
             MotorMessage::GetMaxSpeed(reply) => {
                 reply.send(state.max_speed)?;

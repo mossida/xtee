@@ -1,21 +1,20 @@
 use std::{sync::Arc, time::Duration};
 
 use pid_lite::Controller as Pid;
-use ractor::{async_trait, registry, rpc, Actor, ActorProcessingErr, ActorRef, MessagingErr};
+use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, MessagingErr};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tokio::task::JoinHandle;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::{
     components::master::Event,
     error::Error,
     protocol::Packet,
     store::{PIDSettings, Store, StoreKey},
-    tuner::Tuner,
 };
 
-use super::{controller::ControllerMessage, master::MasterMessage, mux::MuxMessage};
+use super::{controller::ControllerMessage, master::MasterMessage};
 
 pub struct Actuator;
 
@@ -24,8 +23,6 @@ pub struct ActuatorArguments {
     pub scale_gain: f64,
     pub scale_offset: f64,
     pub pid_settings: PIDSettings,
-    pub tuner_setpoint: f64,
-    pub tuner_relay_amplitude: f64,
     pub max_load: f64,
     pub min_load: f64,
     store: Arc<Store>,
@@ -51,13 +48,6 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
 
         let scale_gain = value.get(StoreKey::ScaleGain).ok_or(Error::Config)?;
         let scale_offset = value.get(StoreKey::ScaleOffset).ok_or(Error::Config)?;
-        let tuner_setpoint = value
-            .get(StoreKey::ActuatorTuningSetpoint)
-            .ok_or(Error::Config)?;
-
-        let tuner_relay_amplitude = value
-            .get(StoreKey::ActuatorTuningRelayAmplitude)
-            .ok_or(Error::Config)?;
 
         let max_load = value.get(StoreKey::ActuatorMaxLoad).ok_or(Error::Config)?;
         let min_load = value.get(StoreKey::ActuatorMinLoad).ok_or(Error::Config)?;
@@ -68,8 +58,6 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
         Ok(ActuatorArguments {
             precision: precision.as_f64().ok_or(Error::InvalidStore)?,
             scale_gain: scale_gain.as_f64().ok_or(Error::InvalidStore)?,
-            tuner_setpoint: tuner_setpoint.as_f64().ok_or(Error::InvalidStore)?,
-            tuner_relay_amplitude: tuner_relay_amplitude.as_f64().ok_or(Error::InvalidStore)?,
             max_load: max_load.as_f64().ok_or(Error::InvalidStore)?,
             min_load: min_load.as_f64().ok_or(Error::InvalidStore)?,
             scale_offset: scale_offset.as_f64().ok_or(Error::InvalidStore)?,
@@ -85,7 +73,6 @@ impl TryFrom<Arc<Store>> for ActuatorArguments {
 pub enum ActuatorStatus {
     Loading { target: f32 },
     Keeping { target: f32 },
-    Tuning,
     Idle,
 }
 
@@ -95,7 +82,6 @@ pub enum ActuatorMessage {
     Move(bool),
     Stop,
     Packet(Packet),
-    Tune,
     ReloadSettings,
 }
 
@@ -107,12 +93,11 @@ impl From<Packet> for ActuatorMessage {
 
 pub struct ActuatorState {
     pid: Pid,
-    tuner: Tuner,
-    mux: Option<Arc<ActorRef<MuxMessage>>>,
-    master: Arc<ActorRef<MasterMessage>>,
+    master: ActorRef<MasterMessage>,
+    controller: ActorRef<ControllerMessage>,
     status: ActuatorStatus,
     config: ActuatorArguments,
-    current_step: Option<JoinHandle<Result<(), MessagingErr<MuxMessage>>>>,
+    current_step: Option<JoinHandle<Result<(), MessagingErr<ControllerMessage>>>>,
     current_offset: Option<f64>,
 }
 
@@ -131,10 +116,6 @@ impl ActuatorState {
             .set_proportional_gain(pid_settings.proportional as f64);
         self.pid.set_integral_gain(pid_settings.integral as f64);
         self.pid.set_derivative_gain(pid_settings.derivative as f64);
-
-        self.tuner.set_setpoint(self.config.tuner_setpoint);
-        self.tuner
-            .set_relay_amplitude(self.config.tuner_relay_amplitude);
 
         self.current_offset = Some(self.config.scale_offset);
 
@@ -158,30 +139,6 @@ impl ActuatorState {
                     self.stop()?;
                 } else {
                     self.current_step = self.step_pid(value).ok();
-                }
-            }
-            ActuatorStatus::Tuning => {
-                if self.tuner.is_preload_ok() || self.tuner.verify_preload(value) {
-                    if self.tuner.is_tuning_complete() {
-                        self.status = ActuatorStatus::Idle;
-
-                        let parameters = self.tuner.get_pid_parameters().unwrap();
-
-                        info!("Tuning complete: {:?}", parameters);
-
-                        self.pid.reset();
-                        self.pid.set_proportional_gain(parameters.kp);
-                        self.pid.set_integral_gain(parameters.ki);
-                        self.pid.set_derivative_gain(parameters.kd);
-
-                        self.tuner.reset();
-                        let _ = self.send_status();
-                    } else {
-                        let output = self.tuner.process_measurement(value);
-                        self.current_step = self.step(output).ok();
-                    }
-                } else {
-                    warn!("Please preload the scale");
                 }
             }
             _ => {}
@@ -214,7 +171,7 @@ impl ActuatorState {
     fn step_pid(
         &mut self,
         value: f64,
-    ) -> Result<JoinHandle<Result<(), MessagingErr<MuxMessage>>>, ActorProcessingErr> {
+    ) -> Result<JoinHandle<Result<(), MessagingErr<ControllerMessage>>>, ActorProcessingErr> {
         let correction = self.pid.update(value);
 
         debug!(
@@ -228,25 +185,26 @@ impl ActuatorState {
     fn step(
         &self,
         value_ms: f64,
-    ) -> Result<JoinHandle<Result<(), MessagingErr<MuxMessage>>>, ActorProcessingErr> {
-        let mux = self.mux.clone().ok_or(Error::MissingMux)?;
+    ) -> Result<JoinHandle<Result<(), MessagingErr<ControllerMessage>>>, ActorProcessingErr> {
         let pulse = ((value_ms.abs()).clamp(8.0, 200.0) * 1000.0) as u64;
 
         debug!("Moving for: {} microseconds", pulse);
 
-        mux.send_message(MuxMessage::Write(Packet::ActuatorMove {
-            direction: value_ms < 0.0,
-        }))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::ActuatorMove {
+                direction: value_ms < 0.0,
+            }))?;
 
-        Ok(mux.send_after(Duration::from_micros(pulse), || {
-            MuxMessage::Write(Packet::ActuatorStop)
-        }))
+        Ok(self
+            .controller
+            .send_after(Duration::from_micros(pulse), || {
+                ControllerMessage::Forward(Packet::ActuatorStop)
+            }))
     }
 
     fn stop(&mut self) -> Result<(), ActorProcessingErr> {
-        let mux = self.mux.clone().ok_or(Error::MissingMux)?;
-
-        mux.send_message(MuxMessage::Write(Packet::ActuatorStop))?;
+        self.controller
+            .send_message(ControllerMessage::Forward(Packet::ActuatorStop))?;
 
         self.status = ActuatorStatus::Idle;
         self.send_status()?;
@@ -263,19 +221,18 @@ impl Actor for Actuator {
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         config: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let tuner = Tuner::new();
         let pid = Pid::new(0.0, 0.0, 0.0, 0.0);
 
-        let master = registry::where_is("master".to_string()).ok_or(Error::Packet)?;
+        let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
+        let master = controller.try_get_supervisor().ok_or(Error::Config)?;
 
         Ok(ActuatorState {
             pid,
-            tuner,
-            mux: None,
-            master: Arc::new(master.into()),
+            master: master.into(),
+            controller: controller.into(),
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),
@@ -296,24 +253,10 @@ impl Actor for Actuator {
 
     async fn handle(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        if state.mux.is_none() {
-            let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
-
-            let mux = rpc::call(&controller, ControllerMessage::FetchMux, None)
-                .await?
-                .success_or(Error::MissingMux)?;
-
-            debug!("Actuator got mux: {:?}", mux.get_name());
-
-            state.mux = Some(Arc::new(mux));
-        }
-
-        let mux = state.mux.as_ref().ok_or(Error::MissingMux)?;
-
         match message {
             ActuatorMessage::Stop => {
                 state.status = ActuatorStatus::Idle;
@@ -322,15 +265,13 @@ impl Actor for Actuator {
                     handle.abort();
                 });
 
-                mux.send_message(MuxMessage::Write(Packet::ActuatorStop))?;
+                state
+                    .controller
+                    .send_message(ControllerMessage::Forward(Packet::ActuatorStop))?;
 
                 state.send_status()?;
             }
-            ActuatorMessage::Tune => {
-                state.status = ActuatorStatus::Tuning;
-                state.send_status()?;
-            }
-            ActuatorMessage::Load(value) if state.status != ActuatorStatus::Tuning => {
+            ActuatorMessage::Load(value) => {
                 state.status = ActuatorStatus::Loading { target: value };
 
                 let settings = &state.config.pid_settings;
@@ -343,7 +284,7 @@ impl Actor for Actuator {
 
                 state.send_status()?;
             }
-            ActuatorMessage::Keep(value) if state.status != ActuatorStatus::Tuning => {
+            ActuatorMessage::Keep(value) => {
                 state.status = ActuatorStatus::Keeping { target: value };
 
                 let target = (value as f64).clamp(state.config.min_load, state.config.max_load);
@@ -353,8 +294,10 @@ impl Actor for Actuator {
 
                 state.send_status()?;
             }
-            ActuatorMessage::Move(direction) if state.status != ActuatorStatus::Tuning => {
-                mux.send_message(MuxMessage::Write(Packet::ActuatorMove { direction }))?;
+            ActuatorMessage::Move(direction) => {
+                state.controller.send_message(ControllerMessage::Forward(
+                    Packet::ActuatorMove { direction },
+                ))?;
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
             ActuatorMessage::ReloadSettings => {
@@ -363,7 +306,6 @@ impl Actor for Actuator {
                 state.config.reload()?;
                 state.apply_config();
             }
-            _ => {}
         }
 
         Ok(())

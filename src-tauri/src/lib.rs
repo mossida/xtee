@@ -4,12 +4,10 @@ use setup::setup_app;
 mod cmd;
 mod components;
 mod error;
-mod filter;
 mod protocol;
 mod router;
 mod setup;
 mod store;
-mod tuner;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

@@ -1,7 +1,6 @@
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
-use futures::{future, StreamExt};
-use ractor::ActorRef;
+use futures::{future, SinkExt, StreamExt};
 use serde::Serialize;
 use tokio_serial::SerialStream;
 use tokio_util::{
@@ -11,7 +10,7 @@ use tokio_util::{
 use tracing::{error, info, trace};
 
 use crate::{
-    components::mux::{MuxMessage, MuxSink, MuxStream},
+    components::mux::{MuxSink, MuxStream},
     error::Error,
 };
 
@@ -63,28 +62,21 @@ pub struct Protocol {
 
 impl Protocol {
     #[inline]
-    fn transform(self, mux: ActorRef<MuxMessage>) -> (MuxSink, MuxStream) {
+    async fn transform(self) -> Result<(MuxSink, MuxStream), Error> {
         let codec = Codec::new();
-        let (framed_sink, framed_stream) = codec.framed(self.stream).split();
+        let (mut framed_sink, framed_stream) = codec.framed(self.stream).split();
 
-        let mux = mux.clone();
-        let stream = framed_stream
-            .filter_map(|r| future::ready(r.ok()))
-            .then(move |packet| {
-                trace!("Received packet: {:?}", packet);
-                let mux = mux.clone();
-                async move {
-                    if matches!(packet, Packet::Ready) {
-                        info!("Sending acknowledgement");
-                        mux.send_message(MuxMessage::Write(Packet::Ready))
-                            .map_err(|e| error!("Failed to send acknowledgement: {:?}", e))
-                            .ok();
-                    }
-                    packet
-                }
-            });
+        // Wait for the Ready packet
+        let mut stream = framed_stream.filter_map(|r| future::ready(r.ok()));
+        while let Some(packet) = stream.next().await {
+            if matches!(packet, Packet::Ready) {
+                info!("Received Ready packet, sending acknowledgement");
+                framed_sink.send(Packet::Ready).await?;
+                break;
+            }
+        }
 
-        (framed_sink, stream.boxed())
+        Ok((framed_sink, stream.boxed()))
     }
 
     #[inline]
@@ -93,8 +85,8 @@ impl Protocol {
     }
 
     #[inline]
-    pub fn framed(self, mux: ActorRef<MuxMessage>) -> (MuxSink, MuxStream) {
-        Self::transform(self, mux)
+    pub async fn framed(self) -> Result<(MuxSink, MuxStream), Error> {
+        self.transform().await
     }
 }
 

@@ -2,10 +2,9 @@ use rspc::{Config, Router};
 use tauri::AppHandle;
 
 use crate::cmd::{
-    actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
-    actuator_tune, events, get_controllers, get_groups, get_ports, kill_controller,
-    motor_get_max_speed, motor_keep, motor_reload_settings, motor_set_outputs, motor_spin,
-    motor_stop, spawn_controller,
+    actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop, events,
+    get_controllers, get_groups, get_ports, kill_controller, motor_get_max_speed, motor_keep,
+    motor_reload_settings, motor_set_outputs, motor_spin, motor_stop, spawn_controller,
 };
 
 pub struct RouterContext {
@@ -32,7 +31,6 @@ pub fn router() -> Router<RouterContext> {
         .mutation("actuator/stop", |t| t(actuator_stop))
         .mutation("actuator/load", |t| t(actuator_load))
         .mutation("actuator/keep", |t| t(actuator_keep))
-        .mutation("actuator/tune", |t| t(actuator_tune))
         .mutation("actuator/reload/settings", |t| t(actuator_reload_settings))
         .build()
 }
