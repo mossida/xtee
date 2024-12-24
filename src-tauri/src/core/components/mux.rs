@@ -4,7 +4,7 @@ use futures::{stream::SplitSink, SinkExt, Stream};
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
-use crate::protocol::{Codec, Packet, Protocol};
+use crate::core::protocol::{Codec, Packet, Protocol};
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::Framed;
 use tracing::{debug, error};

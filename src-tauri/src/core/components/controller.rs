@@ -6,10 +6,10 @@ use specta::Type;
 use tracing::{error, warn};
 
 use crate::{
-    components::{motor::Motor, SpawnArgs},
-    error::Error,
-    protocol::Packet,
-    store::Store,
+    core::components::{motor::Motor, SpawnArgs},
+    core::protocol::Packet,
+    core::store::Store,
+    utils::error::Error,
 };
 
 use super::{

@@ -1,8 +1,8 @@
 use ractor::Actor;
 
 use crate::{
-    components::master::Master,
-    router::{router, RouterContext},
+    api::router::{router, RouterContext},
+    core::components::master::Master,
 };
 
 #[cfg(not(debug_assertions))]

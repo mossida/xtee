@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::{
-    components::{
+    api::router::RouterContext,
+    core::components::{
         actuator::ActuatorMessage,
         controller::{Controller, ControllerChild, ControllerGroup},
         master::{Event, MasterMessage},
         motor::{MotorMessage, MotorMovement},
     },
-    router::RouterContext,
 };
 
 pub fn events(_ctx: RouterContext, _: ()) -> Event {

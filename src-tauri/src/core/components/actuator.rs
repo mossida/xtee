@@ -9,10 +9,10 @@ use tokio::task::JoinHandle;
 use tracing::{debug, info};
 
 use crate::{
-    components::master::Event,
-    error::Error,
-    protocol::Packet,
-    store::{PIDSettings, Store, StoreKey},
+    core::components::master::Event,
+    core::protocol::Packet,
+    core::store::{PIDSettings, Store, StoreKey},
+    utils::error::Error,
 };
 
 use super::{controller::ControllerMessage, master::MasterMessage, Component, Handler, SpawnArgs};

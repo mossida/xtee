@@ -10,10 +10,10 @@ use specta::Type;
 use tracing::debug;
 
 use crate::{
-    components::{controller::ControllerMessage, master::Event},
-    error::Error,
-    protocol::Packet,
-    store::{MotorsLimits, Store, StoreKey},
+    core::components::{controller::ControllerMessage, master::Event},
+    core::protocol::Packet,
+    core::store::{MotorsLimits, Store, StoreKey},
+    utils::error::Error,
 };
 
 use super::{master::MasterMessage, Component, Handler, SpawnArgs};

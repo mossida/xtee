@@ -6,7 +6,7 @@ use specta::Type;
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Error, StoreExt};
 
-use crate::components::controller::Controller;
+use crate::core::components::controller::Controller;
 
 pub type Store = tauri_plugin_store::Store<Wry>;
 

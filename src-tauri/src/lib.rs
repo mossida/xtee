@@ -1,12 +1,9 @@
 use setup::setup_app;
 
-mod cmd;
-mod components;
-mod error;
-mod protocol;
-mod router;
+mod api;
+mod core;
 mod setup;
-mod store;
+mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

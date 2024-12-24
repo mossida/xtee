@@ -2,13 +2,13 @@ use ractor::ActorRef;
 use rspc::{Config, Router};
 
 use crate::{
-    cmd::{
+    api::cmd::{
         actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
         events, get_controllers, get_groups, get_ports, kill_controller, motor_get_max_speed,
         motor_keep, motor_reload_settings, motor_set_outputs, motor_spin, motor_stop,
         spawn_controller,
     },
-    components::master::MasterMessage,
+    core::components::master::MasterMessage,
 };
 
 pub struct RouterContext {

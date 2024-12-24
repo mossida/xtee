@@ -8,7 +8,7 @@ use specta::Type;
 use tauri::{AppHandle, Emitter};
 use tracing::{error, warn};
 
-use crate::store::{store, Store, StoreKey};
+use crate::core::store::{store, Store, StoreKey};
 
 use super::{
     actuator::ActuatorStatus,

@@ -10,8 +10,8 @@ use tokio_util::{
 use tracing::{error, info, trace};
 
 use crate::{
-    components::mux::{MuxSink, MuxStream},
-    error::Error,
+    core::components::mux::{MuxSink, MuxStream},
+    utils::error::Error,
 };
 
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
