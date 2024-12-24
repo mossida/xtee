@@ -9,7 +9,6 @@ use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::Framed;
 use tracing::{debug, error};
 
-// Use static dispatch for better performance
 pub type MuxSink = SplitSink<Framed<SerialStream, Codec>, Packet>;
 pub type MuxStream = Pin<Box<dyn Stream<Item = Packet> + Send + 'static>>;
 pub type MuxTarget = Box<dyn Target<MuxStream>>;
@@ -32,8 +31,6 @@ pub struct MuxArguments {
     pub targets: Vec<MuxTarget>,
 }
 
-// Optimize MuxCallback with static dispatch
-#[derive(Debug, Default)]
 pub struct MuxCallback;
 
 impl StreamMuxNotification for MuxCallback {
