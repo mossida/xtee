@@ -106,15 +106,15 @@ pub struct ControllerState {
 impl ControllerState {
     pub async fn spawn_children(
         &self,
-        controller: &Controller,
-        reference: ActorRef<ControllerMessage>,
+        actor: ActorRef<ControllerMessage>,
+        controller: Controller,
     ) -> Result<ActorRef<MuxMessage>, ActorProcessingErr> {
-        let children = Vec::<ControllerChild>::from(controller.group.clone());
+        let children = Vec::<ControllerChild>::from(controller.group);
 
         let children = futures::future::try_join_all(
             children
                 .into_iter()
-                .map(|child| child.spawn(reference.clone(), self.store.clone())),
+                .map(|child| child.spawn(actor.clone(), self.store.clone())),
         )
         .await?;
 
@@ -123,8 +123,12 @@ impl ControllerState {
         let (mux, _) = Actor::spawn_linked(
             Some(name),
             Mux,
-            MuxArguments::try_from((controller.clone(), children))?,
-            reference.get_cell(),
+            MuxArguments {
+                port: controller.serial_port,
+                baud_rate: controller.baud_rate,
+                targets: children,
+            },
+            actor.get_cell(),
         )
         .await?;
 
@@ -170,7 +174,7 @@ impl Actor for Controller {
                 myself.stop_children(None);
 
                 let master = myself.try_get_supervisor().ok_or(Error::Config)?;
-                let mux = state.spawn_children(self, myself).await?;
+                let mux = state.spawn_children(myself, self.clone()).await?;
 
                 master.send_message(MasterMessage::Event(Event::ControllerStatus {
                     controller: self.clone(),
