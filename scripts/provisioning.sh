@@ -130,20 +130,31 @@ chown "$USERNAME:$USERNAME" "$USER_PROFILE" ||
 chmod 644 "$USER_PROFILE" ||
     error "Failed to set permissions on $USER_PROFILE"
 
-# Create startup script directory
-STARTUP_DIR="/home/${USERNAME}/.local/bin"
-mkdir -p "$STARTUP_DIR" ||
-    error "Failed to create startup script directory"
-
-# Create the startup script
-cat > "${STARTUP_DIR}/start-labwc.sh" << 'EOL'
-#!/bin/bash
-exec labwc -s "${HOME}/.xtee/bin/xtee"
-EOL
-
-# Make the startup script executable
-chmod +x "${STARTUP_DIR}/start-labwc.sh" ||
-    error "Failed to make startup script executable"
+# Check for DietPi-specific autostart configuration
+if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autostart" ]]; then
+    log "Configuring DietPi autostart..."
+    
+    # Configure DietPi autostart to custom script (option 17)
+    /boot/dietpi/dietpi-autostart 17 ||
+        error "Failed to configure dietpi-autostart"
+    
+    # Create custom.sh with our startup script content
+    DIETPI_CUSTOM_SCRIPT="/var/lib/dietpi/dietpi-autostart/custom.sh"
+    
+    # Completely replace the content of custom.sh with our script
+    echo '#!/bin/bash' > "$DIETPI_CUSTOM_SCRIPT" ||
+        error "Failed to write to DietPi custom script"
+    echo 'exec labwc -s "${HOME}/.xtee/bin/xtee"' >> "$DIETPI_CUSTOM_SCRIPT" ||
+        error "Failed to write to DietPi custom script"
+    
+    # Set proper permissions
+    chmod 755 "$DIETPI_CUSTOM_SCRIPT" ||
+        error "Failed to set permissions on DietPi custom script"
+    
+    log_success "DietPi autostart configured successfully"
+else
+    log_warning "dietpi-autostart not found - skipping DietPi-specific configuration"
+fi
 
 # Update package list and install dependencies
 log "Installing dependencies..."
