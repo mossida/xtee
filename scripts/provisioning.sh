@@ -137,9 +137,14 @@ if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autost
     # Configure DietPi autostart to custom script (option 17)
     /boot/dietpi/dietpi-autostart 17 ||
         error "Failed to configure dietpi-autostart"
+
+    G_CONFIG_INJECT 'AUTO_SETUP_AUTOSTART_LOGIN_USER=' "AUTO_SETUP_AUTOSTART_LOGIN_USER=$USERNAME" /boot/dietpi.txt
     
     # Create custom.sh with our startup script content
     DIETPI_CUSTOM_SCRIPT="/var/lib/dietpi/dietpi-autostart/custom.sh"
+
+    mkdir -p "$(dirname "$DIETPI_CUSTOM_SCRIPT")" ||
+        error "Failed to create directory for DietPi custom script"
     
     # Completely replace the content of custom.sh with our script
     echo '#!/bin/bash' > "$DIETPI_CUSTOM_SCRIPT" ||
