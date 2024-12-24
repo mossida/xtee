@@ -10,7 +10,8 @@
 # 6. Checks if required commands are available on the system.
 # 7. Downloads and installs the xtee application binary to the specified directory.
 # 8. Ensures proper permissions and ownership for the installed files.
-# 9. Provides error handling and logging throughout the script execution.
+# 9. Sets up required environment variables for the application.
+# 10. Provides error handling and logging throughout the script execution.
 
 # Exit on error, undefined variables, and pipe failures
 set -euo pipefail
@@ -96,6 +97,53 @@ for group in sudo video input audio dialout render tty; do
 done
 
 log_success "User setup completed successfully"
+
+# Set up environment variables
+USER_PROFILE="/home/${USERNAME}/.profile"
+
+# Define environment variables to be added
+declare -A ENV_VARS=(
+    ["WEBKIT_DISABLE_DMABUF_RENDERER"]="1"
+    ["GDK_BACKEND"]="wayland"
+)
+
+# Add environment variable to .profile
+if [[ ! -f "$USER_PROFILE" ]]; then
+    touch "$USER_PROFILE" ||
+        error "Failed to create $USER_PROFILE"
+fi
+
+# Add environment variables if they're not already there
+for key in "${!ENV_VARS[@]}"; do
+    if ! grep -q "$key=" "$USER_PROFILE"; then
+        echo "export $key=${ENV_VARS[$key]}" >> "$USER_PROFILE" ||
+            error "Failed to add $key to $USER_PROFILE"
+        log_success "Added $key=${ENV_VARS[$key]} to $USER_PROFILE"
+    else
+        log_warning "$key already exists in $USER_PROFILE"
+    fi
+done
+
+# Fix ownership of the config file
+chown "$USERNAME:$USERNAME" "$USER_PROFILE" ||
+    error "Failed to set ownership of $USER_PROFILE"
+chmod 644 "$USER_PROFILE" ||
+    error "Failed to set permissions on $USER_PROFILE"
+
+# Create startup script directory
+STARTUP_DIR="/home/${USERNAME}/.local/bin"
+mkdir -p "$STARTUP_DIR" ||
+    error "Failed to create startup script directory"
+
+# Create the startup script
+cat > "${STARTUP_DIR}/start-labwc.sh" << 'EOL'
+#!/bin/bash
+exec labwc -s "${HOME}/.xtee/bin/xtee"
+EOL
+
+# Make the startup script executable
+chmod +x "${STARTUP_DIR}/start-labwc.sh" ||
+    error "Failed to make startup script executable"
 
 # Update package list and install dependencies
 log "Installing dependencies..."
