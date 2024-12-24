@@ -137,15 +137,26 @@ if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autost
     # Configure DietPi autostart to custom script (option 17)
     /boot/dietpi/dietpi-autostart 17 ||
         error "Failed to configure dietpi-autostart"
-
-    # Load DietPi globals
-    . /boot/dietpi/func/dietpi-globals
-
-    G_CONFIG_INJECT 'AUTO_SETUP_AUTOSTART_LOGIN_USER=' "AUTO_SETUP_AUTOSTART_LOGIN_USER=$USERNAME" /boot/dietpi.txt
+    
+    # Update DietPi autostart user configuration
+    DIETPI_CONF="/boot/dietpi.txt"
+    if [[ -f "$DIETPI_CONF" ]]; then
+        # Replace existing AUTO_SETUP_AUTOSTART_LOGIN_USER value or add if not present
+        if grep -q '^AUTO_SETUP_AUTOSTART_LOGIN_USER=' "$DIETPI_CONF"; then
+            sed -i "s/^AUTO_SETUP_AUTOSTART_LOGIN_USER=.*/AUTO_SETUP_AUTOSTART_LOGIN_USER=$USERNAME/" "$DIETPI_CONF" ||
+                error "Failed to update DietPi autostart user configuration"
+        else
+            echo "AUTO_SETUP_AUTOSTART_LOGIN_USER=$USERNAME" >> "$DIETPI_CONF" ||
+                error "Failed to add DietPi autostart user configuration"
+        fi
+        log_success "Updated DietPi autostart user configuration"
+    else
+        error "DietPi configuration file not found at $DIETPI_CONF"
+    fi
     
     # Create custom.sh with our startup script content
     DIETPI_CUSTOM_SCRIPT="/var/lib/dietpi/dietpi-autostart/custom.sh"
-
+    
     mkdir -p "$(dirname "$DIETPI_CUSTOM_SCRIPT")" ||
         error "Failed to create directory for DietPi custom script"
     
