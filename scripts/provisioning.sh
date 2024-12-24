@@ -138,6 +138,9 @@ if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autost
     /boot/dietpi/dietpi-autostart 17 ||
         error "Failed to configure dietpi-autostart"
 
+    # Load DietPi globals
+    . /boot/dietpi/func/dietpi-globals
+
     G_CONFIG_INJECT 'AUTO_SETUP_AUTOSTART_LOGIN_USER=' "AUTO_SETUP_AUTOSTART_LOGIN_USER=$USERNAME" /boot/dietpi.txt
     
     # Create custom.sh with our startup script content
