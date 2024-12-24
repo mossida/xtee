@@ -5,19 +5,15 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tracing::{error, warn};
 
-use crate::{
-    core::components::{motor::Motor, SpawnArgs},
-    core::protocol::Packet,
-    core::store::Store,
-    utils::error::Error,
+use crate::{core::store::Store, utils::error::Error};
+
+use crate::core::components::{
+    master::{Event, MasterMessage},
+    mux::MuxMessage,
 };
 
-use super::{
-    actuator::Actuator,
-    master::{Event, MasterMessage},
-    mux::{Mux, MuxArguments, MuxMessage, MuxTarget},
-    Component,
-};
+use super::messages::{ControllerGroup, ControllerMessage, ControllerStatus};
+use super::state::ControllerState;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct Controller {
@@ -25,115 +21,6 @@ pub struct Controller {
     pub group: ControllerGroup,
     pub serial_port: String,
     pub baud_rate: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(tag = "type", content = "data")]
-#[serde(rename_all = "kebab-case")]
-pub enum ControllerStatus {
-    Connected,
-    Disconnected,
-    Failed { reason: String },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Type)]
-#[serde(rename_all = "kebab-case")]
-pub enum ControllerGroup {
-    Default,
-    Motors,
-}
-
-impl From<ControllerGroup> for String {
-    fn from(val: ControllerGroup) -> Self {
-        match val {
-            ControllerGroup::Default => "default".to_owned(),
-            ControllerGroup::Motors => "motors".to_owned(),
-        }
-    }
-}
-
-impl From<ControllerGroup> for Vec<ControllerChild> {
-    fn from(val: ControllerGroup) -> Self {
-        match val {
-            ControllerGroup::Default => vec![ControllerChild::Actuator(Actuator)],
-            ControllerGroup::Motors => vec![
-                ControllerChild::Motor(Motor { slave: 1 }),
-                ControllerChild::Motor(Motor { slave: 2 }),
-            ],
-        }
-    }
-}
-
-pub enum ControllerChild {
-    Motor(Motor),
-    Actuator(Actuator),
-}
-
-impl ControllerChild {
-    async fn spawn(
-        self,
-        controller: ActorRef<ControllerMessage>,
-        store: Arc<Store>,
-    ) -> Result<MuxTarget, ActorProcessingErr> {
-        let handler = match self {
-            ControllerChild::Motor(component) => {
-                let handler = component.spawn(SpawnArgs { controller, store }).await?;
-
-                Box::new(handler) as MuxTarget
-            }
-            ControllerChild::Actuator(component) => {
-                let handler = component.spawn(SpawnArgs { controller, store }).await?;
-
-                Box::new(handler) as MuxTarget
-            }
-        };
-
-        Ok(handler)
-    }
-}
-
-pub enum ControllerMessage {
-    Connect,
-    Forward(Packet),
-}
-
-pub struct ControllerState {
-    mux: Option<ActorRef<MuxMessage>>,
-    store: Arc<Store>,
-    restart_count: u32,
-}
-
-impl ControllerState {
-    pub async fn spawn_children(
-        &self,
-        actor: ActorRef<ControllerMessage>,
-        controller: Controller,
-    ) -> Result<ActorRef<MuxMessage>, ActorProcessingErr> {
-        let children = Vec::<ControllerChild>::from(controller.group);
-
-        let children = futures::future::try_join_all(
-            children
-                .into_iter()
-                .map(|child| child.spawn(actor.clone(), self.store.clone())),
-        )
-        .await?;
-
-        let name = format!("mux-{}", controller.id);
-
-        let (mux, _) = Actor::spawn_linked(
-            Some(name),
-            Mux,
-            MuxArguments {
-                port: controller.serial_port,
-                baud_rate: controller.baud_rate,
-                targets: children,
-            },
-            actor.get_cell(),
-        )
-        .await?;
-
-        Ok(mux)
-    }
 }
 
 #[async_trait]
