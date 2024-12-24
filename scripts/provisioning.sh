@@ -209,3 +209,5 @@ fi
 
 log_success "Installation completed successfully"
 log_success "XTEE has been installed to: $EXEC_FILE"
+
+reboot
