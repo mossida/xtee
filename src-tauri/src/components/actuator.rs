@@ -15,55 +15,45 @@ use crate::{
     store::{PIDSettings, Store, StoreKey},
 };
 
-use super::{controller::ControllerMessage, master::MasterMessage, Component, Handler};
+use super::{controller::ControllerMessage, master::MasterMessage, Component, Handler, SpawnArgs};
 
 pub struct Actuator;
 
-pub struct ActuatorArguments {
+pub struct ActuatorConfig {
     pub precision: f64,
     pub scale_gain: f64,
     pub scale_offset: f64,
     pub pid_settings: PIDSettings,
     pub max_load: f64,
     pub min_load: f64,
-    store: Arc<Store>,
 }
 
-impl ActuatorArguments {
-    pub fn reload(&mut self) -> Result<(), Error> {
-        *self = Self::try_from(self.store.clone())?;
-
-        Ok(())
-    }
-}
-
-impl TryFrom<Arc<Store>> for ActuatorArguments {
+impl TryFrom<Arc<Store>> for ActuatorConfig {
     type Error = Error;
 
-    fn try_from(value: Arc<Store>) -> Result<Self, Self::Error> {
-        let pid_settings = value
+    fn try_from(store: Arc<Store>) -> Result<Self, Self::Error> {
+        let pid_settings = store
             .get(StoreKey::ActuatorPidSettings)
             .ok_or(Error::Config)?;
 
         let settings: PIDSettings = serde_json::from_value(pid_settings)?;
 
-        let scale_gain = value.get(StoreKey::ScaleGain).ok_or(Error::Config)?;
-        let scale_offset = value.get(StoreKey::ScaleOffset).ok_or(Error::Config)?;
+        let scale_gain = store.get(StoreKey::ScaleGain).ok_or(Error::Config)?;
+        let scale_offset = store.get(StoreKey::ScaleOffset).ok_or(Error::Config)?;
 
-        let max_load = value.get(StoreKey::ActuatorMaxLoad).ok_or(Error::Config)?;
-        let min_load = value.get(StoreKey::ActuatorMinLoad).ok_or(Error::Config)?;
-        let precision = value
+        let max_load = store.get(StoreKey::ActuatorMaxLoad).ok_or(Error::Config)?;
+        let min_load = store.get(StoreKey::ActuatorMinLoad).ok_or(Error::Config)?;
+        let precision = store
             .get(StoreKey::ActuatorPrecision)
             .ok_or(Error::Config)?;
 
-        Ok(ActuatorArguments {
+        Ok(Self {
             precision: precision.as_f64().ok_or(Error::InvalidStore)?,
             scale_gain: scale_gain.as_f64().ok_or(Error::InvalidStore)?,
             max_load: max_load.as_f64().ok_or(Error::InvalidStore)?,
             min_load: min_load.as_f64().ok_or(Error::InvalidStore)?,
             scale_offset: scale_offset.as_f64().ok_or(Error::InvalidStore)?,
             pid_settings: settings,
-            store: value,
         })
     }
 }
@@ -94,10 +84,11 @@ impl From<Packet> for ActuatorMessage {
 
 pub struct ActuatorState {
     pid: Pid,
+    store: Arc<Store>,
     master: ActorRef<MasterMessage>,
     controller: ActorRef<ControllerMessage>,
     status: ActuatorStatus,
-    config: ActuatorArguments,
+    config: ActuatorConfig,
     current_step: Option<JoinHandle<Result<(), MessagingErr<ControllerMessage>>>>,
     current_offset: Option<f64>,
 }
@@ -215,18 +206,10 @@ impl ActuatorState {
 }
 
 impl Component for Actuator {
-    async fn spawn(
-        self,
-        controller: &ActorRef<ControllerMessage>,
-        args: Arc<Store>,
-    ) -> Result<Handler<ActuatorMessage>, ActorProcessingErr> {
-        let (actuator, _) = Actuator::spawn_linked(
-            Some("actuator".to_owned()),
-            self,
-            ActuatorArguments::try_from(args)?,
-            controller.get_cell(),
-        )
-        .await?;
+    async fn spawn(self, args: SpawnArgs) -> Result<Handler<ActuatorMessage>, ActorProcessingErr> {
+        let cell = args.controller.get_cell();
+        let (actuator, _) =
+            Actuator::spawn_linked(Some("actuator".to_owned()), self, args, cell).await?;
 
         Ok(Handler { cell: actuator })
     }
@@ -236,22 +219,24 @@ impl Component for Actuator {
 impl Actor for Actuator {
     type Msg = ActuatorMessage;
     type State = ActuatorState;
-    type Arguments = ActuatorArguments;
+    type Arguments = SpawnArgs;
 
     async fn pre_start(
         &self,
-        myself: ActorRef<Self::Msg>,
-        config: Self::Arguments,
+        _myself: ActorRef<Self::Msg>,
+        SpawnArgs { store, controller }: SpawnArgs,
     ) -> Result<Self::State, ActorProcessingErr> {
         let pid = Pid::new(0.0, 0.0, 0.0, 0.0);
-
-        let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
-        let master = controller.try_get_supervisor().ok_or(Error::Config)?;
+        let config = ActuatorConfig::try_from(store.clone())?;
+        let master = controller
+            .try_get_supervisor()
+            .ok_or(Error::MissingAncestor)?;
 
         Ok(ActuatorState {
             pid,
+            store,
             master: master.into(),
-            controller: controller.into(),
+            controller,
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),
@@ -322,7 +307,7 @@ impl Actor for Actuator {
             ActuatorMessage::ReloadSettings => {
                 debug!("Reloading settings");
 
-                state.config.reload()?;
+                state.config = ActuatorConfig::try_from(state.store.clone())?;
                 state.apply_config();
             }
         }

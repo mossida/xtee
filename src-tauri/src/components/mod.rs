@@ -32,10 +32,11 @@ impl<T: Message + From<Packet>> Target<MuxStream> for Handler<T> {
     }
 }
 
+pub struct SpawnArgs {
+    store: Arc<Store>,
+    controller: ActorRef<ControllerMessage>,
+}
+
 trait Component: Actor<Msg: From<Packet>> {
-    async fn spawn(
-        self,
-        controller: &ActorRef<ControllerMessage>,
-        args: Arc<Store>,
-    ) -> Result<Handler<Self::Msg>, ActorProcessingErr>;
+    async fn spawn(self, args: SpawnArgs) -> Result<Handler<Self::Msg>, ActorProcessingErr>;
 }

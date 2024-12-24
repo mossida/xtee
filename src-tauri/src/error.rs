@@ -3,6 +3,8 @@
 pub enum Error {
     #[error("Config error")]
     Config,
+    #[error("Ancestor missing")]
+    MissingAncestor,
     #[error("Invalid store")]
     InvalidStore,
     #[error("Missing mux")]

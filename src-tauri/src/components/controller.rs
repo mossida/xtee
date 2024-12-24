@@ -5,7 +5,12 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tracing::{error, warn};
 
-use crate::{components::motor::Motor, error::Error, protocol::Packet, store::Store};
+use crate::{
+    components::{motor::Motor, SpawnArgs},
+    error::Error,
+    protocol::Packet,
+    store::Store,
+};
 
 use super::{
     actuator::Actuator,
@@ -67,15 +72,19 @@ pub enum ControllerChild {
 impl ControllerChild {
     async fn spawn(
         self,
-        controller: &ActorRef<ControllerMessage>,
-        args: Arc<Store>,
+        controller: ActorRef<ControllerMessage>,
+        store: Arc<Store>,
     ) -> Result<MuxTarget, ActorProcessingErr> {
         let handler = match self {
             ControllerChild::Motor(component) => {
-                Box::new(component.spawn(controller, args).await?) as MuxTarget
+                let handler = component.spawn(SpawnArgs { controller, store }).await?;
+
+                Box::new(handler) as MuxTarget
             }
             ControllerChild::Actuator(component) => {
-                Box::new(component.spawn(controller, args).await?) as MuxTarget
+                let handler = component.spawn(SpawnArgs { controller, store }).await?;
+
+                Box::new(handler) as MuxTarget
             }
         };
 
@@ -98,16 +107,19 @@ impl ControllerState {
     pub async fn spawn_children(
         &self,
         controller: &Controller,
-        reference: &ActorRef<ControllerMessage>,
+        reference: ActorRef<ControllerMessage>,
     ) -> Result<ActorRef<MuxMessage>, ActorProcessingErr> {
+        let children = Vec::<ControllerChild>::from(controller.group.clone());
+
         let children = futures::future::try_join_all(
-            Vec::<ControllerChild>::from(controller.group.clone())
+            children
                 .into_iter()
-                .map(|child| child.spawn(reference, self.store.clone())),
+                .map(|child| child.spawn(reference.clone(), self.store.clone())),
         )
         .await?;
 
         let name = format!("mux-{}", controller.id);
+
         let (mux, _) = Actor::spawn_linked(
             Some(name),
             Mux,
@@ -157,8 +169,8 @@ impl Actor for Controller {
             ControllerMessage::Connect => {
                 myself.stop_children(None);
 
-                let mux = state.spawn_children(self, &myself).await?;
                 let master = myself.try_get_supervisor().ok_or(Error::Config)?;
+                let mux = state.spawn_children(self, myself).await?;
 
                 master.send_message(MasterMessage::Event(Event::ControllerStatus {
                     controller: self.clone(),

@@ -16,7 +16,7 @@ use crate::{
     store::{MotorsLimits, Store, StoreKey},
 };
 
-use super::{master::MasterMessage, Component, Handler};
+use super::{master::MasterMessage, Component, Handler, SpawnArgs};
 
 pub struct Motor {
     pub slave: u8,
@@ -38,7 +38,6 @@ impl MotorMovement {
 
 #[derive(Debug)]
 pub enum MotorMessage {
-    StartUpdates,
     Keep(MotorMovement),
     Spin(MotorMovement),
 
@@ -70,10 +69,11 @@ pub enum MotorStatus {
 pub struct MotorState {
     status: MotorStatus,
     max_speed: u32,
-    config: MotorArguments,
+    config: MotorsLimits,
     updates_handle: Option<JoinHandle<()>>,
     master: ActorRef<MasterMessage>,
     controller: ActorRef<ControllerMessage>,
+    store: Arc<Store>,
 }
 
 impl MotorState {
@@ -82,7 +82,7 @@ impl MotorState {
         slave: u8,
         movement: &mut MotorMovement,
     ) -> Result<(), ActorProcessingErr> {
-        movement.clamp(&self.config.limits);
+        movement.clamp(&self.config);
 
         self.controller
             .send_message(ControllerMessage::Forward(Packet::MotorSetOutputs {
@@ -100,7 +100,7 @@ impl MotorState {
         self.controller
             .send_message(ControllerMessage::Forward(Packet::MotorSetAcceleration {
                 slave,
-                acceleration: self.config.limits.acceleration,
+                acceleration: self.config.acceleration,
             }))?;
 
         self.controller
@@ -117,7 +117,7 @@ impl MotorState {
         slave: u8,
         movement: &mut MotorMovement,
     ) -> Result<(), ActorProcessingErr> {
-        movement.clamp(&self.config.limits);
+        movement.clamp(&self.config);
 
         // To be sure we make X rotations, we need to stop the motor first and reset the position
         self.controller
@@ -144,7 +144,7 @@ impl MotorState {
         self.controller
             .send_message(ControllerMessage::Forward(Packet::MotorSetAcceleration {
                 slave,
-                acceleration: self.config.limits.acceleration,
+                acceleration: self.config.acceleration,
             }))?;
 
         self.controller
@@ -158,45 +158,23 @@ impl MotorState {
     }
 }
 
-pub struct MotorArguments {
-    pub limits: MotorsLimits,
-    store: Arc<Store>,
-}
-
-impl MotorArguments {
-    pub fn reload(&mut self) -> Result<(), Error> {
-        *self = Self::try_from(self.store.clone())?;
-
-        Ok(())
-    }
-}
-
-impl TryFrom<Arc<Store>> for MotorArguments {
+impl TryFrom<Arc<Store>> for MotorsLimits {
     type Error = Error;
 
     fn try_from(store: Arc<Store>) -> Result<Self, Error> {
         let limits_value = store.get(StoreKey::MotorsLimits).ok_or(Error::Config)?;
         let limits: MotorsLimits = serde_json::from_value(limits_value)?;
 
-        Ok(Self { limits, store })
+        Ok(limits)
     }
 }
 
 impl Component for Motor {
-    async fn spawn(
-        self,
-        controller: &ActorRef<ControllerMessage>,
-        args: Arc<Store>,
-    ) -> Result<Handler<MotorMessage>, ActorProcessingErr> {
+    async fn spawn(self, args: SpawnArgs) -> Result<Handler<MotorMessage>, ActorProcessingErr> {
         let name = format!("motor-{}", self.slave);
+        let controller = args.controller.get_cell();
 
-        let (cell, _) = Motor::spawn_linked(
-            Some(name),
-            self,
-            MotorArguments::try_from(args)?,
-            controller.get_cell(),
-        )
-        .await?;
+        let (cell, _) = Motor::spawn_linked(Some(name), self, args, controller).await?;
 
         Ok(Handler { cell })
     }
@@ -206,14 +184,14 @@ impl Component for Motor {
 impl Actor for Motor {
     type Msg = MotorMessage;
     type State = MotorState;
-    type Arguments = MotorArguments;
+    type Arguments = SpawnArgs;
 
     async fn pre_start(
         &self,
-        myself: ActorRef<Self::Msg>,
-        config: Self::Arguments,
+        _myself: ActorRef<Self::Msg>,
+        SpawnArgs { store, controller }: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let controller = myself.try_get_supervisor().ok_or(Error::Config)?;
+        let config = MotorsLimits::try_from(store.clone())?;
         let master = controller.try_get_supervisor().ok_or(Error::Config)?;
 
         Ok(MotorState {
@@ -221,17 +199,25 @@ impl Actor for Motor {
             max_speed: 0,
             config,
             updates_handle: None,
-            controller: controller.into(),
+            controller,
             master: master.into(),
+            store,
         })
     }
 
     async fn post_start(
         &self,
-        myself: ActorRef<Self::Msg>,
-        _state: &mut Self::State,
+        _myself: ActorRef<Self::Msg>,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        myself.send_message(MotorMessage::StartUpdates)?;
+        let slave = self.slave;
+        state.updates_handle = Some(
+            state
+                .controller
+                .send_interval(Duration::from_millis(500), move || {
+                    ControllerMessage::Forward(Packet::MotorAskStatus { slave })
+                }),
+        );
 
         Ok(())
     }
@@ -245,15 +231,6 @@ impl Actor for Motor {
         let slave = self.slave;
 
         match msg {
-            MotorMessage::StartUpdates => {
-                state.updates_handle = Some(
-                    state
-                        .controller
-                        .send_interval(Duration::from_millis(500), move || {
-                            ControllerMessage::Forward(Packet::MotorAskStatus { slave })
-                        }),
-                );
-            }
             MotorMessage::GracefulStop => {
                 state
                     .controller
@@ -292,7 +269,7 @@ impl Actor for Motor {
                 reply.send(state.max_speed)?;
             }
             MotorMessage::ReloadSettings => {
-                state.config.reload()?;
+                state.config = MotorsLimits::try_from(state.store.clone())?;
             }
             MotorMessage::Packet(packet) => match packet {
                 Packet::MotorStatus {
