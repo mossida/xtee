@@ -89,7 +89,7 @@ else
 fi
 
 # Add user to required groups
-for group in sudo video input audio dialout tty; do
+for group in sudo video input audio dialout render tty; do
     usermod -aG "$group" "$USERNAME" ||
         error "Failed to add user to group '$group'"
     log_success "Added user to group: $group"
@@ -104,6 +104,7 @@ apt-get update || error "Failed to update package list"
 # Install dependencies with proper error handling
 DEPS=(
     "libwebkit2gtk-4.1-0"
+    "at-spi2-core"
     "seatd"
     "labwc"
 )
@@ -144,7 +145,3 @@ fi
 
 log_success "Installation completed successfully"
 log_success "XTEE has been installed to: $EXEC_FILE"
-
-
-
-
