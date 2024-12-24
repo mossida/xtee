@@ -8,6 +8,8 @@ use tauri_plugin_store::{Error, StoreExt};
 
 use crate::core::components::controller::Controller;
 
+use super::components::motor::MotorsLimits;
+
 pub type Store = tauri_plugin_store::Store<Wry>;
 
 #[derive(Serialize, Deserialize, Type)]
@@ -65,14 +67,6 @@ pub struct PIDSettings {
     pub proportional: f32,
     pub integral: f32,
     pub derivative: f32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MotorsLimits {
-    pub max_speed: u32,
-    pub max_rotations: u32,
-    pub acceleration: u32,
 }
 
 pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
