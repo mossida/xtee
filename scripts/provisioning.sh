@@ -48,11 +48,14 @@ PROJECT_REPO="xtee"
 PROJECT_OWNER="mossida"
 PROJECT_VERSION="latest"
 
+CURSORS_DIR="/usr/share/icons/Adwaita/cursors"
+
 INSTALL_DIR="/home/${USERNAME}/.local"
 BIN_DIR="${INSTALL_DIR}/bin"
 EXEC_FILE="${BIN_DIR}/xtee"
 
 DOWNLOAD_URI="https://github.com/${PROJECT_OWNER}/${PROJECT_REPO}/releases/${PROJECT_VERSION}/download/xtee"
+CURSOR_DOWNLOAD_URI="https://github.com/${PROJECT_OWNER}/${PROJECT_REPO}/raw/refs/heads/main/config/cursor/transparent"
 
 # Check if script is run as root
 if [[ $EUID -ne 0 ]]; then
@@ -200,6 +203,33 @@ for dep in "${DEPS[@]}"; do
         error "Failed to install $dep"
     log_success "Successfully installed: $dep"
 done
+
+# Download and replace cursor files
+log "Downloading and replacing cursor files..."
+# Create temporary directory for cursor download
+TMP_CURSOR_DIR=$(mktemp -d)
+
+# Download cursor files
+curl --fail --location --progress-bar --output "${TMP_CURSOR_DIR}/transparent" "$CURSOR_DOWNLOAD_URI" ||
+    error "Failed to download cursor from '$CURSOR_DOWNLOAD_URI'"
+
+# Ensure cursor directory exists
+if [[ ! -d "$CURSORS_DIR" ]]; then
+    mkdir -p "$CURSORS_DIR" ||
+        error "Failed to create cursor directory '$CURSORS_DIR'"
+fi
+
+# Replace specific cursor files
+for cursor in "left_ptr" "pointer"; do
+    cp "${TMP_CURSOR_DIR}/transparent" "${CURSORS_DIR}/${cursor}" ||
+        error "Failed to replace cursor file '${cursor}'"
+    chmod 644 "${CURSORS_DIR}/${cursor}" ||
+        error "Failed to set permissions for cursor '${cursor}'"
+done
+
+# Clean up temporary directory
+rm -rf "$TMP_CURSOR_DIR"
+log_success "Cursor files replaced successfully"
 
 # Create installation directory if it doesn't exist
 if [[ ! -d $BIN_DIR ]]; then
