@@ -48,7 +48,7 @@ PROJECT_REPO="xtee"
 PROJECT_OWNER="mossida"
 PROJECT_VERSION="latest"
 
-INSTALL_DIR="/home/${USERNAME}/.xtee"
+INSTALL_DIR="/home/${USERNAME}/.local"
 BIN_DIR="${INSTALL_DIR}/bin"
 EXEC_FILE="${BIN_DIR}/xtee"
 
@@ -134,10 +134,6 @@ chmod 644 "$USER_PROFILE" ||
 if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autostart" ]]; then
     log "Configuring DietPi autostart..."
     
-    # Configure DietPi autostart to custom script (option 17)
-    /boot/dietpi/dietpi-autostart 17 ||
-        error "Failed to configure dietpi-autostart"
-    
     # Update DietPi autostart user configuration
     DIETPI_CONF="/boot/dietpi.txt"
     if [[ -f "$DIETPI_CONF" ]]; then
@@ -153,6 +149,10 @@ if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autost
     else
         error "DietPi configuration file not found at $DIETPI_CONF"
     fi
+
+    # Configure DietPi autostart to custom script (option 17)
+    /boot/dietpi/dietpi-autostart 17 ||
+        error "Failed to configure dietpi-autostart"
     
     # Create custom.sh with our startup script content
     DIETPI_CUSTOM_SCRIPT="/var/lib/dietpi/dietpi-autostart/custom.sh"
@@ -161,10 +161,17 @@ if command -v dietpi-autostart &> /dev/null || [[ -f "/boot/dietpi/dietpi-autost
         error "Failed to create directory for DietPi custom script"
     
     # Completely replace the content of custom.sh with our script
-    echo '#!/bin/bash' > "$DIETPI_CUSTOM_SCRIPT" ||
-        error "Failed to write to DietPi custom script"
-    echo 'exec labwc -s "${HOME}/.xtee/bin/xtee"' >> "$DIETPI_CUSTOM_SCRIPT" ||
-        error "Failed to write to DietPi custom script"
+    cat > "$DIETPI_CUSTOM_SCRIPT" << EOF || error "Failed to write DietPi custom script"
+#!/bin/bash
+
+# Check if running as correct user
+if [[ "\$USER" != "$USERNAME" ]]; then
+    echo "This script must be run as user $USERNAME"
+    exit 1
+fi
+
+exec labwc -s "$EXEC_FILE"
+EOF
     
     # Set proper permissions
     chmod 755 "$DIETPI_CUSTOM_SCRIPT" ||
