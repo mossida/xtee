@@ -41,7 +41,6 @@ pub struct MasterState {
 pub enum MasterMessage {
     Kill(String),
     Spawn(Controller),
-    #[allow(dead_code)]
     Event(Event),
     FetchControllers(RpcReplyPort<Vec<Controller>>),
 }

@@ -69,6 +69,25 @@ pub struct PIDSettings {
     pub derivative: f32,
 }
 
+#[derive(Serialize, Deserialize, Type)]
+pub struct TwistingSpeeds {
+    pub slow: f32,
+    pub fast: f32,
+}
+
+#[derive(Serialize, Deserialize, Type)]
+pub struct ServingSpeeds {
+    pub slow: f32,
+    pub medium: f32,
+    pub fast: f32,
+}
+
+#[derive(Serialize, Deserialize, Type)]
+pub struct MotorsSpeeds {
+    pub twisting: TwistingSpeeds,
+    pub serving: ServingSpeeds,
+}
+
 pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
     let builder = app
         .store_builder("store.json")
@@ -93,6 +112,20 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
                 max_speed: 1,
                 max_rotations: 1,
                 acceleration: 1,
+            })?,
+        )
+        .default(
+            StoreKey::MotorsSpeeds,
+            serde_json::to_value(MotorsSpeeds {
+                twisting: TwistingSpeeds {
+                    slow: 1.0,
+                    fast: 1.0,
+                },
+                serving: ServingSpeeds {
+                    slow: 1.0,
+                    medium: 1.0,
+                    fast: 1.0,
+                },
             })?,
         )
         .default(
