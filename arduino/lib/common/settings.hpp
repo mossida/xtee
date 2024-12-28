@@ -5,7 +5,8 @@
 
 namespace settings
 {
-    static const int64_t MOTOR_STEPS = 800;
+    static const uint16_t MOTOR_STEPS = 800;
+    static const uint32_t MOTOR_ROTATIONS_LIMIT = (INT32_MAX / MOTOR_STEPS) * 10;
 }
 
 #endif

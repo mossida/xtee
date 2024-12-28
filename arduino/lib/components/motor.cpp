@@ -55,14 +55,14 @@ void Engine::handleMove(const uint8_t *buffer, size_t size)
 
     auto *stepper = steppers[data.slave - 1];
     auto direction = data.direction ? 1 : -1;
+    auto rotations = constrain(data.rotations, 0, settings::MOTOR_ROTATIONS_LIMIT);
 
-    if (data.rotations == 0)
+    if (rotations == 0)
         return;
 
-    // NOTE: multiplication overflow if rotations is uint16_t
-    auto steps = settings::MOTOR_STEPS * data.rotations * direction;
+    int64_t steps = (settings::MOTOR_STEPS * rotations * direction) / 10;
 
-    stepper->move(static_cast<int32_t>(steps));
+    stepper->move(steps);
 
     sendStatus(data.slave);
 }

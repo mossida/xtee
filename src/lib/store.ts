@@ -31,6 +31,7 @@ export type Store = {
     maxSpeed: number;
     maxRotations: number;
     acceleration: number;
+    stepsPerPulse: number;
   };
   "motors.speeds": {
     twisting: {

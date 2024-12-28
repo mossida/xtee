@@ -37,7 +37,7 @@ namespace components
             {
                 uint8_t slave;
                 bool direction;
-                uint16_t rotations;
+                uint32_t rotations;
             } MOVE_DATA;
 
             typedef struct __attribute__((packed))

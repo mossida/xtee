@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { mapValues } from "remeda";
 import { z } from "zod";
 import { DialogNumberInput } from "../dialog-number-input";
 import { Button } from "../ui/button";
@@ -34,11 +33,23 @@ import { Spinner } from "../ui/spinner";
 const u16 = 65535;
 const u32 = 4294967295;
 
-const schema = z.object({
-  maxSpeed: z.number().min(1).max(speedToRpm(u32)),
-  maxRotations: z.number().min(1).max(u16),
-  acceleration: z.number().min(1).max(speedToRpm(u32)),
-});
+const schema = z
+  .object({
+    maxSpeed: z.number().min(1),
+    maxRotations: z.number().min(1).max(u16),
+    acceleration: z.number().min(1),
+    stepsPerPulse: z.number().min(1).max(u16),
+  })
+  .refine(
+    (data) => {
+      const limit = speedToRpm(u32, data.stepsPerPulse);
+      return data.maxSpeed <= limit && data.acceleration <= limit;
+    },
+    {
+      message: "Value must be less than the hardware limit",
+      path: ["maxSpeed", "acceleration"],
+    },
+  );
 
 type LimitSettings = z.infer<typeof schema>;
 
@@ -62,10 +73,12 @@ export function LimitsSettings() {
   const { mutateAsync: reload } = api.useMutation("motor/reload/settings");
   const { mutateAsync: save } = store.useMutation();
 
+  const currentSPP = motorsLimits?.stepsPerPulse ?? 800;
   const values = {
-    maxSpeed: speedToRpm(motorsLimits?.maxSpeed ?? 1),
+    maxSpeed: speedToRpm(motorsLimits?.maxSpeed ?? 1, currentSPP),
     maxRotations: motorsLimits?.maxRotations ?? 1,
-    acceleration: speedToRpm(motorsLimits?.acceleration ?? 1),
+    acceleration: speedToRpm(motorsLimits?.acceleration ?? 1, currentSPP),
+    stepsPerPulse: currentSPP,
   };
 
   const form = useForm<LimitSettings>({
@@ -79,9 +92,10 @@ export function LimitsSettings() {
         [
           "motors.limits",
           {
-            maxSpeed: rpmToSpeed(data.maxSpeed),
+            maxSpeed: rpmToSpeed(data.maxSpeed, data.stepsPerPulse),
             maxRotations: data.maxRotations,
-            acceleration: rpmToSpeed(data.acceleration),
+            acceleration: rpmToSpeed(data.acceleration, data.stepsPerPulse),
+            stepsPerPulse: data.stepsPerPulse,
           },
         ],
       ]);
@@ -115,34 +129,63 @@ export function LimitsSettings() {
           >
             <Form {...form}>
               <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name={"acceleration"}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Acceleration</FormLabel>
-                      <FormDescription>
-                        The acceleration of the motors.
-                      </FormDescription>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name={"acceleration"}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Acceleration</FormLabel>
+                        <FormDescription>
+                          The acceleration of the motors.
+                        </FormDescription>
 
-                      <FormControl>
-                        <div className="flex items-center space-x-2">
-                          <DialogNumberInput
-                            min={1}
-                            max={speedToRpm(u32)}
-                            allowFloat={false}
-                            allowNegative={false}
-                            {...field}
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            RPM/s
-                          </span>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormControl>
+                          <div className="flex items-center space-x-2">
+                            <DialogNumberInput
+                              min={1}
+                              max={speedToRpm(u32, currentSPP)}
+                              allowFloat={false}
+                              allowNegative={false}
+                              {...field}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              RPM/s
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stepsPerPulse"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Steps Per Pulse</FormLabel>
+                        <FormDescription>
+                          The number of steps per pulse for the motors.
+                        </FormDescription>
+                        <FormControl>
+                          <div className="flex items-center space-x-2">
+                            <DialogNumberInput
+                              min={1}
+                              max={u16}
+                              allowFloat={false}
+                              allowNegative={false}
+                              {...field}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              steps
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -159,7 +202,10 @@ export function LimitsSettings() {
                           <div className="flex items-center space-x-2">
                             <DialogNumberInput
                               min={1}
-                              max={speedToRpm(hardwareMaxSpeed ?? u32)}
+                              max={speedToRpm(
+                                hardwareMaxSpeed ?? u32,
+                                currentSPP,
+                              )}
                               allowFloat={false}
                               allowNegative={false}
                               {...field}
@@ -172,7 +218,7 @@ export function LimitsSettings() {
                         {!!hardwareMaxSpeed && (
                           <FormDescription className="text-xs text-yellow-500">
                             Hardware reported a maximum speed of{" "}
-                            {speedToRpm(hardwareMaxSpeed)} RPM
+                            {speedToRpm(hardwareMaxSpeed, currentSPP)} RPM
                           </FormDescription>
                         )}
                         <FormMessage />

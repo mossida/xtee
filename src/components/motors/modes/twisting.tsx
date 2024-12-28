@@ -15,6 +15,7 @@ import {
 import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
+import { rpmToSpeed } from "@/lib/constants";
 import { type Store, store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,10 +69,11 @@ export function TwistingMode() {
   const motor1Status = useAtomValue(motorStatusFamily(1));
   const motor2Status = useAtomValue(motorStatusFamily(2));
 
+  const spp = limits?.stepsPerPulse ?? 800;
   const mode = useWatch({ control: form.control, name: "mode" });
 
   const speedToValue = (speed: Schema["speed"]) => {
-    return speeds?.twisting[speed] ?? 1;
+    return rpmToSpeed(speeds?.twisting[speed] ?? 1, spp);
   };
 
   const start = () => {
@@ -79,7 +81,7 @@ export function TwistingMode() {
     const payload = {
       direction: values.mode === "mode-1",
       speed: speedToValue(values.speed),
-      rotations: values.rotations,
+      rotations: values.rotations * 5,
     };
 
     spin([1, payload]);
@@ -92,6 +94,7 @@ export function TwistingMode() {
     onStart: () => {
       lock();
       const values = form.getValues();
+      console.log(values);
       const payload = {
         direction: values.mode === "mode-1",
         speed: speedToValue(values.speed),
@@ -160,7 +163,7 @@ export function TwistingMode() {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Rotations</FormLabel>
+                <FormLabel>String rotations</FormLabel>
                 <FormControl>
                   <DialogNumberInput
                     min={1}
@@ -170,6 +173,9 @@ export function TwistingMode() {
                     {...field}
                   />
                 </FormControl>
+                <FormDescription>
+                  One rotation means half rotation for each motor.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

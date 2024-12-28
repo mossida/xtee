@@ -45,7 +45,7 @@ const schema = z.object({
   }),
 });
 
-function valuesToPayload(values: z.infer<typeof schema>) {
+function valuesToPayload(values: z.infer<typeof schema>, spp: number) {
   const payload: MotorMovement[] = [];
 
   for (const motor of [1, 2] as const) {
@@ -53,8 +53,8 @@ function valuesToPayload(values: z.infer<typeof schema>) {
 
     payload.push({
       direction: value.direction === "clockwise",
-      speed: Math.round(rpmToSpeed(value.speed)),
-      rotations: value.rotations,
+      speed: rpmToSpeed(value.speed, spp),
+      rotations: value.rotations * 10,
     });
   }
 
@@ -70,6 +70,7 @@ export function ManualMode() {
   const motor1Status = useAtomValue(motorStatusFamily(1));
   const motor2Status = useAtomValue(motorStatusFamily(2));
 
+  const spp = limits?.stepsPerPulse ?? 800;
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
       motor1: {
@@ -88,7 +89,7 @@ export function ManualMode() {
 
   const start = () => {
     const values = form.getValues();
-    const payload = valuesToPayload(values);
+    const payload = valuesToPayload(values, spp);
 
     spin([1, payload[0]]);
     spin([2, payload[1]]);
@@ -105,7 +106,7 @@ export function ManualMode() {
     onStart: () => {
       lock();
       const values = form.getValues();
-      const payload = valuesToPayload(values);
+      const payload = valuesToPayload(values, spp);
 
       keep([1, payload[0]]);
       keep([2, payload[1]]);
@@ -153,7 +154,7 @@ export function ManualMode() {
                     <FormControl>
                       <DialogNumberInput
                         min={1}
-                        max={speedToRpm(limits?.maxSpeed ?? 1)}
+                        max={speedToRpm(limits?.maxSpeed ?? 1, spp)}
                         allowFloat={false}
                         allowNegative={false}
                         {...field}
@@ -218,7 +219,7 @@ export function ManualMode() {
                     <FormControl>
                       <DialogNumberInput
                         min={1}
-                        max={speedToRpm(limits?.maxSpeed ?? 1)}
+                        max={speedToRpm(limits?.maxSpeed ?? 1, spp)}
                         allowFloat={false}
                         allowNegative={false}
                         {...field}

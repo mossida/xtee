@@ -13,6 +13,7 @@ pub struct MotorsLimits {
     pub max_speed: u32,
     pub max_rotations: u32,
     pub acceleration: u32,
+    pub steps_per_pulse: u16,
 }
 
 impl TryFrom<Arc<Store>> for MotorsLimits {

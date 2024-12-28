@@ -25,7 +25,8 @@ pub enum Packet {
     MotorMove {
         slave: u8,
         direction: bool,
-        rotations: u16,
+        #[deku(assert = "*rotations <= 1000000")]
+        rotations: u32,
     },
     #[deku(id = 0x05)]
     MotorSetSpeed { slave: u8, apply: u8, speed: u32 },

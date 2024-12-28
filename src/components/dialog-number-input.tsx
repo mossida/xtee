@@ -82,14 +82,14 @@ const validateNumber = (
   >,
 ): string => {
   if (!value || value === "-") return value;
-  if (allowFloat && value === ".") return "0.";
+  if (allowFloat && (value === "." || value === "-.")) return `0${value}`;
 
   return R.pipe(
     value,
     (v) => (allowFloat ? v : v.replace(/\./g, "")),
     (v) => (allowNegative ? v : v.replace(/^-/, "")),
     (v) => {
-      if (allowFloat && v.endsWith(".")) return v;
+      if (allowFloat && (v.endsWith(".") || v.match(/\.\d*$/))) return v;
 
       const num = Number.parseFloat(v);
       if (Number.isNaN(num)) return v;
@@ -98,7 +98,7 @@ const validateNumber = (
         num,
         (n) => (min !== undefined ? Math.max(n, min) : n),
         (n) => (max !== undefined ? Math.min(n, max) : n),
-        String,
+        (n) => n.toString(),
       );
     },
   );

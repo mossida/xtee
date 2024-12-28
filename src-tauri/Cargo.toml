@@ -36,7 +36,7 @@ rspc-tauri = { version = "0.1.1" }
 specta = { version = "2.0.0-rc.20", features = ["derive"] }
 
 ractor = "0.14.2"
-deku = { version = "0.18.1" }
+deku = { version = "0.18.1", default-features = false, features = ["std"] }
 crc = "3.2.1"
 cobs-codec = "0.1.0"
 async-stream = "0.3.6"

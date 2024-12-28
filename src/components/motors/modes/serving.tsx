@@ -15,12 +15,13 @@ import {
 import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
+import { rpmToSpeed } from "@/lib/constants";
 import { store } from "@/lib/store";
 import type { Store } from "@/lib/store";
 import { motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { capitalize } from "remeda";
 import { z } from "zod";
 import { MotorsStatus } from "../motors-status";
@@ -43,13 +44,13 @@ const schema = z.object({
   rotations: z.number().min(1),
 });
 
+type Schema = z.infer<typeof schema>;
+
 function valuesToPayload(
   motor: 1 | 2,
   values: z.infer<typeof schema>,
-  speeds: Store["motors.speeds"] | null,
+  speedToValue: (speed: Schema["speed"]) => number,
 ) {
-  const speed = speeds?.serving[values.speed] ?? 1;
-
   const directions =
     motor === 1 ? ([true, false] as const) : ([false, true] as const);
   const direction =
@@ -57,8 +58,8 @@ function valuesToPayload(
 
   return {
     direction,
-    speed,
-    rotations: values.rotations,
+    speed: speedToValue(values.speed),
+    rotations: values.rotations * 10,
   };
 }
 
@@ -83,14 +84,18 @@ export function ServingMode() {
     resolver: zodResolver(schema),
   });
 
+  const spp = limits?.stepsPerPulse ?? 800;
   const motor1Status = useAtomValue(motorStatusFamily(1));
   const motor2Status = useAtomValue(motorStatusFamily(2));
+
+  const speedToValue = (speed: Schema["speed"]) =>
+    rpmToSpeed(speeds?.serving[speed] ?? 1, spp);
 
   const start = () => {
     const values = form.getValues();
 
-    spin([1, valuesToPayload(1, values, speeds)]);
-    spin([2, valuesToPayload(2, values, speeds)]);
+    spin([1, valuesToPayload(1, values, speedToValue)]);
+    spin([2, valuesToPayload(2, values, speedToValue)]);
   };
 
   const { lock, unlock } = useLockScroll();
@@ -100,8 +105,8 @@ export function ServingMode() {
       lock();
       const values = form.getValues();
 
-      keep([1, valuesToPayload(1, values, speeds)]);
-      keep([2, valuesToPayload(2, values, speeds)]);
+      keep([1, valuesToPayload(1, values, speedToValue)]);
+      keep([2, valuesToPayload(2, values, speedToValue)]);
     },
     onEnd: () => {
       unlock();
@@ -162,7 +167,7 @@ export function ServingMode() {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Rotations</FormLabel>
+                <FormLabel>String rotations</FormLabel>
                 <FormControl>
                   <DialogNumberInput
                     min={1}

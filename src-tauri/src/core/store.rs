@@ -112,6 +112,7 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
                 max_speed: 1,
                 max_rotations: 1,
                 acceleration: 1,
+                steps_per_pulse: 800,
             })?,
         )
         .default(

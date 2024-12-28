@@ -10,13 +10,13 @@ use super::MotorsLimits;
 pub struct MotorMovement {
     pub speed: u32,
     pub direction: bool,
-    pub rotations: u16,
+    pub rotations: u32,
 }
 
 impl MotorMovement {
     pub fn clamp(&mut self, limits: &MotorsLimits) {
         self.speed = self.speed.clamp(1, limits.max_speed);
-        self.rotations = self.rotations.clamp(1, limits.max_rotations as u16);
+        self.rotations = self.rotations.clamp(1, limits.max_rotations * 10);
     }
 }
 
