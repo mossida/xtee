@@ -60,7 +60,8 @@ void Engine::handleMove(const uint8_t *buffer, size_t size)
     if (rotations == 0)
         return;
 
-    int64_t steps = (settings::MOTOR_STEPS * rotations * direction) / 10;
+    int32_t pulses = settings::MOTOR_STEPS / 10;
+    int32_t steps = rotations * direction * pulses;
 
     stepper->move(steps);
 
