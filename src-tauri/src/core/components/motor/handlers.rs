@@ -7,7 +7,7 @@ use crate::{
             controller::ControllerMessage,
             master::{Event, MasterMessage},
             motor::state::MotorStatus,
-            Component, Handler, SpawnArgs,
+            Component, Handler, SpawnArgs, Stoppable,
         },
         protocol::Packet,
     },
@@ -18,6 +18,15 @@ use super::{state::MotorState, MotorMessage, MotorsLimits};
 
 pub struct Motor {
     pub slave: u8,
+}
+
+impl Stoppable for Motor {
+    fn packet(&self) -> Packet {
+        Packet::MotorStop {
+            slave: self.slave,
+            gentle: false,
+        }
+    }
 }
 
 impl Component for Motor {

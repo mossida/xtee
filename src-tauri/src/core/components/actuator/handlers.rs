@@ -5,7 +5,7 @@ use tracing::{debug, info};
 
 use crate::{
     core::{
-        components::{controller::ControllerMessage, Component, Handler, SpawnArgs},
+        components::{controller::ControllerMessage, Component, Handler, SpawnArgs, Stoppable},
         protocol::Packet,
     },
     utils::error::Error,
@@ -18,6 +18,12 @@ use super::{
 };
 
 pub struct Actuator;
+
+impl Stoppable for Actuator {
+    fn packet(&self) -> Packet {
+        Packet::ActuatorStop
+    }
+}
 
 impl Component for Actuator {
     async fn spawn(self, args: SpawnArgs) -> Result<Handler<ActuatorMessage>, ActorProcessingErr> {
@@ -55,6 +61,7 @@ impl Actor for Actuator {
             current_step: None,
             current_offset: Some(config.scale_offset),
             config,
+            bypass: false,
         })
     }
 
@@ -75,10 +82,15 @@ impl Actor for Actuator {
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
+        let overloaded = state.status == ActuatorStatus::Overloaded;
+
         match message {
             ActuatorMessage::Stop => {
-                state.status = ActuatorStatus::Idle;
+                if !overloaded {
+                    state.status = ActuatorStatus::Idle;
+                }
 
+                state.bypass = false;
                 state.current_step.take().inspect(|handle| {
                     handle.abort();
                 });
@@ -89,7 +101,7 @@ impl Actor for Actuator {
 
                 state.send_status()?;
             }
-            ActuatorMessage::Load(value) => {
+            ActuatorMessage::Load(value) if !overloaded => {
                 state.status = ActuatorStatus::Loading { target: value };
 
                 let settings = &state.config.pid_settings;
@@ -102,7 +114,7 @@ impl Actor for Actuator {
 
                 state.send_status()?;
             }
-            ActuatorMessage::Keep(value) => {
+            ActuatorMessage::Keep(value) if !overloaded => {
                 state.status = ActuatorStatus::Keeping { target: value };
 
                 let target = (value as f64).clamp(state.config.min_load, state.config.max_load);
@@ -112,7 +124,8 @@ impl Actor for Actuator {
 
                 state.send_status()?;
             }
-            ActuatorMessage::Move(direction) => {
+            ActuatorMessage::Move(direction) if !overloaded || direction => {
+                state.bypass = overloaded && direction;
                 state.controller.send_message(ControllerMessage::Forward(
                     Packet::ActuatorMove { direction },
                 ))?;
@@ -124,6 +137,7 @@ impl Actor for Actuator {
                 state.config = ActuatorConfig::try_from(state.store.clone())?;
                 state.apply_config();
             }
+            _ => {}
         }
 
         Ok(())

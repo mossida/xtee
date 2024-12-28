@@ -26,6 +26,7 @@ pub struct ActuatorState {
     pub config: ActuatorConfig,
     pub current_step: Option<JoinHandle<Result<(), MessagingErr<ControllerMessage>>>>,
     pub current_offset: Option<f64>,
+    pub bypass: bool,
 }
 
 impl ActuatorState {
@@ -53,8 +54,9 @@ impl ActuatorState {
         let target = self.pid.target();
         let is_setpoint = (value - target).abs() < self.config.precision;
 
-        if value > self.config.max_load {
-            return self.stop();
+        if value > self.config.max_load && !self.bypass {
+            self.status = ActuatorStatus::Overloaded;
+            return self.system_stop();
         }
 
         match self.status {
@@ -67,6 +69,10 @@ impl ActuatorState {
                 } else {
                     self.current_step = self.step_pid(value).ok();
                 }
+            }
+            ActuatorStatus::Overloaded if !self.bypass => {
+                self.status = ActuatorStatus::Idle;
+                self.send_status()?;
             }
             _ => {}
         }
@@ -127,6 +133,13 @@ impl ActuatorState {
             .send_after(Duration::from_micros(pulse), || {
                 ControllerMessage::Forward(Packet::ActuatorStop)
             }))
+    }
+
+    fn system_stop(&mut self) -> Result<(), ActorProcessingErr> {
+        self.master.send_message(MasterMessage::SystemStop)?;
+        self.send_status()?;
+
+        Ok(())
     }
 
     fn stop(&mut self) -> Result<(), ActorProcessingErr> {

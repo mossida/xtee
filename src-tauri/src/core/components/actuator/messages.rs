@@ -7,6 +7,7 @@ use crate::core::protocol::Packet;
 #[serde(tag = "status", content = "data")]
 #[serde(rename_all = "kebab-case")]
 pub enum ActuatorStatus {
+    Overloaded,
     Loading { target: f32 },
     Keeping { target: f32 },
     Idle,

@@ -23,7 +23,7 @@ export type Procedures = {
     subscriptions: never
 };
 
-export type ActuatorStatus = { status: "loading"; data: { target: number } } | { status: "keeping"; data: { target: number } } | { status: "idle" }
+export type ActuatorStatus = { status: "overloaded" } | { status: "loading"; data: { target: number } } | { status: "keeping"; data: { target: number } } | { status: "idle" }
 
 export type Controller = { id: string; group: ControllerGroup; serial_port: string; baud_rate: number }
 

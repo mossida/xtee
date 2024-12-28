@@ -14,7 +14,7 @@ export function ManualActuator() {
       <StepActuator
         className="flex-grow"
         direction="forward"
-        disabled={type !== "idle"}
+        disabled={type !== "idle" && type !== "overloaded"}
       />
       <StepActuator
         className="flex-grow"

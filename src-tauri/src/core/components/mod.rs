@@ -37,6 +37,10 @@ pub struct SpawnArgs {
     controller: ActorRef<ControllerMessage>,
 }
 
-trait Component: Actor<Msg: From<Packet>> {
+pub trait Component: Actor<Msg: From<Packet>> {
     async fn spawn(self, args: SpawnArgs) -> Result<Handler<Self::Msg>, ActorProcessingErr>;
+}
+
+pub trait Stoppable {
+    fn packet(&self) -> Packet;
 }

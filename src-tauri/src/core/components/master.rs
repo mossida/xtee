@@ -12,7 +12,7 @@ use crate::core::store::{store, Store, StoreKey};
 
 use super::{
     actuator::ActuatorStatus,
-    controller::{Controller, ControllerStatus},
+    controller::{Controller, ControllerChild, ControllerMessage, ControllerStatus},
     motor::MotorStatus,
 };
 
@@ -43,6 +43,7 @@ pub enum MasterMessage {
     Spawn(Controller),
     Event(Event),
     FetchControllers(RpcReplyPort<Vec<Controller>>),
+    SystemStop,
 }
 
 #[async_trait]
@@ -135,6 +136,21 @@ impl Actor for Master {
                         controller,
                         status: ControllerStatus::Disconnected,
                     }))?;
+                }
+            }
+            MasterMessage::SystemStop => {
+                for controller in state.controllers.values() {
+                    if let Some(actor) = registry::where_is(controller.id.clone()) {
+                        for child in Vec::<ControllerChild>::from(controller.group.clone()) {
+                            if let Err(e) =
+                                actor.send_message(ControllerMessage::Forward(child.stoppable()))
+                            {
+                                error!("Failed to send stop packet to child: {}", e);
+                            }
+                        }
+                    } else {
+                        error!("Controller not found: {}", controller.id);
+                    }
                 }
             }
         };

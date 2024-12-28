@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::core::{
-    components::{actuator::Actuator, motor::Motor, mux::MuxTarget, Component, SpawnArgs},
+    components::{
+        actuator::Actuator, motor::Motor, mux::MuxTarget, Component, SpawnArgs, Stoppable,
+    },
     protocol::Packet,
     store::Store,
 };
@@ -34,6 +36,15 @@ pub enum ControllerMessage {
 pub enum ControllerChild {
     Motor(Motor),
     Actuator(Actuator),
+}
+
+impl ControllerChild {
+    pub fn stoppable(&self) -> Packet {
+        match self {
+            ControllerChild::Motor(motor) => motor.packet(),
+            ControllerChild::Actuator(actuator) => actuator.packet(),
+        }
+    }
 }
 
 impl From<ControllerGroup> for String {
