@@ -6,7 +6,7 @@ use specta::Type;
 use crate::{
     api::router::RouterContext,
     core::components::{
-        actuator::ActuatorMessage,
+        actuator::{ActuatorMessage, ActuatorMovement},
         controller::{Controller, ControllerChild, ControllerGroup},
         master::{Event, MasterMessage},
         motor::{MotorMessage, MotorMovement},
@@ -214,14 +214,25 @@ pub fn actuator_keep(_ctx: RouterContext, setpoint: f32) -> Result<(), rspc::Err
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
-pub fn actuator_move(_ctx: RouterContext, direction: bool) -> Result<(), rspc::Error> {
+pub fn actuator_unload(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
+    let actor = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
+        rspc::ErrorCode::NotFound,
+        "Actuator not found".to_owned(),
+    ))?;
+
+    actor
+        .send_message(ActuatorMessage::Unload)
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
+}
+
+pub fn actuator_move(_ctx: RouterContext, movement: ActuatorMovement) -> Result<(), rspc::Error> {
     let actuator = registry::where_is("actuator".to_string()).ok_or(rspc::Error::new(
         rspc::ErrorCode::NotFound,
         "Actuator not found".to_owned(),
     ))?;
 
     actuator
-        .send_message(ActuatorMessage::Move(direction))
+        .send_message(ActuatorMessage::Move(movement.into()))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 

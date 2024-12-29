@@ -4,9 +4,9 @@ use rspc::{Config, Router};
 use crate::{
     api::cmd::{
         actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
-        events, get_controllers, get_groups, get_ports, kill_controller, motor_get_max_speed,
-        motor_keep, motor_reload_settings, motor_set_outputs, motor_spin, motor_stop,
-        spawn_controller,
+        actuator_unload, events, get_controllers, get_groups, get_ports, kill_controller,
+        motor_get_max_speed, motor_keep, motor_reload_settings, motor_set_outputs, motor_spin,
+        motor_stop, spawn_controller,
     },
     core::components::master::MasterMessage,
 };
@@ -31,6 +31,7 @@ pub fn router() -> Router<RouterContext> {
         .mutation("motor/set/outputs", |t| t(motor_set_outputs))
         .mutation("motor/reload/settings", |t| t(motor_reload_settings))
         .mutation("actuator/move", |t| t(actuator_move))
+        .mutation("actuator/unload", |t| t(actuator_unload))
         .mutation("actuator/stop", |t| t(actuator_stop))
         .mutation("actuator/load", |t| t(actuator_load))
         .mutation("actuator/keep", |t| t(actuator_keep))

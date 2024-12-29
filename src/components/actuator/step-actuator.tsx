@@ -17,7 +17,7 @@ export function StepActuator({
   const ref = useLongPress({
     onStart: () => {
       lock();
-      moveActuator(direction === "forward");
+      moveActuator(direction === "forward" ? "unload" : "load");
     },
     onEnd: () => {
       unlock();

@@ -8,6 +8,7 @@ use tracing::{debug, info};
 
 use crate::core::{
     components::{
+        actuator::ActuatorDirection,
         controller::ControllerMessage,
         master::{Event, MasterMessage},
     },
@@ -74,6 +75,11 @@ impl ActuatorState {
                 self.status = ActuatorStatus::Idle;
                 self.send_status()?;
             }
+            ActuatorStatus::Unloading => {
+                if value < self.config.precision {
+                    self.stop()?;
+                }
+            }
             _ => {}
         }
 
@@ -120,13 +126,16 @@ impl ActuatorState {
         value_ms: f64,
     ) -> Result<JoinHandle<Result<(), MessagingErr<ControllerMessage>>>, ActorProcessingErr> {
         let pulse = ((value_ms.abs()).clamp(8.0, 200.0) * 1000.0) as u64;
+        let direction = if value_ms < 0.0 {
+            ActuatorDirection::unload()
+        } else {
+            ActuatorDirection::load()
+        };
 
         debug!("Moving for: {} microseconds", pulse);
 
         self.controller
-            .send_message(ControllerMessage::Forward(Packet::ActuatorMove {
-                direction: value_ms < 0.0,
-            }))?;
+            .send_message(ControllerMessage::Forward(direction.into_packet()))?;
 
         Ok(self
             .controller

@@ -15,6 +15,7 @@ use super::{
     config::ActuatorConfig,
     messages::{ActuatorMessage, ActuatorStatus},
     state::ActuatorState,
+    ActuatorDirection,
 };
 
 pub struct Actuator;
@@ -124,11 +125,19 @@ impl Actor for Actuator {
 
                 state.send_status()?;
             }
-            ActuatorMessage::Move(direction) if !overloaded || direction => {
-                state.bypass = overloaded && direction;
+            ActuatorMessage::Unload => {
+                state.status = ActuatorStatus::Unloading;
                 state.controller.send_message(ControllerMessage::Forward(
-                    Packet::ActuatorMove { direction },
+                    ActuatorDirection::unload().into_packet(),
                 ))?;
+
+                state.send_status()?;
+            }
+            ActuatorMessage::Move(movement) if !overloaded || movement.is_unload() => {
+                state.bypass = overloaded && movement.is_unload();
+                state
+                    .controller
+                    .send_message(ControllerMessage::Forward(movement.into_packet()))?;
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
             ActuatorMessage::ReloadSettings => {
