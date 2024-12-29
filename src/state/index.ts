@@ -5,6 +5,14 @@ import { atom } from "jotai";
 import { withAtomEffect } from "jotai-effect";
 import { atomFamily } from "jotai/utils";
 
+export const weightAtom = withAtomEffect(atom<number>(0), (_, set) => {
+  const promise = listenEvent("weight", (payload) => {
+    set(weightAtom, payload.data);
+  });
+
+  return () => promise.then((unsubscribe) => unsubscribe());
+});
+
 export const actuatorTargetAtom = atom<number>(0);
 
 export const actuatorStatusAtom = withAtomEffect(
@@ -16,6 +24,10 @@ export const actuatorStatusAtom = withAtomEffect(
 
     return () => promise.then((unsubscribe) => unsubscribe());
   },
+);
+
+export const isOverloadedAtom = atom<boolean>(
+  (get) => get(actuatorStatusAtom)?.status === "overloaded",
 );
 
 export const motorModeAtom = atom<"twisting" | "serving" | "manual">(

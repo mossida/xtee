@@ -17,7 +17,7 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { rpmToSpeed } from "@/lib/constants";
 import { type Store, store } from "@/lib/store";
-import { motorStatusFamily } from "@/state";
+import { isOverloadedAtom, motorStatusFamily } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
 import { useForm, useWatch } from "react-hook-form";
@@ -68,6 +68,12 @@ export function TwistingMode() {
 
   const motor1Status = useAtomValue(motorStatusFamily(1));
   const motor2Status = useAtomValue(motorStatusFamily(2));
+  const isOverloaded = useAtomValue(isOverloadedAtom);
+
+  const isDisabled =
+    isOverloaded || !motor1Status?.status || !motor2Status?.status;
+
+  console.log(form.formState.isValid);
 
   const spp = limits?.stepsPerPulse ?? 800;
   const mode = useWatch({ control: form.control, name: "mode" });
@@ -124,6 +130,7 @@ export function TwistingMode() {
                 <FormControl>
                   <ComboboxDropdown
                     hasSearch={false}
+                    disabled={isDisabled}
                     popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
                     items={modeItems}
@@ -148,6 +155,7 @@ export function TwistingMode() {
                 <FormControl>
                   <ComboboxDropdown
                     hasSearch={false}
+                    disabled={isDisabled}
                     popoverProps={{ className: "!animate-none" }}
                     onSelect={({ id }) => onChange(id)}
                     items={speedItems}
@@ -170,6 +178,7 @@ export function TwistingMode() {
                     max={limits?.maxRotations}
                     allowFloat={false}
                     allowNegative={false}
+                    disabled={isDisabled}
                     {...field}
                   />
                 </FormControl>
@@ -188,11 +197,7 @@ export function TwistingMode() {
             <Button
               className="w-full h-16"
               onClick={start}
-              disabled={
-                !form.formState.isValid ||
-                !motor1Status?.status ||
-                !motor2Status?.status
-              }
+              disabled={isDisabled || !form.formState.isValid}
             >
               Start rotations
             </Button>
@@ -201,11 +206,7 @@ export function TwistingMode() {
             <Button
               ref={ref}
               className="w-full h-16"
-              disabled={
-                !form.formState.isValid ||
-                !motor1Status?.status ||
-                !motor2Status?.status
-              }
+              disabled={isDisabled || !form.formState.isValid}
             >
               Move manually
             </Button>
@@ -213,7 +214,7 @@ export function TwistingMode() {
         </div>
         <Button
           className="w-full hover:bg-destructive flex-grow"
-          disabled={!motor1Status?.status || !motor2Status?.status}
+          disabled={isDisabled}
           variant="destructive"
           onClick={() => {
             stop([1, "emergency"]);

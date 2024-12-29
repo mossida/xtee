@@ -1,6 +1,7 @@
 "use client";
 
-import { useEvent } from "@/hooks/use-event";
+import { weightAtom } from "@/state";
+import { useAtomValue } from "jotai";
 import { LoadVisualizer } from "../load-visualizer";
 
 function formatBalancedNumber(num: number): string {
@@ -11,7 +12,7 @@ function formatBalancedNumber(num: number): string {
 }
 
 export function CurrentLoad() {
-  const weight = useEvent("weight");
+  const weight = useAtomValue(weightAtom);
 
   return (
     <div className="flex flex-col items-start w-full">

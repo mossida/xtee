@@ -17,7 +17,7 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
 import { rpmToSpeed, speedToRpm } from "@/lib/constants";
 import { store } from "@/lib/store";
-import { motorStatusFamily } from "@/state";
+import { isOverloadedAtom, motorStatusFamily } from "@/state";
 import type { MotorMovement } from "@/types/bindings";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtomValue } from "jotai";
@@ -69,6 +69,10 @@ export function ManualMode() {
 
   const motor1Status = useAtomValue(motorStatusFamily(1));
   const motor2Status = useAtomValue(motorStatusFamily(2));
+  const isOverloaded = useAtomValue(isOverloadedAtom);
+
+  const isDisabled =
+    isOverloaded || !motor1Status?.status || !motor2Status?.status;
 
   const spp = limits?.stepsPerPulse ?? 800;
   const form = useForm<z.infer<typeof schema>>({
@@ -133,6 +137,7 @@ export function ManualMode() {
                     <FormControl>
                       <ComboboxDropdown
                         hasSearch={false}
+                        disabled={isDisabled}
                         popoverProps={{ className: "!animate-none" }}
                         onSelect={({ id }) => onChange(id)}
                         items={directionItems}
@@ -157,6 +162,7 @@ export function ManualMode() {
                         max={speedToRpm(limits?.maxSpeed ?? 1, spp)}
                         allowFloat={false}
                         allowNegative={false}
+                        disabled={isDisabled}
                         {...field}
                       />
                     </FormControl>
@@ -179,6 +185,7 @@ export function ManualMode() {
                         max={limits?.maxRotations ?? 1000}
                         allowFloat={false}
                         allowNegative={false}
+                        disabled={isDisabled}
                         {...field}
                       />
                     </FormControl>
@@ -198,6 +205,7 @@ export function ManualMode() {
                     <FormControl>
                       <ComboboxDropdown
                         hasSearch={false}
+                        disabled={isDisabled}
                         popoverProps={{ className: "!animate-none" }}
                         onSelect={({ id }) => onChange(id)}
                         items={directionItems}
@@ -222,6 +230,7 @@ export function ManualMode() {
                         max={speedToRpm(limits?.maxSpeed ?? 1, spp)}
                         allowFloat={false}
                         allowNegative={false}
+                        disabled={isDisabled}
                         {...field}
                       />
                     </FormControl>
@@ -244,6 +253,7 @@ export function ManualMode() {
                         max={limits?.maxRotations ?? 1}
                         allowFloat={false}
                         allowNegative={false}
+                        disabled={isDisabled}
                         {...field}
                       />
                     </FormControl>
@@ -261,11 +271,7 @@ export function ManualMode() {
             <Button
               className="w-full h-16"
               onClick={start}
-              disabled={
-                !form.formState.isValid ||
-                !motor1Status?.status ||
-                !motor2Status?.status
-              }
+              disabled={isDisabled || !form.formState.isValid}
             >
               Start rotations
             </Button>
@@ -274,11 +280,7 @@ export function ManualMode() {
             <Button
               ref={ref}
               className="w-full h-16"
-              disabled={
-                !form.formState.isValid ||
-                !motor1Status?.status ||
-                !motor2Status?.status
-              }
+              disabled={isDisabled || !form.formState.isValid}
             >
               Move manually
             </Button>
@@ -287,7 +289,7 @@ export function ManualMode() {
         <Button
           className="w-full hover:bg-destructive flex-grow"
           variant="destructive"
-          disabled={!motor1Status?.status || !motor2Status?.status}
+          disabled={isDisabled}
           onClick={() => {
             stop([1, "emergency"]);
             stop([2, "emergency"]);

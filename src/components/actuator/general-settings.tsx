@@ -1,8 +1,11 @@
 import { api } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { store } from "@/lib/store";
+import { weightAtom } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useStore } from "jotai";
+import { RefreshCcwIcon, Sparkles, WandSparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogNumberInput } from "../dialog-number-input";
@@ -35,6 +38,8 @@ const schema = z.object({
 
 export function GeneralSettings() {
   "use no memo";
+
+  const atomStore = useStore();
 
   const queries = store.useQueries([
     "scale.gain",
@@ -123,7 +128,24 @@ export function GeneralSettings() {
                           zero calibration.
                         </FormDescription>
                         <FormControl>
-                          <DialogNumberInput min={-100} max={100} {...field} />
+                          <div className="inline-flex items-center gap-2">
+                            <DialogNumberInput
+                              min={-100}
+                              max={100}
+                              {...field}
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                field.onChange(
+                                  atomStore.get(weightAtom) + field.value,
+                                );
+                              }}
+                            >
+                              <WandSparkles className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
