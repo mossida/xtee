@@ -232,7 +232,7 @@ pub fn actuator_move(_ctx: RouterContext, movement: ActuatorMovement) -> Result<
     ))?;
 
     actuator
-        .send_message(ActuatorMessage::Move(movement.into()))
+        .send_message(ActuatorMessage::Move(movement))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
 
