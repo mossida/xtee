@@ -1,8 +1,8 @@
 #include <PacketSerial.h>
 
-#define ENABLE_SCALE 1
-#define ENABLE_MOTORS 0
-#define ENABLE_ACTUATOR 1
+#define ENABLE_SCALE 0
+#define ENABLE_MOTORS 1
+#define ENABLE_ACTUATOR 0
 
 #if ENABLE_SCALE
 #include <HX711.h>
@@ -15,7 +15,7 @@
 #include "protocol.hpp"
 #include "components.hpp"
 
-#define SERIAL_SPEED 230400
+#define SERIAL_SPEED 115200
 
 protocol::Protocol pt;
 

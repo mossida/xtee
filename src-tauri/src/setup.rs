@@ -1,19 +1,41 @@
 use ractor::Actor;
+use tracing::Level;
+use tracing_appender::non_blocking::{NonBlockingBuilder, WorkerGuard};
+use tracing_subscriber::{fmt::format::FmtSpan, prelude::*, EnvFilter};
 
 use crate::{
     api::router::{router, RouterContext},
     core::components::master::Master,
 };
 
-#[cfg(not(debug_assertions))]
-pub fn setup_logging() {
-    let builder = tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_file(false)
-        .with_line_number(false)
-        .with_target(false);
+pub fn setup_logging() -> (WorkerGuard, WorkerGuard) {
+    let (stdout, stdout_guard) = NonBlockingBuilder::default()
+        .lossy(true)
+        .thread_name("xtee-log-stdout")
+        .finish(std::io::stdout());
 
-    builder.init();
+    let (stderr, stderr_guard) = NonBlockingBuilder::default()
+        .lossy(true)
+        .thread_name("xtee-log-stderr")
+        .finish(std::io::stderr());
+
+    let filter = EnvFilter::new("xtee_lib");
+    let writer = stderr.with_max_level(Level::WARN).or_else(stdout);
+    let logger = tracing_subscriber::fmt::layer()
+        .compact()
+        .with_ansi(true)
+        .with_file(false)
+        .with_target(true)
+        .with_line_number(false)
+        .with_thread_ids(false)
+        .with_thread_names(false)
+        .with_span_events(FmtSpan::NONE)
+        .with_writer(writer)
+        .with_filter(filter);
+
+    tracing_subscriber::registry().with(logger).init();
+
+    (stdout_guard, stderr_guard)
 }
 
 pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
