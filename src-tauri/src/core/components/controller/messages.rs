@@ -28,6 +28,7 @@ pub enum ControllerGroup {
     Motors,
 }
 
+#[derive(Debug)]
 pub enum ControllerMessage {
     Connect,
     Forward(Packet),

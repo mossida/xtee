@@ -36,26 +36,23 @@ rspc-tauri = { version = "0.1.1" }
 specta = { version = "2.0.0-rc.20", features = ["derive"] }
 
 ractor = "0.14.2"
+ractor_actors = "0.4.6"
+
 deku = { version = "0.18.1", default-features = false, features = ["std"] }
 crc = "3.2.1"
 cobs-codec = "0.1.0"
-async-stream = "0.3.6"
+
 tokio = { version = "1.42.0", features = ["full"] }
-tokio-stream = { version = "0.1.17", features = ["sync"] }
 tokio-util = "0.7.13"
-ractor_actors = "0.4.6"
 tokio-serial = "5.4.4"
+
 serialport = { version = "4", features = ["serde"] }
+pid-lite = "1.2.0"
+
+tracing = { version = "0", features = ["log", "release_max_level_info"] }
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0", features = ["json"] }
+
 futures = "0.3.31"
 thiserror = "2.0.9"
 anyhow = "1.0.95"
-pid-lite = "1.2.0"
-time = { version = "0", features = ['macros', 'serde'] }
-tracing = { version = "0", features = ["log", "release_max_level_info"] }
-tracing-appender = "0.2"
-tracing-subscriber = { version = "0", features = [
-  'time',
-  'env-filter',
-  'json',
-] }
-nanoid = "0.4.0"

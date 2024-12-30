@@ -1,7 +1,6 @@
 use pid_lite::Controller as Pid;
 use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
-
-use tracing::{debug, info};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{
     core::{
@@ -27,8 +26,10 @@ impl Stoppable for Actuator {
 }
 
 impl Component for Actuator {
+    #[instrument(name = "spawn_actuator", skip(self, args), fields(controller = ?args.controller.get_id()))]
     async fn spawn(self, args: SpawnArgs) -> Result<Handler<ActuatorMessage>, ActorProcessingErr> {
         let cell = args.controller.get_cell();
+
         let (actuator, _) =
             Actuator::spawn_linked(Some("actuator".to_owned()), self, args, cell).await?;
 
@@ -42,22 +43,26 @@ impl Actor for Actuator {
     type State = ActuatorState;
     type Arguments = SpawnArgs;
 
+    #[instrument(name = "pre_start_actuator", skip_all)]
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        SpawnArgs { store, controller }: SpawnArgs,
+        args: SpawnArgs,
     ) -> Result<Self::State, ActorProcessingErr> {
+        debug!("Starting actuator");
+
         let pid = Pid::new(0.0, 0.0, 0.0, 0.0);
-        let config = ActuatorConfig::try_from(store.clone())?;
-        let master = controller
+        let config = ActuatorConfig::try_from(args.store.clone())?;
+        let master = args
+            .controller
             .try_get_supervisor()
             .ok_or(Error::MissingAncestor)?;
 
         Ok(ActuatorState {
             pid,
-            store,
+            store: args.store,
             master: master.into(),
-            controller,
+            controller: args.controller,
             status: ActuatorStatus::Idle,
             current_step: None,
             current_offset: Some(config.scale_offset),
@@ -66,25 +71,30 @@ impl Actor for Actuator {
         })
     }
 
+    #[instrument(name = "post_start_actuator", skip_all)]
     async fn post_start(
         &self,
         _myself: ActorRef<Self::Msg>,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
+        debug!("Applying initial configuration");
+
         state.apply_config();
         state.send_status()?;
 
         Ok(())
     }
 
+    #[instrument(name = "handle_actuator_message", skip_all)]
     async fn handle(
         &self,
         _myself: ActorRef<Self::Msg>,
         message: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        let overloaded = state.status == ActuatorStatus::Overloaded;
+        debug!(?message, "Handling message");
 
+        let overloaded = matches!(state.status, ActuatorStatus::Overloaded);
         match message {
             ActuatorMessage::Stop => {
                 if !overloaded {
@@ -103,22 +113,27 @@ impl Actor for Actuator {
                 state.send_status()?;
             }
             ActuatorMessage::Load(value) if !overloaded => {
+                info!(target_load = value, "Loading actuator");
+
                 state.status = ActuatorStatus::Loading { target: value };
 
-                let settings = &state.config.pid_settings;
                 let target = (value as f64).clamp(state.config.min_load, state.config.max_load);
 
                 state.pid.reset();
                 state.pid.set_target(target);
 
-                info!("Loading: {:.2} kg with settings: {:?}", value, settings);
+                info!("Loading: {:.2} kg", value);
 
                 state.send_status()?;
             }
             ActuatorMessage::Keep(value) if !overloaded => {
+                info!(target_value = value, "Keeping actuator position");
+
                 state.status = ActuatorStatus::Keeping { target: value };
 
                 let target = (value as f64).clamp(state.config.min_load, state.config.max_load);
+
+                debug!(target, "Clamped target value");
 
                 state.pid.reset();
                 state.pid.set_target(target);
@@ -126,6 +141,8 @@ impl Actor for Actuator {
                 state.send_status()?;
             }
             ActuatorMessage::Unload => {
+                info!("Unloading actuator");
+
                 state.status = ActuatorStatus::Unloading;
                 state.controller.send_message(ControllerMessage::Forward(
                     ActuatorDirection::unload().into_packet(),
@@ -134,6 +151,8 @@ impl Actor for Actuator {
                 state.send_status()?;
             }
             ActuatorMessage::Move(movement) if !overloaded || movement.is_unload() => {
+                debug!(?movement, "Moving actuator");
+
                 state.bypass = overloaded && movement.is_unload();
                 state
                     .controller
@@ -141,12 +160,14 @@ impl Actor for Actuator {
             }
             ActuatorMessage::Packet(packet) => state.handle_packet(packet)?,
             ActuatorMessage::ReloadSettings => {
-                debug!("Reloading settings");
+                info!("Reloading actuator settings");
 
                 state.config = ActuatorConfig::try_from(state.store.clone())?;
                 state.apply_config();
             }
-            _ => {}
+            _ => {
+                warn!(?message, overloaded, "Message skipped due to conditions");
+            }
         }
 
         Ok(())

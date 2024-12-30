@@ -78,6 +78,7 @@ impl From<ActuatorMovement> for ActuatorDirection {
     }
 }
 
+#[derive(Debug)]
 pub enum ActuatorMessage {
     Load(f32),
     Keep(f32),
