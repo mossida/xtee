@@ -13,7 +13,7 @@ pub fn setup_logging() {
         .with_line_number(false)
         .with_target(false);
 
-    builder.json().init();
+    builder.init();
 }
 
 pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
