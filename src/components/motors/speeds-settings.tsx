@@ -68,6 +68,7 @@ export function SpeedsSettings() {
 
   const { mutateAsync: save } = store.useMutation();
 
+  const spp = motorsLimits?.stepsPerPulse ?? 800;
   const form = useForm<SpeedSettings>({
     resolver: zodResolver(speedSchema),
     values: motorsSpeeds ?? {
@@ -117,7 +118,10 @@ export function SpeedsSettings() {
                             <div className="flex items-center space-x-2">
                               <DialogNumberInput
                                 min={1}
-                                max={speedToRpm(motorsLimits?.maxSpeed ?? 1)}
+                                max={speedToRpm(
+                                  motorsLimits?.maxSpeed ?? 1,
+                                  spp,
+                                )}
                                 allowFloat={false}
                                 allowNegative={false}
                                 {...field}
@@ -153,7 +157,10 @@ export function SpeedsSettings() {
                             <div className="flex items-center space-x-2">
                               <DialogNumberInput
                                 min={1}
-                                max={speedToRpm(motorsLimits?.maxSpeed ?? 1)}
+                                max={speedToRpm(
+                                  motorsLimits?.maxSpeed ?? 1,
+                                  spp,
+                                )}
                                 allowFloat={false}
                                 allowNegative={false}
                                 {...field}
