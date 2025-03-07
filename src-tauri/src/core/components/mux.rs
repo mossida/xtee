@@ -1,8 +1,8 @@
 use std::pin::Pin;
 
-use futures::{stream::SplitSink, SinkExt, Stream};
+use futures::{SinkExt, Stream, stream::SplitSink};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
-use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
+use ractor_actors::streams::{StreamMuxConfiguration, StreamMuxNotification, Target, mux_stream};
 
 use crate::core::protocol::{Codec, Packet, Protocol};
 use tokio_serial::{SerialPortBuilderExt, SerialStream};
@@ -84,11 +84,26 @@ impl Actor for Mux {
         MuxMessage::Write(packet): Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        state
-            .writer
-            .send(packet)
-            .await
-            .map_err(ActorProcessingErr::from)
+        let send_timeout = tokio::time::Duration::from_secs(2);
+
+        match tokio::time::timeout(send_timeout, state.writer.send(packet.clone())).await {
+            Ok(result) => match result {
+                Ok(_) => {
+                    debug!("Successfully sent packet: {:?}", packet);
+                    Ok(())
+                }
+                Err(e) => {
+                    error!("Failed to send packet: {:?} - Error: {}", packet, e);
+                    Err(ActorProcessingErr::from(e))
+                }
+            },
+            Err(_) => {
+                error!("Timeout sending packet: {:?}", packet);
+                Err(ActorProcessingErr::from(
+                    crate::utils::error::Error::Timeout("Timeout sending packet".to_string()),
+                ))
+            }
+        }
     }
 
     async fn post_stop(

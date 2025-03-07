@@ -11,6 +11,8 @@ pub enum Error {
     MissingMux,
     #[error("Packet error")]
     Packet,
+    #[error("Timeout: {0}")]
+    Timeout(String),
     IO(#[from] std::io::Error),
     Serial(#[from] tokio_serial::Error),
     Json(#[from] serde_json::Error),

@@ -1,12 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ractor::{registry, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent};
+use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent, registry};
 use serde::Serialize;
 use specta::Type;
 use tauri::{AppHandle, Emitter};
 use tracing::{error, warn};
 
-use crate::core::store::{store, Store, StoreKey};
+use crate::core::store::{Store, StoreKey, store};
 
 use super::{
     actuator::ActuatorStatus,
@@ -95,20 +95,25 @@ impl Actor for Master {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             MasterMessage::Spawn(controller) => {
-                let id = controller.id.clone();
-                let result = Actor::spawn_linked(
-                    Some(id.clone()),
-                    controller.clone(),
-                    state.store.clone(),
-                    myself.get_cell(),
-                )
-                .await;
-
-                match result {
-                    Ok((_, _)) => {
-                        state.controllers.insert(id, controller);
+                let mut spawn_controller = async |ctrl: Controller| -> Result<(), String> {
+                    match Actor::spawn_linked(
+                        Some(ctrl.id.clone()),
+                        ctrl.clone(),
+                        state.store.clone(),
+                        myself.get_cell(),
+                    )
+                    .await
+                    {
+                        Ok((_, _)) => {
+                            state.controllers.insert(ctrl.id.clone(), ctrl);
+                            Ok(())
+                        }
+                        Err(e) => Err(format!("Failed to spawn controller: {}", e)),
                     }
-                    Err(e) => error!("Failed to spawn controller: {}", e),
+                };
+
+                if let Err(e) = spawn_controller(controller).await {
+                    error!("{}", e);
                 }
             }
             MasterMessage::FetchControllers(reply) => {

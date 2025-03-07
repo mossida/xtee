@@ -4,15 +4,15 @@ use ractor::Actor;
 use tracing::{Level, Subscriber};
 use tracing_appender::non_blocking::{NonBlocking, NonBlockingBuilder, WorkerGuard};
 use tracing_subscriber::{
+    Layer,
     filter::Targets,
     fmt::{format::FmtSpan, writer::MakeWriterExt},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    Layer,
 };
 
 use crate::{
-    api::router::{router, RouterContext},
+    api::router::{RouterContext, router},
     core::components::master::Master,
 };
 
@@ -28,7 +28,7 @@ where
 
     #[cfg(debug_assertions)]
     {
-        return tracing_subscriber::fmt::layer()
+        tracing_subscriber::fmt::layer()
             .pretty()
             .with_file(false)
             .with_line_number(false)
@@ -37,12 +37,12 @@ where
             .with_span_events(FmtSpan::NONE)
             .with_writer(writer)
             .with_filter(filter)
-            .boxed();
+            .boxed()
     }
 
     #[cfg(not(debug_assertions))]
     {
-        return tracing_subscriber::fmt::layer()
+        tracing_subscriber::fmt::layer()
             .compact()
             .with_file(false)
             .with_line_number(false)
@@ -51,7 +51,7 @@ where
             .with_span_events(FmtSpan::NONE)
             .with_writer(writer)
             .with_filter(filter)
-            .boxed();
+            .boxed()
     }
 }
 
@@ -66,12 +66,14 @@ pub fn setup_logging() -> (WorkerGuard, WorkerGuard) {
         .thread_name("xtee-log-stderr")
         .finish(std::io::stderr());
 
-    let env = std::env::var("XTEE_LOG").unwrap_or("info".to_string());
+    let env = std::env::var("XTEE_LOG").unwrap_or_else(|_| "info".to_string());
     let level = Level::from_str(&env).unwrap_or(Level::INFO);
+
+    // Using the package name
     let package = env!("CARGO_PKG_NAME").replace("-", "_");
 
     let filter = Targets::default()
-        .with_target(package, level)
+        .with_target(&package, level)
         .with_target("tokio", level)
         .with_target("ractor", level)
         .with_target("rspc", level);
@@ -87,20 +89,28 @@ pub fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
     let app_handle = app.handle().to_owned();
 
     tauri::async_runtime::spawn(async move {
-        let (actor, handle) = Actor::spawn(Some("master".to_owned()), Master, app_handle.clone())
-            .await
-            .expect("Failed to spawn master");
-
-        // Inject the master actor into the router
-        app_handle
-            .plugin(rspc_tauri::plugin(router().arced(), move |_| {
-                RouterContext {
-                    master: actor.clone(),
+        match Actor::spawn(Some("master".to_owned()), Master, app_handle.clone()).await {
+            Ok((actor, handle)) => {
+                // Inject the master actor into the router
+                match app_handle.plugin(rspc_tauri::plugin(router().arced(), move |_| {
+                    RouterContext {
+                        master: actor.clone(),
+                    }
+                })) {
+                    Ok(_) => {
+                        if let Err(e) = handle.await {
+                            tracing::error!("Master actor failed: {e}");
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to plugin rspc: {e}");
+                    }
                 }
-            }))
-            .expect("Failed to plugin rspc");
-
-        handle.await.expect("Master failed");
+            }
+            Err(e) => {
+                tracing::error!("Failed to spawn master actor: {e}");
+            }
+        }
     });
 
     Ok(())
