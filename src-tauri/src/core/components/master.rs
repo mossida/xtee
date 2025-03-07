@@ -1,8 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ractor::{
-    async_trait, registry, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent,
-};
+use ractor::{registry, Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent};
 use serde::Serialize;
 use specta::Type;
 use tauri::{AppHandle, Emitter};
@@ -46,7 +44,6 @@ pub enum MasterMessage {
     SystemStop,
 }
 
-#[async_trait]
 impl Actor for Master {
     type Msg = MasterMessage;
     type State = MasterState;

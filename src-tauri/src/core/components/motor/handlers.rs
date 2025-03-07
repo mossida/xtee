@@ -1,4 +1,4 @@
-use ractor::{async_trait, concurrency::Duration, Actor, ActorProcessingErr, ActorRef};
+use ractor::{concurrency::Duration, Actor, ActorProcessingErr, ActorRef};
 use tracing::debug;
 
 use crate::{
@@ -40,7 +40,6 @@ impl Component for Motor {
     }
 }
 
-#[async_trait]
 impl Actor for Motor {
     type Msg = MotorMessage;
     type State = MotorState;

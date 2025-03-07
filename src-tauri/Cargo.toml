@@ -35,16 +35,16 @@ rspc = { version = "0.3.1", features = ["tracing"] }
 rspc-tauri = { version = "0.1.1" }
 specta = { version = "2.0.0-rc.20", features = ["derive"] }
 
-ractor = "0.14.2"
-ractor_actors = "0.4.6"
+ractor = "0.15.2"
+ractor_actors = "0.4.9"
 
 deku = { version = "0.18.1", default-features = false, features = ["std"] }
 crc = "3.2.1"
 cobs-codec = "0.1.0"
 
-tokio = { version = "1.42.0", features = ["full"] }
+tokio = { version = "1.43.0", features = ["full"] }
 tokio-util = "0.7.13"
-tokio-serial = "5.4.4"
+tokio-serial = "5.4.5"
 
 serialport = { version = "4", features = ["serde"] }
 pid-lite = "1.2.0"
@@ -54,5 +54,5 @@ tracing-appender = "0.2"
 tracing-subscriber = { version = "0", features = ["json"] }
 
 futures = "0.3.31"
-thiserror = "2.0.9"
-anyhow = "1.0.95"
+thiserror = "2.0.12"
+anyhow = "1.0.97"

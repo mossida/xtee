@@ -13,11 +13,11 @@ export function ControlActuator() {
 
         <AutoActuator />
 
-        <div className="w-full flex-grow">
+        <div className="w-full grow">
           <ManualActuator />
         </div>
 
-        <div className="w-full flex-grow flex flex-col justify-between px-4 gap-2">
+        <div className="w-full grow flex flex-col justify-between px-4 gap-2">
           <StopActuator />
           <Button variant="outline" size="lg">
             Advanced functions

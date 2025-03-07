@@ -1,5 +1,5 @@
 use pid_lite::Controller as Pid;
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tracing::{debug, info, instrument, warn};
 
 use crate::{
@@ -37,7 +37,6 @@ impl Component for Actuator {
     }
 }
 
-#[async_trait]
 impl Actor for Actuator {
     type Msg = ActuatorMessage;
     type State = ActuatorState;

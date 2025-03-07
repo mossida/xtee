@@ -23,7 +23,7 @@ export function AutoActuator() {
   const min = queries[1]?.data ?? 0;
 
   return (
-    <div className="w-full flex-grow flex flex-col justify-between px-4">
+    <div className="w-full grow flex flex-col justify-between px-4">
       <TouchNumberInput
         min={min}
         max={max}

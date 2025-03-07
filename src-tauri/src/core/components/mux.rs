@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
 use futures::{stream::SplitSink, SinkExt, Stream};
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{mux_stream, StreamMuxConfiguration, StreamMuxNotification, Target};
 
 use crate::core::protocol::{Codec, Packet, Protocol};
@@ -45,7 +45,6 @@ impl StreamMuxNotification for MuxCallback {
     }
 }
 
-#[async_trait]
 impl Actor for Mux {
     type Msg = MuxMessage;
     type State = MuxState;

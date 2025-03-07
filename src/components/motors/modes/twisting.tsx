@@ -131,7 +131,7 @@ export function TwistingMode() {
                   <ComboboxDropdown
                     hasSearch={false}
                     disabled={isDisabled}
-                    popoverProps={{ className: "!animate-none" }}
+                    popoverProps={{ className: "animate-none!" }}
                     onSelect={({ id }) => onChange(id)}
                     items={modeItems}
                     selectedItem={modeItems.find((item) => item.id === value)}
@@ -156,7 +156,7 @@ export function TwistingMode() {
                   <ComboboxDropdown
                     hasSearch={false}
                     disabled={isDisabled}
-                    popoverProps={{ className: "!animate-none" }}
+                    popoverProps={{ className: "animate-none!" }}
                     onSelect={({ id }) => onChange(id)}
                     items={speedItems}
                     selectedItem={speedItems.find((item) => item.id === value)}
@@ -213,7 +213,7 @@ export function TwistingMode() {
           </div>
         </div>
         <Button
-          className="w-full hover:bg-destructive flex-grow"
+          className="w-full hover:bg-destructive grow"
           disabled={isDisabled}
           variant="destructive"
           onClick={() => {

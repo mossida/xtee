@@ -1,7 +1,7 @@
 "use client";
 
 import { api } from "@/lib/client";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils";
 import { rpmToSpeed, speedToRpm } from "@/lib/constants";
 import { store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -111,7 +111,7 @@ export function LimitsSettings() {
           Set maximum speed and rotation limits.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow">
+      <CardContent className="grow">
         <div className="grid grid-cols-1 grid-rows-1">
           <div
             className={cn(

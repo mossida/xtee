@@ -138,7 +138,7 @@ export function ManualMode() {
                       <ComboboxDropdown
                         hasSearch={false}
                         disabled={isDisabled}
-                        popoverProps={{ className: "!animate-none" }}
+                        popoverProps={{ className: "animate-none!" }}
                         onSelect={({ id }) => onChange(id)}
                         items={directionItems}
                         selectedItem={directionItems.find(
@@ -206,7 +206,7 @@ export function ManualMode() {
                       <ComboboxDropdown
                         hasSearch={false}
                         disabled={isDisabled}
-                        popoverProps={{ className: "!animate-none" }}
+                        popoverProps={{ className: "animate-none!" }}
                         onSelect={({ id }) => onChange(id)}
                         items={directionItems}
                         selectedItem={directionItems.find(
@@ -287,7 +287,7 @@ export function ManualMode() {
           </div>
         </div>
         <Button
-          className="w-full hover:bg-destructive flex-grow"
+          className="w-full hover:bg-destructive grow"
           variant="destructive"
           disabled={isDisabled}
           onClick={() => {

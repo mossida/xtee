@@ -14,7 +14,7 @@ export function ControlMotors() {
   const [mode, setMode] = useAtom(motorModeAtom);
 
   return (
-    <Card className="flex flex-col flex-grow">
+    <Card className="flex flex-col grow">
       <TabsPrimitive.Root className="p-6 space-y-6" value={mode}>
         <TabsPrimitive.List className="flex flex-row justify-between">
           <ModeSelector
