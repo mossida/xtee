@@ -3,12 +3,12 @@
 import { useLockScroll } from "@/hooks/use-lock-scroll";
 import { useLongPress } from "@/hooks/use-long-press";
 import { api } from "@/lib/client";
-import { Button, type ButtonProps } from "../ui/button";
+import { Button } from "../ui/button";
 
 export function StepActuator({
   direction,
   ...props
-}: { direction: "forward" | "backward" } & ButtonProps) {
+}: { direction: "forward" | "backward" } & Parameters<typeof Button>[0]) {
   const { mutate: moveActuator } = api.useMutation("actuator/move");
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
 

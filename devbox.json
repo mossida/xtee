@@ -4,6 +4,7 @@
     "rustup@latest",
     "libiconv@latest",
     "nodejs_22@latest",
-    "cargo-edit@latest"
+    "cargo-edit@latest",
+    "platformio@latest"
   ]
 }

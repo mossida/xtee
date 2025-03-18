@@ -153,6 +153,70 @@
         }
       }
     },
+    "platformio@latest": {
+      "last_modified": "2025-02-24T19:15:38Z",
+      "resolved": "github:NixOS/nixpkgs/39d921ecb8fc4028eb43d9a87bdeef55ff86fa9b#platformio",
+      "source": "devbox-search",
+      "version": "6.1.16",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/c83qv2ivn4njd8z89lb2pqgp4yjv6lpr-platformio-6.1.16",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/4nvc1jv5kiif08yx7mz433n1gxhzn0la-platformio-6.1.16-dist"
+            },
+            {
+              "name": "udev",
+              "path": "/nix/store/29zvafgy2f5ix54q5583dcwhjy4jrm1j-platformio-6.1.16-udev"
+            }
+          ],
+          "store_path": "/nix/store/c83qv2ivn4njd8z89lb2pqgp4yjv6lpr-platformio-6.1.16"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/j5dhylb776p1gl2iawa4y4cmjm382iyx-platformio-6.1.16",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/j5dhylb776p1gl2iawa4y4cmjm382iyx-platformio-6.1.16"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/q1fv94ixnic6907jsi65ykzr35c6jh38-platformio-6.1.16",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/8c9vf2ns3012vyszqsfffaglc216w0c7-platformio-6.1.16-dist"
+            },
+            {
+              "name": "udev",
+              "path": "/nix/store/kqym9111x5929v6a0s1jkx0m0vh883hg-platformio-6.1.16-udev"
+            }
+          ],
+          "store_path": "/nix/store/q1fv94ixnic6907jsi65ykzr35c6jh38-platformio-6.1.16"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3nj9g91hvbradsplx2fv60dlk7ynb9n4-platformio-6.1.16",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/3nj9g91hvbradsplx2fv60dlk7ynb9n4-platformio-6.1.16"
+        }
+      }
+    },
     "rustup@latest": {
       "last_modified": "2025-02-07T11:26:36Z",
       "plugin_version": "0.0.1",
