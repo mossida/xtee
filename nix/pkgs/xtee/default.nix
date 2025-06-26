@@ -1,28 +1,23 @@
 {
   lib,
-  stdenv,
   rustPlatform,
   fetchFromGitHub,
-  nodejs,
+
+  moreutils,
   bun,
-  wrapGAppsHook3,
-  cargo,
-  rustc,
-  cargo-tauri_1,
+  nodejs,
+  cargo-tauri,
   pkg-config,
-  esbuild,
-  buildGoModule,
-  libayatana-appindicator,
-  gtk3,
-  webkitgtk_4_0,
-  libsoup_2_4,
+  wrapGAppsHook3,
+
+  libsoup_3,
   openssl,
-  xdotool,
+  webkitgtk_4_1,
 }:
 
-stdenv.mkDerivation (finalAttrs: {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "xtee";
-  version = "3.0.7";
+  version = "2.0.2";
 
   src = fetchFromGitHub {
     owner = "mossida";
@@ -32,36 +27,23 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   cargoRoot = "src-tauri";
-  buildAndTestSubdir = "src-tauri";
+  buildAndTestSubdir = finalAttrs.cargoRoot;
 
-  cargoDeps = rustPlatform.fetchCargoVendor {
-    inherit (finalAttrs)
-      pname
-      version
-      src
-      cargoRoot
-      ;
-    hash = "sha256-dyXINRttgsqCfmgtZNXxr/Rl8Yn0F2AVm8v2Ao+OBsw=";
-  };
+  cargoHash = "sha256-dyXINRttgsqCfmgtZNXxr/Rl8Yn0F2AVm8v2Ao+OBsw=";
 
   nativeBuildInputs = [
-    rustPlatform.cargoSetupHook
-    cargo
-    rustc
-    cargo-tauri.hook
-    nodejs
+    moreutils
     bun
-    wrapGAppsHook3
+    nodejs
+    cargo-tauri.hook
     pkg-config
+    wrapGAppsHook3
   ];
 
   buildInputs = [
-    gtk3
-    libsoup_2_4
-    libayatana-appindicator
+    libsoup_3
     openssl
-    webkitgtk_4_0
-    xdotool
+    webkitgtk_4_1
   ];
 
   meta = {
