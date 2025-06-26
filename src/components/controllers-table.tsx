@@ -4,7 +4,7 @@ import { waitEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
 import { store } from "@/lib/store";
 import type { Controller, ControllerGroup, Port } from "@/types/bindings";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { uniqueBy } from "remeda";
 import { Badge } from "./ui/badge";
@@ -135,7 +135,7 @@ export function ControllersTable() {
               <TableCell className="font-medium">{port.name}</TableCell>
               <TableCell>{port.manufacturer}</TableCell>
               <TableCell>
-                <Badge variant="tag">{port.serial_number ?? "N/A"}</Badge>
+                <Badge variant="default">{port.serial_number ?? "N/A"}</Badge>
               </TableCell>
               <TableCell>
                 <ComboboxDropdown

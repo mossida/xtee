@@ -65,7 +65,7 @@ export function LimitsSettings() {
     () =>
       motors
         .map((motor) => motor.data)
-        .reduce((a, b) => Math.min(a, b), Number.POSITIVE_INFINITY),
+        .reduce((a, b) => Math.min(a ?? 0, b ?? 0), Number.POSITIVE_INFINITY),
     [motors],
   );
 

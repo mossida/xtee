@@ -6,5 +6,19 @@
     "nodejs_22@latest",
     "cargo-edit@latest",
     "platformio@latest"
-  ]
+  ],
+  "env": {
+    "ROOT_DIR": "$PWD",
+
+    "PLATFORMIO_CORE_DIR": "$PWD/.devbox/platformio"
+  },
+  "shell": {
+    "init_hook": [
+      "rustupHomeDir=\"$ROOT_DIR/.devbox/rust\"",
+      "mkdir -p $rustupHomeDir",
+      "export RUSTUP_HOME=$rustupHomeDir",
+      "export LIBRARY_PATH=$LIBRARY_PATH:\"$ROOT_DIR/.devbox/nix/profile/default/lib\"",
+      "rustup default stable"
+    ]
+  }
 }

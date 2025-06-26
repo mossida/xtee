@@ -8,12 +8,14 @@ Scale::Scale(protocol::Protocol *protocol) : protocol(protocol)
 
 void Scale::begin()
 {
-    sensor.begin(pins::SCALE_DOUT, pins::SCALE_SCK);
+    sensor.begin();
+
+    // TODO: Needs calibration?
 }
 
 void Scale::update()
 {
-    if (protocol->hasAcknowledged() && sensor.is_ready())
+    if (protocol->hasAcknowledged() && sensor.available())
     {
         auto weight = sensor.read();
         protocol->sendPacket(packet::WEIGHT, (uint8_t *)&weight, sizeof(weight));

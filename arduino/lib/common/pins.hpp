@@ -12,9 +12,6 @@ namespace pins
         const uint8_t enable;
     };
 
-    static const uint8_t SCALE_DOUT = 2;
-    static const uint8_t SCALE_SCK = 3;
-
     static const uint8_t ACTUATOR_DIR = 8;
     static const uint8_t ACTUATOR_PWM = 7;
 

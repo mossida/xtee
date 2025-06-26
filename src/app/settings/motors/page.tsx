@@ -6,7 +6,7 @@ import { InfoIcon } from "lucide-react";
 export default function DualMotorSettings() {
   return (
     <div className="space-y-6">
-      <Alert variant={"warning"}>
+      <Alert variant={"default"}>
         <InfoIcon className="h-4 w-4" />
         <AlertTitle>Important</AlertTitle>
         <AlertDescription>

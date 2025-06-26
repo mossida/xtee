@@ -1,7 +1,7 @@
 #ifndef SCALE_H
 #define SCALE_H
 
-#include <HX711.h>
+#include <Adafruit_NAU7802.h>
 
 #include "common.hpp"
 #include "protocol.hpp"
@@ -25,7 +25,7 @@ namespace components
 
         private:
             protocol::Protocol *protocol;
-            HX711 sensor;
+            Adafruit_NAU7802 sensor;
         };
     }
 }

@@ -2,9 +2,9 @@
 
 import { api } from "@/lib/client";
 import { cn } from "@/lib/utils";
-import { Button, type ButtonProps } from "../ui/button";
+import { Button } from "../ui/button";
 
-export function StopActuator({ className, ...props }: ButtonProps) {
+export function StopActuator({ className, ...props }: React.ComponentProps<"button">) {
   const { mutate: stopActuator } = api.useMutation("actuator/stop");
 
   return (
