@@ -31,7 +31,7 @@ export function MotorStatus({ motor }: { motor: 1 | 2 }) {
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm">Condition</span>
-          <Badge variant="tag" className="text-xs">
+          <Badge variant="default" className="text-xs">
             {(data?.status ?? "Unknown").toUpperCase()}
           </Badge>
         </div>

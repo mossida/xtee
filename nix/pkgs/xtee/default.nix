@@ -1,15 +1,15 @@
 {
   lib,
   rustPlatform,
-  fetchFromGitHub,
 
-  moreutils,
   bun,
   nodejs,
   cargo-tauri,
   pkg-config,
-  wrapGAppsHook3,
+  moreutils,
+  mkBunNodeModules,
 
+  udev,
   libsoup_3,
   openssl,
   webkitgtk_4_1,
@@ -17,30 +17,33 @@
 
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "xtee";
-  version = "2.0.2";
+  version = "2.0.3";
 
-  src = fetchFromGitHub {
-    owner = "mossida";
-    repo = "xtee";
-    tag = finalAttrs.version;
-    hash = "sha256-0Q1hf1AGAZv6jt05tV3F6++lzLpddvjhiykIhV40cPs=";
+  src = lib.cleanSource ../../..;
+
+  nodeModules = mkBunNodeModules {
+    packages = import ./deps.nix;
   };
 
   cargoRoot = "src-tauri";
   buildAndTestSubdir = finalAttrs.cargoRoot;
 
-  cargoHash = "sha256-dyXINRttgsqCfmgtZNXxr/Rl8Yn0F2AVm8v2Ao+OBsw=";
+  cargoHash = "sha256-IOFF6KZu32Wp4cP7dvfpLmKGoz2cAwK1kzL28hDW8MY=";
+
+  preBuild = ''
+    ln -sf ${finalAttrs.nodeModules}/node_modules ./node_modules
+  '';
 
   nativeBuildInputs = [
-    moreutils
     bun
-    nodejs
+    moreutils
     cargo-tauri.hook
     pkg-config
-    wrapGAppsHook3
+    nodejs
   ];
 
   buildInputs = [
+    udev
     libsoup_3
     openssl
     webkitgtk_4_1

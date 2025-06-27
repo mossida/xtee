@@ -15,7 +15,8 @@
     "lint": "npm run next:lint && npm run tauri:lint",
     "lint:fix": "npm run next:lint:fix && npm run tauri:lint:fix",
     "tauri": "tauri",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "bun2nix -o nix/pkgs/xtee/deps.nix"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",

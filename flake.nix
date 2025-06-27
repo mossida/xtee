@@ -6,6 +6,9 @@
 
     systems.url = "github:nix-systems/default-linux";
     hardware.url = "github:nixos/nixos-hardware";
+
+    bun2nix.url = "github:baileyluTCD/bun2nix";
+    bun2nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -13,9 +16,12 @@
       self,
       nixpkgs,
       systems,
+      bun2nix,
       ...
     }@inputs:
     let
+      inherit (self) outputs;
+
       lib = nixpkgs.lib;
       forEachSystem = f: lib.genAttrs (import systems) (system: f pkgsFor.${system});
       pkgsFor = lib.genAttrs (import systems) (
@@ -28,7 +34,7 @@
     in
     {
 
-      packages = forEachSystem (pkgs: import ./nix/pkgs { inherit pkgs; });
+      packages = forEachSystem (pkgs: import ./nix/pkgs { inherit pkgs bun2nix; });
 
       nixosConfigurations = {
         raspberrypi4 = lib.nixosSystem {
@@ -37,7 +43,7 @@
             ./nix/hosts/raspberrypi4
           ];
           specialArgs = {
-            inherit inputs;
+            inherit inputs outputs;
           };
         };
       };

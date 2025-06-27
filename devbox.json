@@ -5,7 +5,8 @@
     "libiconv@latest",
     "nodejs_22@latest",
     "cargo-edit@latest",
-    "platformio@latest"
+    "platformio@latest",
+    "github:baileyluTCD/bun2nix"
   ],
   "env": {
     "ROOT_DIR": "$PWD",
