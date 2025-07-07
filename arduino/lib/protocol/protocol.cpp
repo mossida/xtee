@@ -31,6 +31,8 @@ void Protocol::begin(uint32_t speed)
 {
     Serial.begin(speed);
 
+    while (!Serial) {;}
+
     serial.setStream(&Serial);
     serial.setPacketHandler([](const void *sender, const uint8_t *buffer, size_t size)
                             {
