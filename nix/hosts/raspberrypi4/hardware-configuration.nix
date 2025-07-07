@@ -1,6 +1,23 @@
 {
   boot = {
-    kernelParams = [ "vt.global_cursor_default=0" ];
+    kernelParams = [ "vt.global_cursor_default=0", "cma=256M" ];
+  };
+
+  fileSystems = {
+    "/" = {
+      device = "/dev/disk/by-label/NIXOS_SD";
+      fsType = "ext4";
+      options = [ "noatime" ];
+    };
+
+    "/boot/firmware" = {
+      device = "/dev/disk/by-label/FIRMWARE";
+      fsType = "vfat";
+      options = [
+        "nofail"
+        "noauto"
+      ];
+    };
   };
 
   hardware.raspberry-pi."4" = {
