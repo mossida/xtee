@@ -12,8 +12,8 @@ namespace pins
         const uint8_t enable;
     };
 
-    static const uint8_t ACTUATOR_DIR = 8;
-    static const uint8_t ACTUATOR_PWM = 7;
+    static const uint8_t ACTUATOR_DIR = 3;
+    static const uint8_t ACTUATOR_PWM = 2;
 
     static const Motor MOTOR_1 = {3, 2, 4};
     static const Motor MOTOR_2 = {6, 5, 7};
