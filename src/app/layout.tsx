@@ -9,9 +9,10 @@ import { Providers } from "./providers";
 
 export const viewport: Viewport = {
   initialScale: 1,
-  maximumScale: 1,
-  minimumScale: 1,
+  maximumScale: 3,
+  minimumScale: 0.5,
   userScalable: false,
+  width: "device-width",
 };
 
 export default function RootLayout({

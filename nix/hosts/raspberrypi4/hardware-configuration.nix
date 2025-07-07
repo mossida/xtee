@@ -1,6 +1,9 @@
 {
   boot = {
-    kernelParams = [ "vt.global_cursor_default=0", "cma=256M" ];
+    kernelParams = [
+      "vt.global_cursor_default=0"
+      "cma=256M"
+    ];
   };
 
   fileSystems = {
