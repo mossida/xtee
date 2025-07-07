@@ -6,7 +6,8 @@
     "nodejs_22@latest",
     "cargo-edit@latest",
     "platformio@latest",
-    "github:baileyluTCD/bun2nix"
+    "github:baileyluTCD/bun2nix",
+    "zstd@latest"
   ],
   "env": {
     "ROOT_DIR": "$PWD",
