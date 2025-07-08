@@ -12,8 +12,6 @@ void Scale::begin()
 
     while (! sensor.calibrate(NAU7802_CALMOD_INTERNAL));
     while (! sensor.calibrate(NAU7802_CALMOD_OFFSET));
-
-    // TODO: Needs calibration?
 }
 
 void Scale::update()

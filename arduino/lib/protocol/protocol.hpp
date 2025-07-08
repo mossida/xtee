@@ -10,6 +10,7 @@ namespace protocol
 {
     namespace packet
     {
+        const uint8_t RESET = 0x00;
         const uint8_t READY = 0x01;
         const uint8_t DATA = 0x02;
     }
@@ -72,6 +73,7 @@ namespace protocol
         }
 
         void sendPacket(uint8_t id, const uint8_t *data, size_t size);
+        void announceReady();
     };
 }
 

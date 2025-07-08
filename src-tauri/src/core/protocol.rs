@@ -1,7 +1,8 @@
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
-use futures::{future, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, future};
 use serde::Serialize;
+use tokio::time::{Duration, timeout};
 use tokio_serial::SerialStream;
 use tokio_util::{
     bytes::{BufMut, BytesMut},
@@ -17,6 +18,8 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
 #[deku(id_type = "u8", endian = "little")]
 pub enum Packet {
+    #[deku(id = 0x00)]
+    Reset,
     #[deku(id = 0x01)]
     Ready,
     #[deku(id = 0x02)]
@@ -67,15 +70,29 @@ impl Protocol {
         let codec = Codec::new();
         let (mut framed_sink, framed_stream) = codec.framed(self.stream).split();
 
-        // Wait for the Ready packet
         let mut stream = framed_stream.filter_map(|r| future::ready(r.ok()));
-        while let Some(packet) = stream.next().await {
-            if matches!(packet, Packet::Ready) {
-                info!("Received Ready packet, sending acknowledgement");
-                framed_sink.send(Packet::Ready).await?;
-                break;
+        let ready_timeout = Duration::from_secs(5);
+
+        let wait_for_ready = async {
+            framed_sink.send(Packet::Reset).await?;
+
+            while let Some(packet) = stream.next().await {
+                if matches!(packet, Packet::Ready) {
+                    info!("Received Ready packet, sending acknowledgement");
+
+                    framed_sink.send(Packet::Ready).await?;
+
+                    return Ok(());
+                }
             }
-        }
+
+            Err(Error::Packet) // If stream ends without ready packet
+        };
+
+        let _ = timeout(ready_timeout, wait_for_ready).await.map_err(|_| {
+            error!("Timeout waiting for Ready packet");
+            Error::Packet
+        })?;
 
         Ok((framed_sink, stream.boxed()))
     }

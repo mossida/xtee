@@ -5,21 +5,23 @@
 #define ENABLE_ACTUATOR 0
 
 #include "protocol.hpp"
-#include "components.hpp"
 
 #define SERIAL_SPEED 115200
 
 protocol::Protocol pt;
 
 #if ENABLE_SCALE
+#include "scale.hpp"
 components::scale::Scale sc(&pt);
 #endif
 
 #if ENABLE_ACTUATOR
+#include "actuator.hpp"
 components::actuator::Actuator at(&pt);
 #endif
 
 #if ENABLE_MOTORS
+#include "motor.hpp"
 components::motor::Engine mt(&pt);
 #endif
 
@@ -44,7 +46,7 @@ void setup()
 }
 
 void loop()
-{
+{  
 #if ENABLE_SCALE
   sc.update();
 #endif

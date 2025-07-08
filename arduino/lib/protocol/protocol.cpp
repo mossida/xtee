@@ -1,4 +1,5 @@
 #include "protocol.hpp"
+#include <digitalWriteFast.h>
 
 using namespace protocol;
 
@@ -18,6 +19,12 @@ void Protocol::handler(const uint8_t *data, size_t size)
     if (packetId < 0 || packetId >= 256)
         return;
 
+    if (packetId == packet::RESET)
+    {
+        ack = false;
+        return;
+    }
+
     if (packetId == packet::READY)
         return handleAck();
 
@@ -31,20 +38,30 @@ void Protocol::begin(uint32_t speed)
 {
     Serial.begin(speed);
 
+    // Only wait for Serial on boards with native USB
+#ifdef USBCON
     while (!Serial) {;}
+#else
+    delay(100);
+#endif
 
     serial.setStream(&Serial);
     serial.setPacketHandler([](const void *sender, const uint8_t *buffer, size_t size)
                             {
                                Protocol *protocol = (Protocol *)sender;
                                protocol->handler(buffer, size); });
-
-    sendPacket(packet::READY, nullptr, 0);
 }
 
 void Protocol::update()
 {
     serial.update();
+
+    static unsigned long lastAnnouncement = 0;
+    if (!hasAcknowledged() && millis() - lastAnnouncement > 1000)
+    {
+        announceReady();
+        lastAnnouncement = millis();
+    }
 }
 
 void Protocol::sendPacket(uint8_t id, const uint8_t *data, size_t size)
@@ -62,4 +79,9 @@ void Protocol::sendPacket(uint8_t id, const uint8_t *data, size_t size)
     buffer[size + 1] = crc::calculate(buffer, size + 1);
 
     serial.send(buffer, size + 2);
+}
+
+void Protocol::announceReady()
+{
+    sendPacket(packet::READY, nullptr, 0);
 }
