@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { speedToRpm } from "@/lib/constants";
 import { type Store, store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -91,7 +91,7 @@ export function SpeedsSettings() {
           Configure speed settings for both twisting and serving modes.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grow">
+      <CardContent className="flex-grow">
         <OverSpinner isLoading={isFetching}>
           <Form {...form}>
             <Tabs value={activeTab} onValueChange={setActiveTab}>

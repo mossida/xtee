@@ -140,7 +140,7 @@ export function ControllersTable() {
               <TableCell>
                 <ComboboxDropdown
                   hasSearch={false}
-                  popoverProps={{ className: "animate-none!" }}
+                  popoverProps={{ className: "!animate-none" }}
                   disabled={isConnected}
                   items={groupItems.map((item) => ({
                     ...item,

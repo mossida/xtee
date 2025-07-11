@@ -15,12 +15,12 @@ export function ManualActuator() {
   return (
     <div className="h-full flex flex-col items-stretch gap-2">
       <StepActuator
-        className="grow"
+        className="flex-grow"
         direction="forward"
         disabled={type !== "idle" && type !== "overloaded"}
       />
       <StepActuator
-        className="grow"
+        className="flex-grow"
         direction="backward"
         disabled={type !== "idle"}
       />

@@ -1,5 +1,5 @@
 import { api } from "@/lib/client";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { store } from "@/lib/store";
 import { weightAtom } from "@/state";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,7 +81,7 @@ export function GeneralSettings() {
       <CardHeader>
         <CardTitle>General</CardTitle>
       </CardHeader>
-      <CardContent className="grow">
+      <CardContent className="flex-grow">
         <div className="grid grid-cols-1 grid-rows-1">
           <div
             className={cn(
@@ -99,12 +99,12 @@ export function GeneralSettings() {
           >
             <Form {...form}>
               <div className="flex flex-col gap-4">
-                <div className="flex grow flex-row gap-2">
+                <div className="flex flex-grow flex-row gap-2">
                   <FormField
                     control={form.control}
                     name="scaleGain"
                     render={({ field }) => (
-                      <FormItem className="grow">
+                      <FormItem className="flex-grow">
                         <FormLabel>Scale gain</FormLabel>
                         <FormDescription>
                           Multiplier applied to load cell readings. Adjusts
@@ -121,7 +121,7 @@ export function GeneralSettings() {
                     control={form.control}
                     name="scaleOffset"
                     render={({ field }) => (
-                      <FormItem className="grow">
+                      <FormItem className="flex-grow">
                         <FormLabel>Scale offset</FormLabel>
                         <FormDescription>
                           Constant value added to load cell readings. Used for
@@ -171,12 +171,12 @@ export function GeneralSettings() {
                     )}
                   />
                 </div>
-                <div className="flex grow flex-row gap-2">
+                <div className="flex flex-grow flex-row gap-2">
                   <FormField
                     control={form.control}
                     name="maxLoad"
                     render={({ field }) => (
-                      <FormItem className="grow">
+                      <FormItem className="flex-grow">
                         <FormLabel>Max Load</FormLabel>
                         <FormDescription>
                           Maximum allowable load value. System will stop if
@@ -199,7 +199,7 @@ export function GeneralSettings() {
                     control={form.control}
                     name="minLoad"
                     render={({ field }) => (
-                      <FormItem className="grow">
+                      <FormItem className="flex-grow">
                         <FormLabel>Min Load</FormLabel>
                         <FormDescription>
                           Minimum allowable load value. System will stop if

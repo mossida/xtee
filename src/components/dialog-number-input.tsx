@@ -191,7 +191,7 @@ export function DialogNumberInput({
   const displayValue = formatDisplayValue(tempValue);
 
   return (
-    <div className="space-y-2 grow">
+    <div className="space-y-2 flex-grow">
       <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
         <DialogTrigger asChild>
           <Input
@@ -211,7 +211,7 @@ export function DialogNumberInput({
           <DialogTitle>{name}</DialogTitle>
         </VisuallyHidden>
 
-        <DialogContent className="sm:max-w-[425px] p-7!">
+        <DialogContent className="sm:max-w-[425px] !p-7">
           <div className="grid gap-4">
             <div className="space-y-1">
               <div

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useReducer } from "react";
 import { flatMap, pipe } from "remeda";

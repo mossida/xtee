@@ -1,7 +1,7 @@
 import "@/styles/globals.css";
 import { Header } from "@/components/header";
-import { Toaster } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/cn";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Viewport } from "next";

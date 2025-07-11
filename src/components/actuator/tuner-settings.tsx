@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { store } from "@/lib/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -62,7 +62,7 @@ export function TunerSettings() {
       <CardHeader>
         <CardTitle>Tuner settings</CardTitle>
       </CardHeader>
-      <CardContent className="grow">
+      <CardContent className="flex-grow">
         <div className="grid grid-cols-1 grid-rows-1">
           <div
             className={cn(

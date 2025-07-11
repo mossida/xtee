@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/cn";
 import { Spinner } from "./ui/spinner";
 
 export const OverSpinner = ({
