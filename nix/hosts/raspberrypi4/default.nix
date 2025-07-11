@@ -24,6 +24,10 @@
     enable = true;
     user = "xtee";
     program = "${outputs.packages.aarch64-linux.xtee}/bin/xtee";
+    environment = {
+      WEBKIT_DISABLE_DMABUF_RENDERER = "1";
+      GDK_BACKEND = "wayland";
+    };
   };
 
   # Workaround for https://github.com/NixOS/nixpkgs/issues/154163

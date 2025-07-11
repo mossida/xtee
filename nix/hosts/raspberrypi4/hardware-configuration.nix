@@ -26,6 +26,7 @@
   hardware.raspberry-pi."4" = {
     gpio.enable = true;
     fkms-3d.enable = true;
+    touch-ft5406.enable = true;
   };
 
   hardware.deviceTree.overlays = [
