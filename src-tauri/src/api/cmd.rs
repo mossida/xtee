@@ -1,4 +1,6 @@
-use ractor::{registry, rpc, ActorRef};
+use std::collections::HashMap;
+
+use ractor::{ActorRef, registry, rpc};
 use serde::{Deserialize, Serialize};
 
 use specta::Type;
@@ -15,6 +17,10 @@ use crate::{
 
 pub fn events(_ctx: RouterContext, _: ()) -> Event {
     Event::Init
+}
+
+pub fn get_env(_ctx: RouterContext, _: ()) -> Result<HashMap<String, String>, rspc::Error> {
+    Ok(std::env::vars().collect())
 }
 
 #[derive(Default, Type, Serialize, Deserialize)]

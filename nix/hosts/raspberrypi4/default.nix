@@ -1,4 +1,5 @@
 {
+  lib,
   pkgs,
   inputs,
   outputs,
@@ -20,17 +21,25 @@
 
   powerManagement.enable = false;
 
+  environment.sessionVariables = {
+    # https://github.com/tauri-apps/tauri/issues/7354
+    XDG_DATA_DIRS = lib.mkAfter (
+      lib.makeSearchPath "share/gsettings-schemas" [
+        pkgs.gsettings-desktop-schemas
+        pkgs.gtk3
+      ]
+    );
+
+    GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules";
+  };
+
   services.cage = {
     enable = true;
     user = "xtee";
-    program = pkgs.writeScriptBin "xtee" ''
-      #!/usr/bin/env bash
-
-      export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/gsettings-desktop-schemas-45.0"
-      export GIO_MODULE_DIR="${pkgs.glib-networking}/lib/gio/modules/"
-
-      exec ${outputs.packages.aarch64-linux.xtee}/bin/xtee
-    '';
+    program = "${outputs.packages.aarch64-linux.xtee}/bin/xtee";
+    environment = {
+      WLR_DPI = "192";
+    };
   };
 
   # Workaround for https://github.com/NixOS/nixpkgs/issues/154163

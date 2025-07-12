@@ -2,6 +2,7 @@
 
 export type Procedures = {
     queries: 
+        { key: "debug/env", input: never, result: { [key in string]: string } } | 
         { key: "master/controllers", input: never, result: Controller[] } | 
         { key: "master/events", input: never, result: Event } | 
         { key: "master/groups", input: never, result: ControllerGroup[] } | 
