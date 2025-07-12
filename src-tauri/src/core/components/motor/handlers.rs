@@ -1,20 +1,20 @@
-use ractor::{async_trait, concurrency::Duration, Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef, concurrency::Duration};
 use tracing::debug;
 
 use crate::{
     core::{
         components::{
+            Component, Handler, SpawnArgs, Stoppable,
             controller::ControllerMessage,
             master::{Event, MasterMessage},
             motor::state::MotorStatus,
-            Component, Handler, SpawnArgs, Stoppable,
         },
         protocol::Packet,
     },
     utils::error::Error,
 };
 
-use super::{state::MotorState, MotorMessage, MotorsLimits};
+use super::{MotorMessage, MotorsLimits, state::MotorState};
 
 pub struct Motor {
     pub slave: u8,
@@ -40,7 +40,6 @@ impl Component for Motor {
     }
 }
 
-#[async_trait]
 impl Actor for Motor {
     type Msg = MotorMessage;
     type State = MotorState;

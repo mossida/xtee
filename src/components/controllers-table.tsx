@@ -135,7 +135,7 @@ export function ControllersTable() {
               <TableCell className="font-medium">{port.name}</TableCell>
               <TableCell>{port.manufacturer}</TableCell>
               <TableCell>
-                <Badge variant="default">{port.serial_number ?? "N/A"}</Badge>
+                <Badge variant="tag">{port.serial_number ?? "N/A"}</Badge>
               </TableCell>
               <TableCell>
                 <ComboboxDropdown

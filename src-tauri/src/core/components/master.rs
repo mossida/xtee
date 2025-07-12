@@ -44,7 +44,6 @@ pub enum MasterMessage {
     SystemStop,
 }
 
-#[async_trait]
 impl Actor for Master {
     type Msg = MasterMessage;
     type State = MasterState;

@@ -1,4 +1,4 @@
-import { FunctionsSelector } from "../functions-selector";
+import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { AutoActuator } from "./auto-actuator";
 import { CurrentLoad } from "./current-load";
@@ -19,7 +19,9 @@ export function ControlActuator() {
 
         <div className="w-full flex-grow flex flex-col justify-between px-4 gap-2">
           <StopActuator />
-          <FunctionsSelector />
+          <Button variant="outline" size="lg">
+            Advanced functions
+          </Button>
         </div>
       </CardContent>
     </Card>

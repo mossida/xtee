@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef, SupervisionEvent};
+use ractor::{Actor, ActorProcessingErr, ActorRef, SupervisionEvent};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tracing::{debug, error, info, instrument, warn};
@@ -23,7 +23,6 @@ pub struct Controller {
     pub baud_rate: u32,
 }
 
-#[async_trait]
 impl Actor for Controller {
     type Msg = ControllerMessage;
     type State = ControllerState;

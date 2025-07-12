@@ -1,20 +1,20 @@
 use pid_lite::Controller as Pid;
-use ractor::{async_trait, Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef};
 use tracing::{debug, info, instrument, warn};
 
 use crate::{
     core::{
-        components::{controller::ControllerMessage, Component, Handler, SpawnArgs, Stoppable},
+        components::{Component, Handler, SpawnArgs, Stoppable, controller::ControllerMessage},
         protocol::Packet,
     },
     utils::error::Error,
 };
 
 use super::{
+    ActuatorDirection,
     config::ActuatorConfig,
     messages::{ActuatorMessage, ActuatorStatus},
     state::ActuatorState,
-    ActuatorDirection,
 };
 
 pub struct Actuator;
@@ -37,7 +37,6 @@ impl Component for Actuator {
     }
 }
 
-#[async_trait]
 impl Actor for Actuator {
     type Msg = ActuatorMessage;
     type State = ActuatorState;

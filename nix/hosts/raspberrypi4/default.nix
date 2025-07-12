@@ -23,11 +23,14 @@
   services.cage = {
     enable = true;
     user = "xtee";
-    program = "${outputs.packages.aarch64-linux.xtee}/bin/xtee";
-    environment = {
-      WEBKIT_DISABLE_DMABUF_RENDERER = "1";
-      GDK_BACKEND = "wayland";
-    };
+    program = pkgs.writeScriptBin "xtee" ''
+      #!/usr/bin/env bash
+
+      export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/gsettings-desktop-schemas-45.0"
+      export GIO_MODULE_DIR="${pkgs.glib-networking}/lib/gio/modules/"
+
+      exec ${outputs.packages.aarch64-linux.xtee}/bin/xtee
+    '';
   };
 
   # Workaround for https://github.com/NixOS/nixpkgs/issues/154163
