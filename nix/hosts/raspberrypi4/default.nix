@@ -17,6 +17,36 @@
   users.users.xtee = {
     isNormalUser = true;
     useDefaultShell = true;
+    password = "xtee";
+  };
+
+  networking = {
+    hostName = "xtee";
+
+    interfaces = {
+      eth0 = {
+        useDHCP = false;
+        ipv4.addresses = [
+          {
+            address = "169.254.1.100";
+            prefixLength = 24;
+          }
+        ];
+      };
+    };
+
+    firewall = {
+      allowedTCPPorts = [ 22 ];
+    };
+  };
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "no";
+      PasswordAuthentication = true;
+      KbdInteractiveAuthentication = false;
+    };
   };
 
   powerManagement.enable = false;
