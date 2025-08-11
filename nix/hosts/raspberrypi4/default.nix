@@ -24,12 +24,12 @@
     hostName = "xtee";
 
     interfaces = {
-      eth0 = {
+      end0 = {
         useDHCP = false;
         ipv4.addresses = [
           {
             address = "169.254.1.100";
-            prefixLength = 24;
+            prefixLength = 16;
           }
         ];
       };
@@ -37,6 +37,7 @@
 
     firewall = {
       allowedTCPPorts = [ 22 ];
+      allowPing = true;
     };
   };
 
@@ -55,7 +56,6 @@
     # https://github.com/tauri-apps/tauri/issues/7354
     XDG_DATA_DIRS = lib.mkMerge [
       "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}"
-      "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
     ];
 
     GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules";
