@@ -28,8 +28,8 @@
         useDHCP = false;
         ipv4.addresses = [
           {
-            address = "169.254.1.100";
-            prefixLength = 16;
+            address = "10.10.0.1";
+            prefixLength = 24;
           }
         ];
       };
