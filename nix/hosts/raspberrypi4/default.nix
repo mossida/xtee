@@ -18,6 +18,10 @@
     isNormalUser = true;
     useDefaultShell = true;
     password = "xtee";
+    extraGroups = [
+      "wheel"
+      "systemd-journal"
+    ];
   };
 
   networking = {
@@ -67,6 +71,7 @@
     program = "${outputs.packages.aarch64-linux.xtee}/bin/xtee";
     environment = {
       WLR_DPI = "192";
+      XTEE_LOG = "debug";
     };
   };
 
