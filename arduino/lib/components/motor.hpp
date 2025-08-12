@@ -76,6 +76,7 @@ namespace components
                 uint8_t slave;
                 bool running;
                 bool stopping;
+                bool outputs;
                 int32_t position;
                 uint32_t remaining;
             } STATUS_DATA;

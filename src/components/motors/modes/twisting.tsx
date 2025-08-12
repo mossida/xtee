@@ -66,8 +66,8 @@ export function TwistingMode() {
     resolver: zodResolver(schema),
   });
 
-  const motor1Status = useAtomValue(motorStatusFamily(1));
-  const motor2Status = useAtomValue(motorStatusFamily(2));
+  const [motor1Status] = useAtomValue(motorStatusFamily(1));
+  const [motor2Status] = useAtomValue(motorStatusFamily(2));
   const isOverloaded = useAtomValue(isOverloadedAtom);
 
   const isDisabled =

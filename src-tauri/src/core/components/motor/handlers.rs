@@ -135,6 +135,7 @@ impl Actor for Motor {
                     slave,
                     running,
                     stopping,
+                    outputs,
                     position,
                     remaining,
                     ..
@@ -149,13 +150,17 @@ impl Actor for Motor {
                         _ => MotorStatus::Idle,
                     };
 
-                    debug!("Motor {} status: {:?}", self.slave, state.status);
+                    debug!(
+                        "Motor {} status: {:?}, outputs: {}",
+                        self.slave, state.status, outputs
+                    );
 
                     state
                         .master
                         .send_message(MasterMessage::Event(Event::MotorStatus(
                             self.slave,
                             state.status.clone(),
+                            outputs,
                         )))?;
                 }
                 Packet::MotorRecognition { slave, max_speed } if slave == self.slave => {

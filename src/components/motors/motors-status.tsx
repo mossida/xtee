@@ -12,13 +12,15 @@ export function MotorsStatus() {
       value={view}
       onValueChange={(value) => setView(value as "1" | "2")}
     >
-      <div className="w-full flex justify-between items-center mb-2">
-        <h4 className="text-base">Status</h4>
-        <TabsList>
-          <TabsTrigger value="1">Motor 1</TabsTrigger>
-          <TabsTrigger value="2">Motor 2</TabsTrigger>
-        </TabsList>
-      </div>
+      <h4 className="text-base mb-4">Status</h4>
+      <TabsList className="w-full">
+        <TabsTrigger className="w-full" value="1">
+          Motor 1
+        </TabsTrigger>
+        <TabsTrigger className="w-full" value="2">
+          Motor 2
+        </TabsTrigger>
+      </TabsList>
       <TabsContent value="1">
         <MotorStatus motor={1} />
       </TabsContent>

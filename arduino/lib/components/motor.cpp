@@ -155,10 +155,13 @@ void Engine::sendStatus(uint8_t slave)
     auto index = slave - 1;
     auto *stepper = steppers[index];
 
+    const bool outputs = digitalReadFast(pins::MOTORS[index]->enable);
+
     const packet::STATUS_DATA data = {
         .slave = slave,
         .running = stepper->isRunning(),
         .stopping = stepper->isStopping(),
+        .outputs = outputs,
         .position = stepper->getCurrentPosition(),
         .remaining = stepper->stepsToStop()};
 

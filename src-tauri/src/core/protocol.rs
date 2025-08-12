@@ -44,6 +44,7 @@ pub enum Packet {
         slave: u8,
         running: bool,
         stopping: bool,
+        outputs: bool,
         position: i32,
         remaining: u32,
     },

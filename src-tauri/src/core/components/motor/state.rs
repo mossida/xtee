@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ractor::{concurrency::JoinHandle, ActorProcessingErr, ActorRef};
+use ractor::{ActorProcessingErr, ActorRef, concurrency::JoinHandle};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 

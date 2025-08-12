@@ -67,8 +67,8 @@ export function ManualMode() {
   const { mutate: keep } = api.useMutation("motor/keep");
   const { mutate: stop } = api.useMutation("motor/stop");
 
-  const motor1Status = useAtomValue(motorStatusFamily(1));
-  const motor2Status = useAtomValue(motorStatusFamily(2));
+  const [motor1Status] = useAtomValue(motorStatusFamily(1));
+  const [motor2Status] = useAtomValue(motorStatusFamily(2));
   const isOverloaded = useAtomValue(isOverloadedAtom);
 
   const isDisabled =

@@ -37,13 +37,16 @@ export const motorModeAtom = atom<"twisting" | "serving" | "manual">(
 export const motorStatusViewAtom = atom<"1" | "2">("1");
 
 export const motorStatusFamily = atomFamily((motor: 1 | 2) =>
-  withAtomEffect(atom<MotorStatus | null>(null), (_, set) => {
-    const promise = listenEvent("motor-status", (payload) => {
-      if (payload.data[0] === motor) {
-        set(motorStatusFamily(motor), payload.data[1]);
-      }
-    });
+  withAtomEffect(
+    atom<[MotorStatus | null, boolean]>([null, false]),
+    (_, set) => {
+      const promise = listenEvent("motor-status", (payload) => {
+        if (payload.data[0] === motor) {
+          set(motorStatusFamily(motor), [payload.data[1], payload.data[2]]);
+        }
+      });
 
-    return () => promise.then((unsubscribe) => unsubscribe());
-  }),
+      return () => promise.then((unsubscribe) => unsubscribe());
+    },
+  ),
 );
