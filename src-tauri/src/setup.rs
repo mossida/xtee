@@ -66,8 +66,8 @@ pub fn setup_logging() -> (WorkerGuard, WorkerGuard) {
         .thread_name("xtee-log-stderr")
         .finish(std::io::stderr());
 
-    let env = std::env::var("XTEE_LOG").unwrap_or_else(|_| "info".to_string());
-    let level = Level::from_str(&env).unwrap_or(Level::INFO);
+    // let env = std::env::var("XTEE_LOG").unwrap_or_else(|_| "info".to_string());
+    let level = Level::DEBUG;
 
     // Using the package name
     let package = env!("CARGO_PKG_NAME").replace("-", "_");
