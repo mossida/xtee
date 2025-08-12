@@ -26,9 +26,15 @@ function useControllerStatus() {
 
   useEffect(() => {
     if (event) {
-      toast("Controller changed", {
-        description: event.status.type,
-      });
+      if (event.status.type === "connected") {
+        toast.success("Controller connected");
+      } else if (event.status.type === "disconnected") {
+        toast.info("Controller disconnected");
+      } else if (event.status.type === "failed") {
+        toast.warning("Controller failed", {
+          description: event.status.data.reason,
+        });
+      }
     }
   }, [event]);
 }

@@ -31,7 +31,7 @@ export default function RootLayout({
           <Header />
           <div className="p-6 h-full">{children}</div>
         </Providers>
-        <Toaster />
+        <Toaster richColors />
       </body>
     </html>
   );
