@@ -15,7 +15,7 @@ export function ControlMotors() {
 
   return (
     <Card className="flex flex-col flex-grow">
-      <TabsPrimitive.Root className="p-6 space-y-6" value={mode}>
+      <TabsPrimitive.Root className="p-6 space-y-10" value={mode}>
         <TabsPrimitive.List className="flex flex-row justify-between">
           <ModeSelector
             value={mode}

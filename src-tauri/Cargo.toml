@@ -1,6 +1,6 @@
 [package]
 name = "xtee"
-version = "2.0.3"
+version = "2.0.4"
 description = "A Tauri App"
 authors = ["marco.condrache@mossida.com"]
 edition = "2024"

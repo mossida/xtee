@@ -25,11 +25,11 @@ export function ModeSelector<M extends ReadonlyArray<string>>({
 
   return (
     <>
-      <Button size="icon" variant="secondary" onClick={prevMode}>
+      <Button size="icon" variant="default" onClick={prevMode}>
         <ChevronLeftIcon className="w-4 h-4" />
       </Button>
       <span className="text-lg font-mono">{value.toUpperCase()}</span>
-      <Button size="icon" variant="secondary" onClick={nextMode}>
+      <Button size="icon" variant="default" onClick={nextMode}>
         <ChevronRightIcon className="w-4 h-4" />
       </Button>
     </>
