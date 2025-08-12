@@ -1,11 +1,11 @@
 "use client";
 
-import { waitEvent } from "@/hooks/use-event";
+import { useEvent, waitEvent } from "@/hooks/use-event";
 import { api } from "@/lib/client";
 import { store } from "@/lib/store";
 import type { Controller, ControllerGroup, Port } from "@/types/bindings";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { uniqueBy } from "remeda";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -19,8 +19,23 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import { toast } from "sonner";
+
+function useControllerStatus() {
+  const event = useEvent("controller-status");
+
+  useEffect(() => {
+    if (event) {
+      toast("Controller changed", {
+        description: event.status.type,
+      });
+    }
+  }, [event]);
+}
 
 export function ControllersTable() {
+  useControllerStatus();
+
   const queries = api.useQueries([
     ["master/ports", void 0, { refetchInterval: 1000 }],
     ["master/groups", void 0, {}],

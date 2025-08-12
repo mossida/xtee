@@ -1,11 +1,11 @@
 import "@/styles/globals.css";
 import { Header } from "@/components/header";
-import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/cn";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Viewport } from "next";
 import { Providers } from "./providers";
+import { Toaster } from "@/components/ui/sonner";
 
 export const viewport: Viewport = {
   initialScale: 1,

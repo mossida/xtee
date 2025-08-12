@@ -4,7 +4,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort, SupervisionEvent
 use serde::Serialize;
 use specta::Type;
 use tauri::{AppHandle, Emitter};
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 use crate::core::store::{Store, StoreKey, store};
 
@@ -55,6 +55,8 @@ impl Actor for Master {
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         let store = store(&args)?;
+
+        debug!("Master initialized");
 
         let controllers = store
             .get(StoreKey::Controllers)

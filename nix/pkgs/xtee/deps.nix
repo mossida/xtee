@@ -1407,6 +1407,12 @@
     url = "https://registry.npmjs.org/simple-swizzle/-/simple-swizzle-0.2.2.tgz";
     hash = "sha512-JA//kQgZtbuY83m+xT+tXJkmJncGMTFT+C+g2h2R9uxkYIrE2yy9sgmcLhCnw57/WSD+Eh3J97FPEDFnbXnDUg==";
   };
+  "sonner" = {
+    out_path = "sonner";
+    name = "sonner@2.0.7";
+    url = "https://registry.npmjs.org/sonner/-/sonner-2.0.7.tgz";
+    hash = "sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w==";
+  };
   "source-map-js" = {
     out_path = "source-map-js";
     name = "source-map-js@1.2.1";
