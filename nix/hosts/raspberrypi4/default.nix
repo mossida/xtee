@@ -21,6 +21,7 @@
     extraGroups = [
       "wheel"
       "systemd-journal"
+      "dialout"
     ];
   };
 
