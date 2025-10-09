@@ -49,6 +49,8 @@ tokio-serial = "5.4.5"
 serialport = { version = "4", features = ["serde"] }
 pid-lite = "1.2.0"
 
+system_shutdown = "4.0.1"
+
 tracing = { version = "0", features = ["log", "release_max_level_info"] }
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0", features = ["json"] }

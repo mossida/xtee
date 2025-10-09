@@ -21,7 +21,8 @@ export type Procedures = {
         { key: "motor/reload/settings", input: never, result: null } | 
         { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
-        { key: "motor/stop", input: [number, MotorStopMode], result: null },
+        { key: "motor/stop", input: [number, MotorStopMode], result: null } | 
+        { key: "system/shutdown", input: never, result: null },
     subscriptions: never
 };
 

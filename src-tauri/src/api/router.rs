@@ -6,7 +6,7 @@ use crate::{
         actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
         actuator_unload, events, get_controllers, get_env, get_groups, get_ports, kill_controller,
         motor_get_max_speed, motor_keep, motor_reload_settings, motor_set_outputs, motor_spin,
-        motor_stop, spawn_controller,
+        motor_stop, shutdown, spawn_controller,
     },
     core::components::master::MasterMessage,
 };
@@ -37,5 +37,6 @@ pub fn router() -> Router<RouterContext> {
         .mutation("actuator/load", |t| t(actuator_load))
         .mutation("actuator/keep", |t| t(actuator_keep))
         .mutation("actuator/reload/settings", |t| t(actuator_reload_settings))
+        .mutation("system/shutdown", |t| t(shutdown))
         .build()
 }

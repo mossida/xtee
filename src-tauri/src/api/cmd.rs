@@ -252,3 +252,8 @@ pub fn actuator_stop(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
         .send_message(ActuatorMessage::Stop)
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))
 }
+
+pub fn shutdown(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
+    system_shutdown::force_shutdown()
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))
+}
