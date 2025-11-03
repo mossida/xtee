@@ -10,9 +10,6 @@ void Protocol::handler(const uint8_t *data, size_t size)
 
     auto packetId = data[0];
 
-    if (packetId < 0 || packetId >= 256)
-        return;
-
     if (packetId == packet::RESET)
     {
         ack = false;
