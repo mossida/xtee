@@ -39,7 +39,6 @@ ractor = "0.15.6"
 ractor_actors = "0.4.9"
 
 deku = { version = "0.18.1", default-features = false, features = ["std"] }
-crc = "3.3.0"
 cobs-codec = "0.1.0"
 
 tokio = { version = "1.45.1", features = ["full"] }
