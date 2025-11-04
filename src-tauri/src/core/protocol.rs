@@ -4,7 +4,7 @@ use serde::Serialize;
 use tokio::time::{Duration, timeout};
 use tokio_serial::SerialStream;
 use tokio_util::{
-    bytes::{BufMut, BytesMut},
+    bytes::BytesMut,
     codec::{Decoder, Encoder},
 };
 use tracing::{error, info, trace};
