@@ -115,7 +115,7 @@ impl Codec {
     pub fn new() -> Self {
         Self {
             cobs_codec: cobs_codec::Codec::new(),
-            encoding_buffer: vec![0u8; 256],
+            encoding_buffer: vec![0u8; 1024],
         }
     }
 }
