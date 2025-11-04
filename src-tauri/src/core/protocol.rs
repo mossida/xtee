@@ -65,7 +65,6 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    #[inline]
     async fn transform(self) -> Result<(MuxSink, MuxStream), Error> {
         let codec = Codec::new();
         let (mut framed_sink, framed_stream) = codec.framed(self.stream).split();
@@ -97,12 +96,10 @@ impl Protocol {
         Ok((framed_sink, stream.boxed()))
     }
 
-    #[inline]
     pub fn new(stream: SerialStream) -> Self {
         Self { stream }
     }
 
-    #[inline]
     pub async fn framed(self) -> Result<(MuxSink, MuxStream), Error> {
         self.transform().await
     }
@@ -110,7 +107,7 @@ impl Protocol {
 
 pub struct Codec {
     cobs_codec: cobs_codec::Codec<0x00, 0x00, 256, 256>,
-    buffer: BytesMut,
+    encoding_buffer: Vec<u8>,
 }
 
 impl Codec {
@@ -118,7 +115,7 @@ impl Codec {
     pub fn new() -> Self {
         Self {
             cobs_codec: cobs_codec::Codec::new(),
-            buffer: BytesMut::with_capacity(256), // Pre-allocate with reasonable size
+            encoding_buffer: vec![0u8; 256],
         }
     }
 }
@@ -128,17 +125,12 @@ impl Decoder for Codec {
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        self.cobs_codec
-            .decode(src)
-            .map_err(|_| Error::Packet)
-            .and_then(|decoded| match decoded {
-                Some(ref decoded_data) if decoded_data.len() >= 1 => {
-                    Packet::from_bytes((decoded_data, 0))
-                        .map(|(_, packet)| Some(packet))
-                        .map_err(|_| Error::Packet)
-                }
-                _ => Ok(None),
-            })
+        match self.cobs_codec.decode(src).map_err(|_| Error::Packet)? {
+            Some(decoded_data) => Packet::from_bytes((&decoded_data, 0))
+                .map(|(_, packet)| Some(packet))
+                .map_err(|_| Error::Packet),
+            None => Ok(None),
+        }
     }
 }
 
@@ -146,22 +138,15 @@ impl Encoder<Packet> for Codec {
     type Error = Error;
 
     fn encode(&mut self, packet: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        self.buffer.clear();
+        let written_len = packet
+            .to_slice(&mut self.encoding_buffer)
+            .map_err(|_| Error::Packet)?;
 
-        // Serialize directly into our reusable buffer
-        packet
-            .to_bytes()
-            .map_err(|_| Error::Packet)
-            .and_then(|packet_bytes| {
-                self.buffer.extend_from_slice(&packet_bytes);
+        self.cobs_codec
+            .encode(&self.encoding_buffer[..written_len], dst)
+            .map_err(|_| Error::Packet)?;
 
-                self.cobs_codec
-                    .encode(&self.buffer, dst)
-                    .map_err(|_| Error::Packet)
-            })
-            .inspect_err(|e| error!("Encoding error: {:?}", e))
-            .map(|_| {
-                trace!("Encoded packet size: {}", dst.len());
-            })
+        trace!("Encoded packet size: {}", dst.len());
+        Ok(())
     }
 }
