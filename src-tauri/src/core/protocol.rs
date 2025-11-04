@@ -59,12 +59,19 @@ pub enum Packet {
     ActuatorStop,
 }
 
-// Optimized Protocol implementation
 pub struct Protocol {
     stream: SerialStream,
 }
 
 impl Protocol {
+    pub fn new(stream: SerialStream) -> Self {
+        Self { stream }
+    }
+
+    pub async fn framed(self) -> Result<(MuxSink, MuxStream), Error> {
+        self.transform().await
+    }
+
     async fn transform(self) -> Result<(MuxSink, MuxStream), Error> {
         let codec = Codec::new();
         let (mut framed_sink, framed_stream) = codec.framed(self.stream).split();
@@ -94,14 +101,6 @@ impl Protocol {
         })?;
 
         Ok((framed_sink, stream.boxed()))
-    }
-
-    pub fn new(stream: SerialStream) -> Self {
-        Self { stream }
-    }
-
-    pub async fn framed(self) -> Result<(MuxSink, MuxStream), Error> {
-        self.transform().await
     }
 }
 
