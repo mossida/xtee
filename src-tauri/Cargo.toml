@@ -35,17 +35,16 @@ rspc = { version = "0.3.1", features = ["tracing"] }
 rspc-tauri = { version = "0.1.1" }
 specta = { version = "2.0.0-rc.20", features = ["derive"] }
 
-ractor = "0.15.6"
+ractor = "0.15.9"
 ractor_actors = "0.4.9"
 
-deku = { version = "0.18.1", default-features = false, features = ["std"] }
+deku = { version = "0.20.0", default-features = false, features = ["std"] }
 cobs-codec = "0.1.0"
 
-tokio = { version = "1.45.1", features = ["full"] }
-tokio-util = "0.7.15"
+tokio = { version = "1.48.0", features = ["full"] }
+tokio-util = "0.7.17"
 tokio-serial = "5.4.5"
 
-serialport = { version = "4", features = ["serde"] }
 pid-lite = "1.2.0"
 
 system_shutdown = "4.0.1"

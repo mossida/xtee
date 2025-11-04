@@ -8,6 +8,7 @@
   packages = [
     pkgs.git
     pkgs.cargo-edit
+    pkgs.cargo-machete
     pkgs.platformio
     pkgs.zstd
 

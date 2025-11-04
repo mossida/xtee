@@ -9,6 +9,8 @@ mod utils;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
+
+    #[cfg(debug_assertions)]
     let (outg, errg) = setup::setup_logging();
 
     let result = builder
@@ -20,6 +22,9 @@ pub fn run() {
         error!("Error while running tauri application: {e}");
     }
 
-    drop(outg);
-    drop(errg);
+    #[cfg(debug_assertions)]
+    {
+        drop(outg);
+        drop(errg);
+    }
 }
