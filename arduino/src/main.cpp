@@ -6,7 +6,7 @@
 
 #include "protocol.hpp"
 
-#define SERIAL_SPEED 115200
+#define SERIAL_SPEED 57600
 
 protocol::Protocol pt;
 
@@ -46,7 +46,7 @@ void setup()
 }
 
 void loop()
-{  
+{
 #if ENABLE_SCALE
   sc.update();
 #endif
