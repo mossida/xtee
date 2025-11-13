@@ -24,6 +24,7 @@ void Engine::begin()
     protocol->registerHandler(packet::SET_OUTPUTS, this, &Engine::handleSetOutputs);
     protocol->registerHandler(packet::REPORT_STATUS, this, &Engine::handleReportStatus);
     protocol->registerHandler(packet::STOP, this, &Engine::handleStop);
+    protocol->registerHandler(packet::STOP_ALL, this, &Engine::handleStopAll);
 
     digitalWriteFast(LED_BUILTIN, LOW);
 }
@@ -97,11 +98,31 @@ void Engine::handleStop(const uint8_t *buffer, size_t size)
     auto *stepper = steppers[data.slave - 1];
 
     if (data.gentle)
-        return stepper->stopMove();
-
-    stepper->forceStopAndNewPosition(0);
+        stepper->stopMove();
+    else
+        stepper->forceStopAndNewPosition(0);
 
     sendStatus(data.slave);
+}
+
+void Engine::handleStopAll(const uint8_t *buffer, size_t size)
+{
+    if (size != sizeof(packet::STOP_ALL_DATA))
+        return;
+
+    const packet::STOP_ALL_DATA data = *reinterpret_cast<const packet::STOP_ALL_DATA *>(buffer);
+
+    for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
+    {
+        auto *stepper = steppers[i];
+
+        if (data.gentle)
+            stepper->stopMove();
+        else
+            stepper->forceStopAndNewPosition(0);
+
+        sendStatus(i + 1);
+    }
 }
 
 void Engine::handleSetSpeed(const uint8_t *buffer, size_t size)

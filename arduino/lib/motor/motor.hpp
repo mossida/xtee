@@ -26,6 +26,7 @@ namespace components
             const uint8_t REPORT_STATUS = 0x09;
             const uint8_t STATUS = 0x0A;
             const uint8_t STOP = 0x0B;
+            const uint8_t STOP_ALL = 0x0C;
 
             typedef struct __attribute__((packed))
             {
@@ -45,6 +46,11 @@ namespace components
                 uint8_t slave;
                 bool gentle;
             } STOP_DATA;
+
+            typedef struct __attribute__((packed))
+            {
+                bool gentle;
+            } STOP_ALL_DATA;
 
             typedef struct __attribute__((packed))
             {
@@ -101,6 +107,7 @@ namespace components
             void handleSetOutputs(const uint8_t *data, size_t size);
             void handleReportStatus(const uint8_t *data, size_t size);
             void handleStop(const uint8_t *data, size_t size);
+            void handleStopAll(const uint8_t *data, size_t size);
 
         private:
             bool is_initialized = false;
