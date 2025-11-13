@@ -43,7 +43,9 @@ cobs-codec = "0.1.0"
 
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-util = "0.7.17"
+# Used only for serial port detection
 tokio-serial = "5.4.5"
+serial2-tokio = "0.1.19"
 
 pid-lite = "1.2.0"
 

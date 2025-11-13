@@ -3,13 +3,13 @@ use std::pin::Pin;
 use futures::{SinkExt, Stream, stream::SplitSink};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use ractor_actors::streams::{StreamMuxConfiguration, StreamMuxNotification, Target, mux_stream};
+use serial2_tokio::SerialPort;
 
 use crate::core::protocol::{Codec, Packet, Protocol};
-use tokio_serial::{SerialPortBuilderExt, SerialStream};
 use tokio_util::codec::Framed;
 use tracing::{debug, error};
 
-pub type MuxSink = SplitSink<Framed<SerialStream, Codec>, Packet>;
+pub type MuxSink = SplitSink<Framed<SerialPort, Codec>, Packet>;
 pub type MuxStream = Pin<Box<dyn Stream<Item = Packet> + Send + 'static>>;
 pub type MuxTarget = Box<dyn Target<MuxStream>>;
 
@@ -59,7 +59,7 @@ impl Actor for Mux {
             targets,
         }: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let io_stream = tokio_serial::new(port, baud_rate).open_native_async()?;
+        let io_stream = SerialPort::open(port, baud_rate)?;
 
         let protocol = Protocol::new(io_stream);
         let (sink, stream) = protocol.framed().await?;

@@ -14,7 +14,6 @@ pub enum Error {
     #[error("Timeout: {0}")]
     Timeout(String),
     IO(#[from] std::io::Error),
-    Serial(#[from] tokio_serial::Error),
     Json(#[from] serde_json::Error),
     #[error(transparent)]
     Any(#[from] anyhow::Error),

@@ -1,8 +1,8 @@
 use deku::prelude::*;
 use futures::{SinkExt, StreamExt, future};
 use serde::Serialize;
+use serial2_tokio::SerialPort;
 use tokio::time::{Duration, timeout};
-use tokio_serial::SerialStream;
 use tokio_util::{
     bytes::BytesMut,
     codec::{Decoder, Encoder},
@@ -54,17 +54,19 @@ pub enum Packet {
     #[deku(id = 0x0B)]
     MotorStop { slave: u8, gentle: bool },
     #[deku(id = 0x0C)]
-    ActuatorMove { direction: bool },
+    MotorsStop { gentle: bool },
     #[deku(id = 0x0D)]
+    ActuatorMove { direction: bool },
+    #[deku(id = 0x0E)]
     ActuatorStop,
 }
 
 pub struct Protocol {
-    stream: SerialStream,
+    stream: SerialPort,
 }
 
 impl Protocol {
-    pub fn new(stream: SerialStream) -> Self {
+    pub fn new(stream: SerialPort) -> Self {
         Self { stream }
     }
 
