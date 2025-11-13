@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include <PacketSerial.h>
 
-#include "crc.hpp"
-
 namespace protocol
 {
     namespace packet

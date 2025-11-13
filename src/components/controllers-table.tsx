@@ -82,7 +82,7 @@ export function ControllersTable() {
       const controller = {
         serial_port: port,
         group: groupSelections[port] as ControllerGroup,
-        baud_rate: 115200,
+        baud_rate: 57600,
         id,
       };
 
