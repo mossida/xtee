@@ -1,15 +1,7 @@
 use ractor::ActorRef;
 use rspc::{Config, Router};
 
-use crate::{
-    api::cmd::{
-        actuator_keep, actuator_load, actuator_move, actuator_reload_settings, actuator_stop,
-        actuator_unload, events, get_controllers, get_env, get_groups, get_ports, kill_controller,
-        motor_get_max_speed, motor_keep, motor_reload_settings, motor_set_outputs, motor_spin,
-        motor_stop, shutdown, spawn_controller,
-    },
-    core::components::master::MasterMessage,
-};
+use crate::{api::cmd::*, core::components::master::MasterMessage};
 
 pub struct RouterContext {
     pub master: ActorRef<MasterMessage>,
@@ -29,6 +21,7 @@ pub fn router() -> Router<RouterContext> {
         .mutation("motor/keep", |t| t(motor_keep))
         .mutation("motor/spin", |t| t(motor_spin))
         .mutation("motor/stop", |t| t(motor_stop))
+        .mutation("motors/stop", |t| t(motors_stop))
         .mutation("motor/set/outputs", |t| t(motor_set_outputs))
         .mutation("motor/reload/settings", |t| t(motor_reload_settings))
         .mutation("actuator/move", |t| t(actuator_move))

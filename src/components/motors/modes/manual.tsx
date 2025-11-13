@@ -65,7 +65,7 @@ export function ManualMode() {
   const { data: limits } = store.useQuery("motors.limits");
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
-  const { mutate: stop } = api.useMutation("motor/stop");
+  const { mutate: stopAll } = api.useMutation("motors/stop");
 
   const [motor1Status] = useAtomValue(motorStatusFamily(1));
   const [motor2Status] = useAtomValue(motorStatusFamily(2));
@@ -99,11 +99,6 @@ export function ManualMode() {
     spin([2, payload[1]]);
   };
 
-  const askStop = () => {
-    stop([1, "graceful"]);
-    stop([2, "graceful"]);
-  };
-
   const { lock, unlock } = useLockScroll();
 
   const ref = useLongPress({
@@ -117,7 +112,7 @@ export function ManualMode() {
     },
     onEnd: () => {
       unlock();
-      askStop();
+      stopAll("graceful");
     },
   });
 
@@ -291,8 +286,7 @@ export function ManualMode() {
           variant="destructive"
           disabled={isDisabled}
           onClick={() => {
-            stop([1, "emergency"]);
-            stop([2, "emergency"]);
+            stopAll("emergency");
           }}
         >
           STOP

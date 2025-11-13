@@ -73,7 +73,7 @@ export function ServingMode() {
 
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
-  const { mutate: stop } = api.useMutation("motor/stop");
+  const { mutate: stopAll } = api.useMutation("motors/stop");
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -114,8 +114,7 @@ export function ServingMode() {
     },
     onEnd: () => {
       unlock();
-      stop([1, "graceful"]);
-      stop([2, "graceful"]);
+      stopAll("graceful");
     },
   });
 
@@ -216,8 +215,7 @@ export function ServingMode() {
           variant="destructive"
           disabled={isDisabled}
           onClick={() => {
-            stop([1, "emergency"]);
-            stop([2, "emergency"]);
+            stopAll("emergency");
           }}
         >
           STOP

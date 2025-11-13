@@ -7,11 +7,14 @@ use specta::Type;
 
 use crate::{
     api::router::RouterContext,
-    core::components::{
-        actuator::{ActuatorMessage, ActuatorMovement},
-        controller::{Controller, ControllerChild, ControllerGroup},
-        master::{Event, MasterMessage},
-        motor::{MotorMessage, MotorMovement},
+    core::{
+        components::{
+            actuator::{ActuatorMessage, ActuatorMovement},
+            controller::{Controller, ControllerChild, ControllerGroup},
+            master::{Event, MasterMessage},
+            motor::{MotorMessage, MotorMovement},
+        },
+        protocol::Packet,
     },
 };
 
@@ -160,6 +163,19 @@ pub fn motor_stop(_ctx: RouterContext, input: (u8, MotorStopMode)) -> Result<(),
         } else {
             MotorMessage::EmergencyStop
         })
+        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn motors_stop(ctx: RouterContext, input: MotorStopMode) -> Result<(), rspc::Error> {
+    ctx.master
+        .send_message(MasterMessage::Forward(
+            Packet::MotorsStop {
+                gentle: matches!(input, MotorStopMode::Graceful),
+            },
+            ControllerGroup::Motors,
+        ))
         .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
 
     Ok(())

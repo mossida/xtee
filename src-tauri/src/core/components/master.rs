@@ -6,7 +6,11 @@ use specta::Type;
 use tauri::{AppHandle, Emitter};
 use tracing::{debug, error, warn};
 
-use crate::core::store::{Store, StoreKey, store};
+use crate::core::{
+    components::controller::ControllerGroup,
+    protocol::Packet,
+    store::{Store, StoreKey, store},
+};
 
 use super::{
     actuator::ActuatorStatus,
@@ -41,6 +45,7 @@ pub enum MasterMessage {
     Spawn(Controller),
     Event(Event),
     FetchControllers(RpcReplyPort<Vec<Controller>>),
+    Forward(Packet, ControllerGroup),
     SystemStop,
 }
 
@@ -120,6 +125,18 @@ impl Actor for Master {
             }
             MasterMessage::FetchControllers(reply) => {
                 reply.send(state.controllers.values().cloned().collect())?;
+            }
+            MasterMessage::Forward(packet, group) => {
+                let controller = state.controllers.iter().find(|(_, c)| c.group == group);
+
+                if let Some((id, _)) = controller {
+                    let cell = registry::where_is(id.clone()).ok_or(rspc::Error::new(
+                        rspc::ErrorCode::NotFound,
+                        "Controller not found".to_owned(),
+                    ))?;
+
+                    cell.send_message(ControllerMessage::Forward(packet))?;
+                }
             }
             MasterMessage::Event(event) => {
                 state.app.emit("app:event", event)?;
