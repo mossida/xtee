@@ -31,7 +31,7 @@ pub enum Packet {
         rotations: u32,
     },
     #[deku(id = 0x05)]
-    MotorSetSpeed { slave: u8, apply: u8, speed: u32 },
+    MotorSetSpeed { slave: u8, apply: bool, speed: u32 },
     #[deku(id = 0x06)]
     MotorSetAcceleration { slave: u8, acceleration: u32 },
     #[deku(id = 0x07)]

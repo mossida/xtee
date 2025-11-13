@@ -49,7 +49,7 @@ impl MotorState {
             .send_message(ControllerMessage::Forward(Packet::MotorSetSpeed {
                 slave,
                 speed: movement.speed,
-                apply: 0x00,
+                apply: false,
             }))?;
 
         self.controller
@@ -92,7 +92,7 @@ impl MotorState {
             .send_message(ControllerMessage::Forward(Packet::MotorSetSpeed {
                 slave,
                 speed: movement.speed,
-                apply: 0x00,
+                apply: false,
             }))?;
 
         // TODO: Understand why we need to set the acceleration here
