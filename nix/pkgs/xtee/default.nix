@@ -28,7 +28,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   cargoRoot = "src-tauri";
   buildAndTestSubdir = finalAttrs.cargoRoot;
 
-  cargoHash = "sha256-e6TIiQwCNuKHBRmmte77MWAr1IfiZssCjny2fhCYV04=";
+  cargoHash = "sha256-5TZ5AI1YCRRYZ8ZUMDfXjPzh75IMTS13t9Y2Ctre1mA=";
 
   preBuild = ''
     ln -sf ${finalAttrs.nodeModules}/node_modules ./node_modules
