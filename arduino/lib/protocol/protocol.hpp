@@ -14,7 +14,7 @@ namespace protocol
     }
 
     // Number of packet types we can handle
-    const uint8_t PACKET_TYPES = 15;
+    const uint8_t PACKET_TYPES = 16;
 
     class HandlerBase
     {

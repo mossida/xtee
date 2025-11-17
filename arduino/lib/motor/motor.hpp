@@ -27,11 +27,13 @@ namespace components
             const uint8_t STATUS = 0x0A;
             const uint8_t STOP = 0x0B;
             const uint8_t STOP_ALL = 0x0C;
+            const uint8_t SYNC = 0x0D;
 
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
                 bool direction;
+                bool deferred;
             } KEEP_DATA;
 
             typedef struct __attribute__((packed))
@@ -39,6 +41,7 @@ namespace components
                 uint8_t slave;
                 bool direction;
                 uint32_t rotations;
+                bool deferred;
             } MOVE_DATA;
 
             typedef struct __attribute__((packed))
@@ -91,6 +94,17 @@ namespace components
             {
                 uint8_t slave;
             } REPORT_STATUS_DATA;
+
+            struct QueuedCommand
+            {
+                uint8_t type;
+                uint8_t slave;
+                union
+                {
+                    MOVE_DATA move;
+                    KEEP_DATA keep;
+                } data;
+            };
         }
 
         class Engine
@@ -108,15 +122,24 @@ namespace components
             void handleReportStatus(const uint8_t *data, size_t size);
             void handleStop(const uint8_t *data, size_t size);
             void handleStopAll(const uint8_t *data, size_t size);
+            void handleSync(const uint8_t *data, size_t size);
 
         private:
             bool is_initialized = false;
+
             protocol::Protocol *protocol;
+
             FastAccelStepperEngine engine;
             FastAccelStepper *steppers[pins::MOTORS_COUNT] = {nullptr};
 
+            packet::QueuedCommand commandQueue[pins::MOTORS_COUNT];
+            bool commandQueued[pins::MOTORS_COUNT];
+
             void sendStatus(uint8_t slave);
             void sendRecognition(uint8_t slave);
+
+            void executeMove(const packet::MOVE_DATA &data);
+            void executeKeep(const packet::KEEP_DATA &data);
         };
     }
 }

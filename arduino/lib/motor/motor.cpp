@@ -12,9 +12,10 @@ void Engine::begin()
 
         stepper->setDirectionPin(pins::MOTORS[i]->dir);
         stepper->setEnablePin(pins::MOTORS[i]->enable, false);
-        stepper->setAutoEnable(true);
+        stepper->setAutoEnable(false);
 
         steppers[i] = stepper;
+        commandQueued[i] = false;
     }
 
     protocol->registerHandler(packet::MOVE, this, &Engine::handleMove);
@@ -25,6 +26,7 @@ void Engine::begin()
     protocol->registerHandler(packet::REPORT_STATUS, this, &Engine::handleReportStatus);
     protocol->registerHandler(packet::STOP, this, &Engine::handleStop);
     protocol->registerHandler(packet::STOP_ALL, this, &Engine::handleStopAll);
+    protocol->registerHandler(packet::SYNC, this, &Engine::handleSync);
 
     digitalWriteFast(LED_BUILTIN, LOW);
 }
@@ -36,14 +38,20 @@ void Engine::handleKeep(const uint8_t *buffer, size_t size)
 
     const packet::KEEP_DATA data = *reinterpret_cast<const packet::KEEP_DATA *>(buffer);
 
-    auto index = data.slave - 1;
-    auto *stepper = steppers[index];
+    if (data.deferred)
+    {
+        packet::QueuedCommand cmd;
+        cmd.type = packet::KEEP;
+        cmd.slave = data.slave;
+        cmd.data.keep = data;
 
-    if (data.direction)
-        stepper->runForward();
-    else
-        stepper->runBackward();
+        commandQueue[data.slave - 1] = cmd;
+        commandQueued[data.slave - 1] = true;
 
+        return;
+    }
+
+    executeKeep(data);
     sendStatus(data.slave);
 }
 
@@ -54,18 +62,20 @@ void Engine::handleMove(const uint8_t *buffer, size_t size)
 
     const packet::MOVE_DATA data = *reinterpret_cast<const packet::MOVE_DATA *>(buffer);
 
-    auto *stepper = steppers[data.slave - 1];
-    auto direction = data.direction ? 1 : -1;
-    auto rotations = constrain(data.rotations, 0, settings::MOTOR_ROTATIONS_LIMIT);
+    if (data.deferred)
+    {
+        packet::QueuedCommand cmd;
+        cmd.type = packet::MOVE;
+        cmd.slave = data.slave;
+        cmd.data.move = data;
 
-    if (rotations == 0)
+        commandQueue[data.slave - 1] = cmd;
+        commandQueued[data.slave - 1] = true;
+
         return;
+    }
 
-    int32_t pulses = settings::MOTOR_STEPS / 10;
-    int32_t steps = rotations * direction * pulses;
-
-    stepper->move(steps);
-
+    executeMove(data);
     sendStatus(data.slave);
 }
 
@@ -123,6 +133,36 @@ void Engine::handleStopAll(const uint8_t *buffer, size_t size)
 
         sendStatus(i + 1);
     }
+}
+
+void Engine::handleSync(const uint8_t *buffer, size_t size)
+{
+    if (size > 0)
+        return;
+
+    noInterrupts();
+
+    for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
+    {
+        if (!commandQueued[i])
+            continue;
+
+        const auto &cmd = commandQueue[i];
+
+        commandQueued[i] = false;
+
+        switch (cmd.type)
+        {
+        case packet::MOVE:
+            executeMove(cmd.data.move);
+            break;
+        case packet::KEEP:
+            executeKeep(cmd.data.keep);
+            break;
+        }
+    }
+
+    interrupts();
 }
 
 void Engine::handleSetSpeed(const uint8_t *buffer, size_t size)
@@ -202,4 +242,30 @@ void Engine::sendRecognition(uint8_t slave)
         .max_speed = stepper->getMaxSpeedInHz()};
 
     protocol->sendPacket(packet::RECOGNITION, reinterpret_cast<const uint8_t *>(&data), sizeof(data));
+}
+
+void Engine::executeMove(const packet::MOVE_DATA &data)
+{
+    auto *stepper = steppers[data.slave - 1];
+    auto direction = data.direction ? 1 : -1;
+    auto rotations = constrain(data.rotations, 0, settings::MOTOR_ROTATIONS_LIMIT);
+
+    if (rotations == 0)
+        return;
+
+    int32_t pulses = settings::MOTOR_STEPS / 10;
+    int32_t steps = rotations * direction * pulses;
+
+    stepper->move(steps);
+}
+
+void Engine::executeKeep(const packet::KEEP_DATA &data)
+{
+    auto index = data.slave - 1;
+    auto *stepper = steppers[index];
+
+    if (data.direction)
+        stepper->runForward();
+    else
+        stepper->runBackward();
 }
