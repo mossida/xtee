@@ -8,11 +8,11 @@ void Engine::begin()
 
     for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
     {
-        auto *stepper = engine.stepperConnectToPin(pins::MOTORS[i]->step);
+        auto *stepper = engine.stepperConnectToPin(pins::MOTORS[i]->step, DRIVER_RMT);
 
         stepper->setDirectionPin(pins::MOTORS[i]->dir);
         stepper->setEnablePin(pins::MOTORS[i]->enable, false);
-        stepper->setAutoEnable(false);
+        stepper->setAutoEnable(true);
 
         steppers[i] = stepper;
     }
