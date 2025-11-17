@@ -29,13 +29,26 @@ pub enum Packet {
         direction: bool,
         #[deku(assert = "*rotations <= 1000000")]
         rotations: u32,
+        deferred: bool,
+    },
+    #[deku(id = 0x04)]
+    MotorKeep {
+        slave: u8,
+        direction: bool,
+        deferred: bool,
     },
     #[deku(id = 0x05)]
     MotorSetSpeed { slave: u8, apply: bool, speed: u32 },
     #[deku(id = 0x06)]
-    MotorSetAcceleration { slave: u8, acceleration: u32 },
+    MotorSetAcceleration {
+        slave: u8,
+        apply: bool,
+        acceleration: u32,
+    },
     #[deku(id = 0x07)]
     MotorSetOutputs { slave: u8, outputs: bool },
+    #[deku(id = 0x08)]
+    MotorRecognition { slave: u8, max_speed: u32 },
     #[deku(id = 0x09)]
     MotorAskStatus { slave: u8 },
     #[deku(id = 0x0A)]
@@ -47,17 +60,15 @@ pub enum Packet {
         position: i32,
         remaining: u32,
     },
-    #[deku(id = 0x08)]
-    MotorRecognition { slave: u8, max_speed: u32 },
-    #[deku(id = 0x04)]
-    MotorKeep { slave: u8, direction: bool },
     #[deku(id = 0x0B)]
-    MotorStop { slave: u8, gentle: bool },
+    MotorStop {
+        slave: u8,
+        gentle: bool,
+        deferred: bool,
+    },
     #[deku(id = 0x0C)]
-    MotorsStop { gentle: bool },
-    #[deku(id = 0x0D)]
     ActuatorMove { direction: bool },
-    #[deku(id = 0x0E)]
+    #[deku(id = 0x0D)]
     ActuatorStop,
 }
 

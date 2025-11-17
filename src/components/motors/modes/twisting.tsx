@@ -55,7 +55,7 @@ export function TwistingMode() {
 
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
-  const { mutate: stopAll } = api.useMutation("motors/stop");
+  const { mutate: stop } = api.useMutation("motor/stop");
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -73,8 +73,6 @@ export function TwistingMode() {
   const isDisabled =
     isOverloaded || !motor1Status?.status || !motor2Status?.status;
 
-  console.log(form.formState.isValid);
-
   const spp = limits?.stepsPerPulse ?? 800;
   const mode = useWatch({ control: form.control, name: "mode" });
 
@@ -88,10 +86,10 @@ export function TwistingMode() {
       direction: values.mode === "mode-1",
       speed: speedToValue(values.speed),
       rotations: values.rotations * 5,
+      deferred: true,
     };
 
-    spin([1, payload]);
-    spin([2, payload]);
+    Promise.all([spin([1, payload]), spin([2, payload])]);
   };
 
   const { lock, unlock } = useLockScroll();
@@ -100,19 +98,19 @@ export function TwistingMode() {
     onStart: () => {
       lock();
       const values = form.getValues();
-      console.log(values);
       const payload = {
         direction: values.mode === "mode-1",
         speed: speedToValue(values.speed),
         rotations: values.rotations,
+        deferred: true,
       };
 
-      keep([1, payload]);
-      keep([2, payload]);
+      Promise.all([keep([1, payload]), keep([2, payload])]);
     },
     onEnd: () => {
       unlock();
-      stopAll("graceful");
+
+      Promise.all([stop([1, "graceful"]), stop([2, "graceful"])]);
     },
   });
 
@@ -216,7 +214,7 @@ export function TwistingMode() {
           disabled={isDisabled}
           variant="destructive"
           onClick={() => {
-            stopAll("emergency");
+            Promise.all([stop([1, "emergency"]), stop([2, "emergency"])]);
           }}
         >
           STOP

@@ -168,19 +168,6 @@ pub fn motor_stop(_ctx: RouterContext, input: (u8, MotorStopMode)) -> Result<(),
     Ok(())
 }
 
-pub async fn motors_stop(ctx: RouterContext, input: MotorStopMode) -> Result<(), rspc::Error> {
-    ctx.master
-        .send_message(MasterMessage::Forward(
-            Packet::MotorsStop {
-                gentle: matches!(input, MotorStopMode::Graceful),
-            },
-            ControllerGroup::Motors,
-        ))
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::ClientClosedRequest, e.to_string()))?;
-
-    Ok(())
-}
-
 pub fn motor_reload_settings(_ctx: RouterContext, _: ()) -> Result<(), rspc::Error> {
     let children: Vec<ControllerChild> = ControllerGroup::Motors.into();
 

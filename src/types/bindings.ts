@@ -22,7 +22,6 @@ export type Procedures = {
         { key: "motor/set/outputs", input: [number, boolean], result: boolean } | 
         { key: "motor/spin", input: [number, MotorMovement], result: null } | 
         { key: "motor/stop", input: [number, MotorStopMode], result: null } | 
-        { key: "motors/stop", input: MotorStopMode, result: null } | 
         { key: "system/shutdown", input: never, result: null },
     subscriptions: never
 };
@@ -39,7 +38,7 @@ export type ControllerStatus = { type: "connected" } | { type: "disconnected" } 
 
 export type Event = { type: "init" } | { type: "weight"; data: number } | { type: "motor-status"; data: [number, MotorStatus, boolean] } | { type: "actuator-status"; data: ActuatorStatus } | { type: "controller-status"; data: { controller: Controller; status: ControllerStatus } }
 
-export type MotorMovement = { speed: number; direction: boolean; rotations: number }
+export type MotorMovement = { speed: number; direction: boolean; rotations: number; deferred: boolean }
 
 export type MotorStatus = { status: "idle" } | { status: "stopping" } | { status: "spinning"; data: { position: number; remaining: number } }
 

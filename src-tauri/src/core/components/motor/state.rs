@@ -56,12 +56,14 @@ impl MotorState {
             .send_message(ControllerMessage::Forward(Packet::MotorSetAcceleration {
                 slave,
                 acceleration: self.config.acceleration,
+                apply: false,
             }))?;
 
         self.controller
             .send_message(ControllerMessage::Forward(Packet::MotorKeep {
                 slave,
                 direction: movement.direction,
+                deferred: movement.deferred,
             }))?;
 
         Ok(())
@@ -79,6 +81,7 @@ impl MotorState {
             .send_message(ControllerMessage::Forward(Packet::MotorStop {
                 slave,
                 gentle: false,
+                deferred: false,
             }))?;
 
         // Enable the motor outputs
@@ -100,6 +103,7 @@ impl MotorState {
             .send_message(ControllerMessage::Forward(Packet::MotorSetAcceleration {
                 slave,
                 acceleration: self.config.acceleration,
+                apply: false,
             }))?;
 
         self.controller
@@ -107,6 +111,7 @@ impl MotorState {
                 slave,
                 direction: movement.direction,
                 rotations: movement.rotations,
+                deferred: movement.deferred,
             }))?;
 
         Ok(())

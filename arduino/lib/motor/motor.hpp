@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <FastAccelStepper.h>
+#include <cstddef>
 #include <digitalWriteFast.h>
 
 #include "common.hpp"
@@ -26,8 +27,6 @@ namespace components
             const uint8_t REPORT_STATUS = 0x09;
             const uint8_t STATUS = 0x0A;
             const uint8_t STOP = 0x0B;
-            const uint8_t STOP_ALL = 0x0C;
-            const uint8_t SYNC = 0x0D;
 
             typedef struct __attribute__((packed))
             {
@@ -48,6 +47,7 @@ namespace components
             {
                 uint8_t slave;
                 bool gentle;
+                bool deferred;
             } STOP_DATA;
 
             typedef struct __attribute__((packed))
@@ -65,6 +65,7 @@ namespace components
             typedef struct __attribute__((packed))
             {
                 uint8_t slave;
+                bool apply;
                 uint32_t acceleration;
             } SET_ACCELERATION_DATA;
 
@@ -103,6 +104,7 @@ namespace components
                 {
                     MOVE_DATA move;
                     KEEP_DATA keep;
+                    STOP_DATA stop;
                 } data;
             };
         }
@@ -121,7 +123,6 @@ namespace components
             void handleSetOutputs(const uint8_t *data, size_t size);
             void handleReportStatus(const uint8_t *data, size_t size);
             void handleStop(const uint8_t *data, size_t size);
-            void handleStopAll(const uint8_t *data, size_t size);
             void handleSync(const uint8_t *data, size_t size);
 
         private:
@@ -133,13 +134,15 @@ namespace components
             FastAccelStepper *steppers[pins::MOTORS_COUNT] = {nullptr};
 
             packet::QueuedCommand commandQueue[pins::MOTORS_COUNT];
-            bool commandQueued[pins::MOTORS_COUNT];
+            size_t commandQueueSize = 0;
 
             void sendStatus(uint8_t slave);
             void sendRecognition(uint8_t slave);
 
+            void executeQueue();
             void executeMove(const packet::MOVE_DATA &data);
             void executeKeep(const packet::KEEP_DATA &data);
+            void executeStop(const packet::STOP_DATA &data);
         };
     }
 }

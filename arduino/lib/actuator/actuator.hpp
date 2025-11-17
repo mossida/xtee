@@ -12,8 +12,8 @@ namespace components
     {
         namespace packet
         {
-            const uint8_t MOVE = 0x0E;
-            const uint8_t STOP = 0x0F;
+            const uint8_t MOVE = 0x0C;
+            const uint8_t STOP = 0x0D;
 
             typedef struct __attribute__((packed))
             {

@@ -11,6 +11,7 @@ pub struct MotorMovement {
     pub speed: u32,
     pub direction: bool,
     pub rotations: u32,
+    pub deferred: bool,
 }
 
 impl MotorMovement {

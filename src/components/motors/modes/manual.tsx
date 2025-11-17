@@ -55,6 +55,7 @@ function valuesToPayload(values: z.infer<typeof schema>, spp: number) {
       direction: value.direction === "clockwise",
       speed: rpmToSpeed(value.speed, spp),
       rotations: value.rotations * 10,
+      deferred: true,
     });
   }
 
@@ -65,7 +66,7 @@ export function ManualMode() {
   const { data: limits } = store.useQuery("motors.limits");
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
-  const { mutate: stopAll } = api.useMutation("motors/stop");
+  const { mutate: stop } = api.useMutation("motor/stop");
 
   const [motor1Status] = useAtomValue(motorStatusFamily(1));
   const [motor2Status] = useAtomValue(motorStatusFamily(2));
@@ -95,8 +96,7 @@ export function ManualMode() {
     const values = form.getValues();
     const payload = valuesToPayload(values, spp);
 
-    spin([1, payload[0]]);
-    spin([2, payload[1]]);
+    Promise.all([spin([1, payload[0]]), spin([2, payload[1]])]);
   };
 
   const { lock, unlock } = useLockScroll();
@@ -107,12 +107,12 @@ export function ManualMode() {
       const values = form.getValues();
       const payload = valuesToPayload(values, spp);
 
-      keep([1, payload[0]]);
-      keep([2, payload[1]]);
+      Promise.all([keep([1, payload[0]]), keep([2, payload[1]])]);
     },
     onEnd: () => {
       unlock();
-      stopAll("graceful");
+
+      Promise.all([stop([1, "graceful"]), stop([2, "graceful"])]);
     },
   });
 
@@ -286,7 +286,7 @@ export function ManualMode() {
           variant="destructive"
           disabled={isDisabled}
           onClick={() => {
-            stopAll("emergency");
+            Promise.all([stop([1, "emergency"]), stop([2, "emergency"])]);
           }}
         >
           STOP

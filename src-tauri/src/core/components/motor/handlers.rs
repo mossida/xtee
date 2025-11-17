@@ -25,6 +25,7 @@ impl Stoppable for Motor {
         Packet::MotorStop {
             slave: self.slave,
             gentle: false,
+            deferred: false,
         }
     }
 }
@@ -96,6 +97,7 @@ impl Actor for Motor {
                     .send_message(ControllerMessage::Forward(Packet::MotorStop {
                         slave,
                         gentle: true,
+                        deferred: true,
                     }))?;
             }
             MotorMessage::EmergencyStop => {
@@ -104,6 +106,7 @@ impl Actor for Motor {
                     .send_message(ControllerMessage::Forward(Packet::MotorStop {
                         slave,
                         gentle: false,
+                        deferred: false,
                     }))?;
             }
             MotorMessage::Keep(mut movement) => {

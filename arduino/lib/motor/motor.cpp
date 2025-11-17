@@ -15,7 +15,6 @@ void Engine::begin()
         stepper->setAutoEnable(false);
 
         steppers[i] = stepper;
-        commandQueued[i] = false;
     }
 
     protocol->registerHandler(packet::MOVE, this, &Engine::handleMove);
@@ -25,8 +24,6 @@ void Engine::begin()
     protocol->registerHandler(packet::SET_OUTPUTS, this, &Engine::handleSetOutputs);
     protocol->registerHandler(packet::REPORT_STATUS, this, &Engine::handleReportStatus);
     protocol->registerHandler(packet::STOP, this, &Engine::handleStop);
-    protocol->registerHandler(packet::STOP_ALL, this, &Engine::handleStopAll);
-    protocol->registerHandler(packet::SYNC, this, &Engine::handleSync);
 
     digitalWriteFast(LED_BUILTIN, LOW);
 }
@@ -46,13 +43,12 @@ void Engine::handleKeep(const uint8_t *buffer, size_t size)
         cmd.data.keep = data;
 
         commandQueue[data.slave - 1] = cmd;
-        commandQueued[data.slave - 1] = true;
+        commandQueueSize++;
 
-        return;
+        return executeQueue();
     }
 
     executeKeep(data);
-    sendStatus(data.slave);
 }
 
 void Engine::handleMove(const uint8_t *buffer, size_t size)
@@ -70,13 +66,12 @@ void Engine::handleMove(const uint8_t *buffer, size_t size)
         cmd.data.move = data;
 
         commandQueue[data.slave - 1] = cmd;
-        commandQueued[data.slave - 1] = true;
+        commandQueueSize++;
 
-        return;
+        return executeQueue();
     }
 
     executeMove(data);
-    sendStatus(data.slave);
 }
 
 void Engine::handleReportStatus(const uint8_t *buffer, size_t size)
@@ -88,7 +83,6 @@ void Engine::handleReportStatus(const uint8_t *buffer, size_t size)
 
     if (!is_initialized)
     {
-        // Send recognition for all motors in first call
         for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
             sendRecognition(i + 1);
 
@@ -105,64 +99,20 @@ void Engine::handleStop(const uint8_t *buffer, size_t size)
 
     const packet::STOP_DATA data = *reinterpret_cast<const packet::STOP_DATA *>(buffer);
 
-    auto *stepper = steppers[data.slave - 1];
-
-    if (data.gentle)
-        stepper->stopMove();
-    else
-        stepper->forceStopAndNewPosition(0);
-
-    sendStatus(data.slave);
-}
-
-void Engine::handleStopAll(const uint8_t *buffer, size_t size)
-{
-    if (size != sizeof(packet::STOP_ALL_DATA))
-        return;
-
-    const packet::STOP_ALL_DATA data = *reinterpret_cast<const packet::STOP_ALL_DATA *>(buffer);
-
-    for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
+    if (data.deferred)
     {
-        auto *stepper = steppers[i];
+        packet::QueuedCommand cmd;
+        cmd.type = packet::STOP;
+        cmd.slave = data.slave;
+        cmd.data.stop = data;
 
-        if (data.gentle)
-            stepper->stopMove();
-        else
-            stepper->forceStopAndNewPosition(0);
+        commandQueue[data.slave - 1] = cmd;
+        commandQueueSize++;
 
-        sendStatus(i + 1);
-    }
-}
-
-void Engine::handleSync(const uint8_t *buffer, size_t size)
-{
-    if (size > 0)
-        return;
-
-    noInterrupts();
-
-    for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
-    {
-        if (!commandQueued[i])
-            continue;
-
-        const auto &cmd = commandQueue[i];
-
-        commandQueued[i] = false;
-
-        switch (cmd.type)
-        {
-        case packet::MOVE:
-            executeMove(cmd.data.move);
-            break;
-        case packet::KEEP:
-            executeKeep(cmd.data.keep);
-            break;
-        }
+        return executeQueue();
     }
 
-    interrupts();
+    executeStop(data);
 }
 
 void Engine::handleSetSpeed(const uint8_t *buffer, size_t size)
@@ -190,7 +140,9 @@ void Engine::handleSetAcceleration(const uint8_t *buffer, size_t size)
     auto *stepper = steppers[data.slave - 1];
 
     stepper->setAcceleration(data.acceleration);
-    stepper->applySpeedAcceleration();
+
+    if (data.apply)
+        stepper->applySpeedAcceleration();
 }
 
 void Engine::handleSetOutputs(const uint8_t *buffer, size_t size)
@@ -242,6 +194,48 @@ void Engine::sendRecognition(uint8_t slave)
         .max_speed = stepper->getMaxSpeedInHz()};
 
     protocol->sendPacket(packet::RECOGNITION, reinterpret_cast<const uint8_t *>(&data), sizeof(data));
+}
+
+void Engine::executeQueue()
+{
+    if (commandQueueSize < pins::MOTORS_COUNT)
+        return;
+
+    noInterrupts();
+
+    for (size_t i = 0; i < pins::MOTORS_COUNT; i++)
+    {
+        const auto &cmd = commandQueue[i];
+
+        commandQueueSize--;
+
+        switch (cmd.type)
+        {
+        case packet::MOVE:
+            executeMove(cmd.data.move);
+            break;
+        case packet::KEEP:
+            executeKeep(cmd.data.keep);
+            break;
+        case packet::STOP:
+            executeStop(cmd.data.stop);
+            break;
+        }
+    }
+
+    interrupts();
+}
+
+void Engine::executeStop(const packet::STOP_DATA &data)
+{
+    auto *stepper = steppers[data.slave - 1];
+
+    if (data.gentle)
+        stepper->stopMove();
+    else
+        stepper->forceStopAndNewPosition(0);
+
+    sendStatus(data.slave);
 }
 
 void Engine::executeMove(const packet::MOVE_DATA &data)

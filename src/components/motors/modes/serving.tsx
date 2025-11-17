@@ -60,6 +60,7 @@ function valuesToPayload(
     direction,
     speed: speedToValue(values.speed),
     rotations: values.rotations * 10,
+    deferred: true,
   };
 }
 
@@ -73,7 +74,7 @@ export function ServingMode() {
 
   const { mutate: spin } = api.useMutation("motor/spin");
   const { mutate: keep } = api.useMutation("motor/keep");
-  const { mutate: stopAll } = api.useMutation("motors/stop");
+  const { mutate: stop } = api.useMutation("motor/stop");
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -114,7 +115,8 @@ export function ServingMode() {
     },
     onEnd: () => {
       unlock();
-      stopAll("graceful");
+      stop([1, "graceful"]);
+      stop([2, "graceful"]);
     },
   });
 
@@ -215,7 +217,8 @@ export function ServingMode() {
           variant="destructive"
           disabled={isDisabled}
           onClick={() => {
-            stopAll("emergency");
+            stop([1, "emergency"]);
+            stop([2, "emergency"]);
           }}
         >
           STOP

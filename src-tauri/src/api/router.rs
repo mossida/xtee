@@ -21,7 +21,6 @@ pub fn router() -> Router<RouterContext> {
         .mutation("motor/keep", |t| t(motor_keep))
         .mutation("motor/spin", |t| t(motor_spin))
         .mutation("motor/stop", |t| t(motor_stop))
-        .mutation("motors/stop", |t| t(motors_stop))
         .mutation("motor/set/outputs", |t| t(motor_set_outputs))
         .mutation("motor/reload/settings", |t| t(motor_reload_settings))
         .mutation("actuator/move", |t| t(actuator_move))
