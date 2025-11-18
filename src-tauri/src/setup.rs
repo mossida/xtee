@@ -1,4 +1,5 @@
 use ractor::Actor;
+use tauri::Manager;
 use tracing::{Level, Subscriber};
 use tracing_appender::non_blocking::{NonBlocking, NonBlockingBuilder, WorkerGuard};
 use tracing_subscriber::{

@@ -44,6 +44,7 @@ export type Store = {
       fast: number;
     };
   };
+  "interface.zoom": number;
 };
 
 type StoreKey = keyof Store;

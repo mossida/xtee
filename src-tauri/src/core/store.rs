@@ -36,6 +36,8 @@ pub enum StoreKey {
     MotorsLimits,
     #[serde(rename = "motors.speeds")]
     MotorsSpeeds,
+    #[serde(rename = "interface.zoom")]
+    InterfaceZoom,
 }
 
 impl AsRef<str> for StoreKey {
@@ -52,6 +54,7 @@ impl AsRef<str> for StoreKey {
             StoreKey::ActuatorPrecision => "actuator.precision",
             StoreKey::MotorsLimits => "motors.limits",
             StoreKey::MotorsSpeeds => "motors.speeds",
+            StoreKey::InterfaceZoom => "interface.zoom",
         }
     }
 }
@@ -133,6 +136,7 @@ pub fn store(app: &AppHandle) -> Result<Arc<Store>, Error> {
             StoreKey::Controllers,
             serde_json::to_value(vec![] as Vec<Controller>)?,
         )
+        .default(StoreKey::InterfaceZoom, 1.0)
         .auto_save(Duration::ZERO);
 
     builder.build()
