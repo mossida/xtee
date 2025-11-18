@@ -258,6 +258,16 @@ void Engine::executeKeep(const packet::KEEP_DATA &data)
     auto index = data.slave - 1;
     auto *stepper = steppers[index];
 
+    if (stepper->isRunningContinuously())
+    {
+        return;
+    }
+
+    if (!stepper->isRunning())
+    {
+        stepper->setCurrentPosition(0);
+    }
+
     if (data.direction)
         stepper->runForward();
     else

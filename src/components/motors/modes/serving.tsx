@@ -99,8 +99,10 @@ export function ServingMode() {
   const start = () => {
     const values = form.getValues();
 
-    spin([1, valuesToPayload(1, values, speedToValue)]);
-    spin([2, valuesToPayload(2, values, speedToValue)]);
+    Promise.all([
+      spin([1, valuesToPayload(1, values, speedToValue)]),
+      spin([2, valuesToPayload(2, values, speedToValue)]),
+    ]);
   };
 
   const { lock, unlock } = useLockScroll();
@@ -110,13 +112,14 @@ export function ServingMode() {
       lock();
       const values = form.getValues();
 
-      keep([1, valuesToPayload(1, values, speedToValue)]);
-      keep([2, valuesToPayload(2, values, speedToValue)]);
+      Promise.all([
+        keep([1, valuesToPayload(1, values, speedToValue)]),
+        keep([2, valuesToPayload(2, values, speedToValue)]),
+      ]);
     },
     onEnd: () => {
       unlock();
-      stop([1, "graceful"]);
-      stop([2, "graceful"]);
+      Promise.all([stop([1, "graceful"]), stop([2, "graceful"])]);
     },
   });
 
@@ -217,8 +220,7 @@ export function ServingMode() {
           variant="destructive"
           disabled={isDisabled}
           onClick={() => {
-            stop([1, "emergency"]);
-            stop([2, "emergency"]);
+            Promise.all([stop([1, "emergency"]), stop([2, "emergency"])]);
           }}
         >
           STOP
