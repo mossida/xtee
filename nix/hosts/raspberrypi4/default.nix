@@ -17,7 +17,6 @@
   users.users.xtee = {
     isNormalUser = true;
     useDefaultShell = true;
-    password = "xtee";
     extraGroups = [
       "wheel"
       "systemd-journal"
@@ -27,32 +26,6 @@
 
   networking = {
     hostName = "xtee";
-
-    interfaces = {
-      end0 = {
-        useDHCP = false;
-        ipv4.addresses = [
-          {
-            address = "10.10.0.1";
-            prefixLength = 24;
-          }
-        ];
-      };
-    };
-
-    firewall = {
-      allowedTCPPorts = [ 22 ];
-      allowPing = true;
-    };
-  };
-
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = true;
-      KbdInteractiveAuthentication = false;
-    };
   };
 
   powerManagement.enable = false;
