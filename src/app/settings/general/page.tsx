@@ -20,15 +20,10 @@ export default function GeneralSettings() {
     <div className="grid grid-cols-2 gap-4">
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle>Interface Zoom</CardTitle>
+          <CardTitle>Interface zoom</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Current zoom: {((zoom ?? 1.0) * 100).toFixed(0)}%
-              </span>
-            </div>
             <div className="flex flex-wrap gap-2">
               {ZOOM_LEVELS.map((level) => (
                 <Button
