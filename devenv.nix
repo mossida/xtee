@@ -16,4 +16,6 @@
   ];
 
   languages.rust.enable = true;
+
+  languages.python.enable = true;
 }
