@@ -41,7 +41,10 @@ export function Header() {
                   <Button variant="outline" onClick={() => setOpen(false)}>
                     Cancel
                   </Button>
-                  <Button variant="destructive" onClick={handleShutdown}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleShutdown()}
+                  >
                     Shutdown
                   </Button>
                 </div>
