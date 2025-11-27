@@ -70,6 +70,8 @@ export function TwistingMode() {
   const [motor2Status] = useAtomValue(motorStatusFamily(2));
   const isOverloaded = useAtomValue(isOverloadedAtom);
 
+  const isValid = form.formState.isValid;
+
   const isDisabled =
     isOverloaded || !motor1Status?.status || !motor2Status?.status;
 
@@ -194,7 +196,7 @@ export function TwistingMode() {
             <Button
               className="w-full h-16"
               onClick={start}
-              disabled={isDisabled || !form.formState.isValid}
+              disabled={isDisabled || !isValid}
             >
               Start rotations
             </Button>
@@ -203,7 +205,7 @@ export function TwistingMode() {
             <Button
               ref={ref}
               className="w-full h-16"
-              disabled={isDisabled || !form.formState.isValid}
+              disabled={isDisabled || !isValid}
             >
               Move manually
             </Button>

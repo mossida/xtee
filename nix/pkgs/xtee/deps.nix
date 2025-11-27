@@ -575,9 +575,9 @@
   };
   "@tauri-apps/api" = {
     out_path = "@tauri-apps/api";
-    name = "@tauri-apps/api@2.3.0";
-    url = "https://registry.npmjs.org/@tauri-apps/api/-/api-2.3.0.tgz";
-    hash = "sha512-33Z+0lX2wgZbx1SPFfqvzI6su63hCBkbzv+5NexeYjIx7WA9htdOKoRR7Dh3dJyltqS5/J8vQFyybiRoaL0hlA==";
+    name = "@tauri-apps/api@2.9.0";
+    url = "https://registry.npmjs.org/@tauri-apps/api/-/api-2.9.0.tgz";
+    hash = "sha512-qD5tMjh7utwBk9/5PrTA/aGr3i5QaJ/Mlt7p8NilQ45WgbifUNPyKWsA63iQ8YfQq6R8ajMapU+/Q8nMcPRLNw==";
   };
   "@tauri-apps/cli" = {
     out_path = "@tauri-apps/cli";
@@ -650,15 +650,9 @@
   };
   "@tauri-apps/plugin-store" = {
     out_path = "@tauri-apps/plugin-store";
-    name = "@tauri-apps/plugin-store@2.2.0";
-    url = "https://registry.npmjs.org/@tauri-apps/plugin-store/-/plugin-store-2.2.0.tgz";
-    hash = "sha512-hJTRtuJis4w5fW1dkcgftsYxKXK0+DbAqurZ3CURHG5WkAyyZgbxpeYctw12bbzF9ZbZREXZklPq8mocCC3Sgg==";
-  };
-  "@tauri-apps/plugin-store/@tauri-apps/api" = {
-    out_path = "@tauri-apps/plugin-store/node_modules/@tauri-apps/node_modules/api";
-    name = "@tauri-apps/api@2.1.1";
-    url = "https://registry.npmjs.org/@tauri-apps/api/-/api-2.1.1.tgz";
-    hash = "sha512-fzUfFFKo4lknXGJq8qrCidkUcKcH2UHhfaaCNt4GzgzGaW2iS26uFOg4tS3H4P8D6ZEeUxtiD5z0nwFF0UN30A==";
+    name = "@tauri-apps/plugin-store@2.4.1";
+    url = "https://registry.npmjs.org/@tauri-apps/plugin-store/-/plugin-store-2.4.1.tgz";
+    hash = "sha512-ckGSEzZ5Ii4Hf2D5x25Oqnm2Zf9MfDWAzR+volY0z/OOBz6aucPKEY0F649JvQ0Vupku6UJo7ugpGRDOFOunkA==";
   };
   "@types/node" = {
     out_path = "@types/node";
@@ -719,9 +713,9 @@
   };
   "babel-plugin-react-compiler" = {
     out_path = "babel-plugin-react-compiler";
-    name = "babel-plugin-react-compiler@19.0.0-beta-ebf51a3-20250411";
-    url = "https://registry.npmjs.org/babel-plugin-react-compiler/-/babel-plugin-react-compiler-19.0.0-beta-ebf51a3-20250411.tgz";
-    hash = "sha512-q84bNR9JG1crykAlJUt5Ud0/5BUyMFuQww/mrwIQDFBaxsikqBDj3f/FNDsVd2iR26A1HvXKWPEIfgJDv8/V2g==";
+    name = "babel-plugin-react-compiler@1.0.0";
+    url = "https://registry.npmjs.org/babel-plugin-react-compiler/-/babel-plugin-react-compiler-1.0.0.tgz";
+    hash = "sha512-Ixm8tFfoKKIPYdCCKYTsqv+Fd4IJ0DQqMyEimo+pxUOMUR9cVPlwTrFt9Avu+3cb6Zp3mAzl+t1MrG2fxxKsxw==";
   };
   "balanced-match" = {
     out_path = "balanced-match";
