@@ -50,6 +50,23 @@ rustPlatform.buildRustPackage (finalAttrs: {
     webkitgtk_4_1
   ];
 
+  # Handle cross-compilation: binary ends up in target/<triple>/release/ instead of target/release/
+  installPhase = ''
+    runHook preInstall
+
+    # Find the binary in the appropriate target directory
+    local binPath
+    if [ -n "''${CARGO_BUILD_TARGET:-}" ]; then
+      binPath="${finalAttrs.cargoRoot}/target/$CARGO_BUILD_TARGET/release/xtee"
+    else
+      binPath="${finalAttrs.cargoRoot}/target/release/xtee"
+    fi
+
+    install -Dm755 "$binPath" "$out/bin/xtee"
+
+    runHook postInstall
+  '';
+
   meta = {
     description = "XTEE";
     mainProgram = "xtee";
