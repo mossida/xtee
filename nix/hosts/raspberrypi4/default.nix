@@ -12,8 +12,6 @@
     ./hardware-configuration.nix
   ];
 
-  boot.initrd.systemd.emergencyAccess = true;
-
   users.users.xtee = {
     isNormalUser = true;
     useDefaultShell = true;
@@ -22,10 +20,6 @@
       "systemd-journal"
       "dialout"
     ];
-  };
-
-  networking = {
-    hostName = "xtee";
   };
 
   powerManagement.enable = false;
@@ -38,6 +32,8 @@
 
     GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules";
   };
+
+  services.udisks2.enable = false;
 
   services.cage = {
     enable = true;

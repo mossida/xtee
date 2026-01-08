@@ -15,6 +15,8 @@
     inputs.bun2nix.packages.${pkgs.system}.default
   ];
 
+  cachix.enable = false;
+
   languages.rust.enable = true;
 
   languages.python.enable = true;

@@ -3,8 +3,14 @@
     kernelParams = [
       "vt.global_cursor_default=0"
       "cma=256M"
+      "quiet"
+      "loglevel=3"
+      "udev.log_level=3"
+      "rd.systemd.show_status=auto"
     ];
   };
+
+  loader.timeout = 0;
 
   fileSystems = {
     "/" = {
