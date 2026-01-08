@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   rustPlatform,
 
   bun,
@@ -51,21 +52,19 @@ rustPlatform.buildRustPackage (finalAttrs: {
   ];
 
   # Handle cross-compilation: binary ends up in target/<triple>/release/ instead of target/release/
-  installPhase = ''
-    runHook preInstall
-
-    # Find the binary in the appropriate target directory
-    local binPath
-    if [ -n "''${CARGO_BUILD_TARGET:-}" ]; then
-      binPath="${finalAttrs.cargoRoot}/target/$CARGO_BUILD_TARGET/release/xtee"
-    else
-      binPath="${finalAttrs.cargoRoot}/target/release/xtee"
-    fi
-
-    install -Dm755 "$binPath" "$out/bin/xtee"
-
-    runHook postInstall
-  '';
+  installPhase =
+    let
+      targetDir =
+        if stdenv.hostPlatform != stdenv.buildPlatform then
+          "${finalAttrs.cargoRoot}/target/${stdenv.hostPlatform.rust.cargoShortTarget}/release"
+        else
+          "${finalAttrs.cargoRoot}/target/release";
+    in
+    ''
+      runHook preInstall
+      install -Dm755 "${targetDir}/xtee" "$out/bin/xtee"
+      runHook postInstall
+    '';
 
   meta = {
     description = "XTEE";
