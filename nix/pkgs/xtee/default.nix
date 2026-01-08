@@ -27,6 +27,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   dontUseBunBuild = true;
   dontUseBunPatch = true;
+  dontUseBunCheck = true;
 
   cargoRoot = "src-tauri";
   buildAndTestSubdir = finalAttrs.cargoRoot;
