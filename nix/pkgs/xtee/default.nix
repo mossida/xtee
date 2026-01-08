@@ -7,7 +7,7 @@
   cargo-tauri,
   pkg-config,
   moreutils,
-  mkBunNodeModules,
+  fetchBunDeps,
 
   udev,
   libsoup_3,
@@ -21,8 +21,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   src = lib.cleanSource ../../..;
 
-  nodeModules = mkBunNodeModules {
-    packages = import ./deps.nix;
+  nodeModules = fetchBunDeps {
+    bunNix = import ./deps.nix;
   };
 
   cargoRoot = "src-tauri";
