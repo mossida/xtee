@@ -25,6 +25,9 @@ rustPlatform.buildRustPackage (finalAttrs: {
     bunNix = import ./deps.nix;
   };
 
+  dontUseBunBuild = true;
+  dontUseBunPatch = false;
+
   cargoRoot = "src-tauri";
   buildAndTestSubdir = finalAttrs.cargoRoot;
 
