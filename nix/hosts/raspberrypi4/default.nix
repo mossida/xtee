@@ -6,13 +6,10 @@
   ...
 }:
 {
-  imports = [
-    inputs.hardware.nixosModules.raspberry-pi-4
-
-    ./hardware-configuration.nix
+  imports = with inputs.pi.nixosModules; [
+    raspberry-pi-4.base
+    raspberry-pi-4.display-vc4
   ];
-
-  boot.initrd.systemd.emergencyAccess = true;
 
   users.users.xtee = {
     isNormalUser = true;
@@ -21,11 +18,20 @@
       "wheel"
       "systemd-journal"
       "dialout"
+      "networkmanager"
+      "video"
     ];
+
+    initialHashedPassword = "";
   };
+
+  services.getty.autologinUser = "xtee";
 
   networking = {
     hostName = "xtee";
+    wireless = {
+      enable = false;
+    };
   };
 
   powerManagement.enable = false;
@@ -45,14 +51,9 @@
     program = "${outputs.packages.aarch64-linux.xtee}/bin/xtee";
     environment = {
       WLR_DPI = "192";
-      XTEE_LOG = "debug";
+      XTEE_LOG = "info";
     };
   };
-
-  # Workaround for https://github.com/NixOS/nixpkgs/issues/154163
-  nixpkgs.overlays = [
-    (_: prev: { makeModulesClosure = x: prev.makeModulesClosure (x // { allowMissing = true; }); })
-  ];
 
   system.stateVersion = "25.05";
 }

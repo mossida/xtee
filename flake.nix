@@ -9,11 +9,14 @@
 
     bun2nix.url = "github:baileyluTCD/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    pi.url = "github:nvmd/nixos-raspberrypi";
   };
 
   outputs =
     {
       self,
+      pi,
       nixpkgs,
       systems,
       bun2nix,
@@ -37,9 +40,8 @@
       packages = forEachSystem (pkgs: import ./nix/pkgs { inherit pkgs bun2nix; });
 
       nixosConfigurations = {
-        raspberrypi4 = lib.nixosSystem {
+        raspberrypi4 = pi.lib.nixosSystem {
           modules = [
-            "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
             ./nix/hosts/raspberrypi4
           ];
           specialArgs = {
