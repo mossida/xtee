@@ -4,5 +4,5 @@
   ...
 }:
 {
-  xtee = pkgs.callPackage ./xtee { inherit (bun2nix.lib.${pkgs.system}) fetchBunDeps; };
+  xtee = pkgs.callPackage ./xtee { inherit (bun2nix.packages.${pkgs.system}.default) fetchBunDeps; };
 }
