@@ -7,7 +7,7 @@
   cargo-tauri,
   pkg-config,
   moreutils,
-  fetchBunDeps,
+  bun2nix,
 
   udev,
   libsoup_3,
@@ -21,7 +21,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   src = lib.cleanSource ../../..;
 
-  nodeModules = fetchBunDeps {
+  bunDeps = bun2nix.fetchBunDeps {
     bunNix = import ./deps.nix;
   };
 
@@ -30,12 +30,9 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   cargoHash = "sha256-5TZ5AI1YCRRYZ8ZUMDfXjPzh75IMTS13t9Y2Ctre1mA=";
 
-  preBuild = ''
-    ln -sf ${finalAttrs.nodeModules}/node_modules ./node_modules
-  '';
-
   nativeBuildInputs = [
     bun
+    bun2nix.hook
     moreutils
     cargo-tauri.hook
     pkg-config
