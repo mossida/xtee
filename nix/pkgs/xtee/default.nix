@@ -52,9 +52,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
   ];
 
   # Handle cross-compilation: binary ends up in target/<triple>/release/ instead of target/release/
+  # Note: cargo builds at the workspace root, not inside cargoRoot
   installPhase =
     let
-      targetDir = "${finalAttrs.cargoRoot}/target/aarch64-unknown-linux-gnu/release";
+      targetDir = "target/aarch64-unknown-linux-gnu/release";
     in
     ''
       runHook preInstall
