@@ -56,7 +56,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
     let
       targetDir =
         if stdenv.hostPlatform != stdenv.buildPlatform then
-          "${finalAttrs.cargoRoot}/target/${stdenv.hostPlatform.rust.cargoShortTarget}/release"
+          "${finalAttrs.cargoRoot}/target/aarch64-unknown-linux-gnu/release"
         else
           "${finalAttrs.cargoRoot}/target/release";
     in
