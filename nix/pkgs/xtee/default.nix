@@ -54,11 +54,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   # Handle cross-compilation: binary ends up in target/<triple>/release/ instead of target/release/
   installPhase =
     let
-      targetDir =
-        if stdenv.hostPlatform != stdenv.buildPlatform then
-          "${finalAttrs.cargoRoot}/target/aarch64-unknown-linux-gnu/release"
-        else
-          "${finalAttrs.cargoRoot}/target/release";
+      targetDir = "${finalAttrs.cargoRoot}/target/aarch64-unknown-linux-gnu/release";
     in
     ''
       runHook preInstall
